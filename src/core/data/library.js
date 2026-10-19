@@ -48,17 +48,23 @@ export async function unlikeTrack(trackId, source = DEFAULT_SOURCE) {
 
 // 歌单 ---------------------------------------------------------------------------
 
+/**
+ * 所有歌单；covers 是前 4 首歌的封面（没有自己封面的歌单用来拼一张）
+ */
 export async function listPlaylists() {
   return unwrap(
     await requireSupabase()
       .from('playlists')
       .select(
-        'id, name, description, cover_url, created_at, updated_at, playlist_tracks(count)'
+        'id, name, description, cover_url, created_at, updated_at, playlist_tracks(count), preview:playlist_tracks(cover:track->al->>picUrl, position)'
       )
       .order('created_at', { ascending: false })
-  ).map(({ playlist_tracks, ...p }) => ({
+      .order('position', { referencedTable: 'preview' })
+      .limit(4, { referencedTable: 'preview' })
+  ).map(({ playlist_tracks, preview, ...p }) => ({
     ...p,
     trackCount: playlist_tracks[0]?.count ?? 0,
+    covers: (preview ?? []).map(t => t.cover).filter(Boolean),
   }));
 }
 

@@ -1,9 +1,10 @@
 <script setup>
 // 封面网格：歌单、专辑、歌手（圆形）
 import Cover from './Cover.vue';
+import PlaylistCover from './PlaylistCover.vue';
 
 defineProps({
-  /** [{ key, to, cover, title, sub?, round? }] */
+  /** [{ key, to, cover, title, sub?, round?, covers? }]（covers：自己的歌单，没封面时用歌的封面拼） */
   items: { type: Array, required: true },
 });
 </script>
@@ -11,7 +12,15 @@ defineProps({
 <template>
   <div class="tile-grid">
     <RouterLink v-for="item in items" :key="item.key" :to="item.to" class="tile" :class="{ round: item.round }">
-      <Cover class="cover" :url="item.cover" :size="180" :round="item.round" radius="12px" />
+      <PlaylistCover
+        v-if="item.covers"
+        class="cover"
+        :cover="item.cover"
+        :covers="item.covers"
+        :name="item.title"
+        :size="180"
+      />
+      <Cover v-else class="cover" :url="item.cover" :size="180" :round="item.round" radius="12px" />
       <span class="title">{{ item.title }}</span>
       <span v-if="item.sub" class="sub">{{ item.sub }}</span>
     </RouterLink>

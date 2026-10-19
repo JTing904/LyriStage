@@ -2,6 +2,7 @@
 // 电脑版左边的侧边栏：Logo、主导航、我的歌单、账号
 import Icon from './Icon.vue';
 import Cover from './Cover.vue';
+import PlaylistCover from './PlaylistCover.vue';
 import { useAuthStore } from '../stores/auth';
 import { useLibraryStore } from '../stores/library';
 import { useRoomStore } from '../stores/room';
@@ -53,7 +54,14 @@ const NAV = [
         class="mine-item"
         active-class="active"
       >
-        <span class="mine-icon">{{ p.name.slice(0, 1) }}</span>
+        <PlaylistCover
+          class="mine-cover"
+          :cover="p.cover_url"
+          :covers="p.covers"
+          :name="p.name"
+          :size="28"
+          radius="7px"
+        />
         <span class="mine-name">{{ p.name }}</span>
       </RouterLink>
     </div>
@@ -187,6 +195,10 @@ const NAV = [
   font-size: 13px;
   font-weight: 700;
   color: var(--text-dim);
+}
+.mine-cover {
+  flex: none;
+  width: 28px;
 }
 .mine-icon.liked {
   background: linear-gradient(135deg, #ff3b5c, #7b2ff7);

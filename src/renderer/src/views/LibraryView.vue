@@ -59,6 +59,7 @@ const tiles = computed(() =>
       key: p.id,
       to: `/my/${p.id}`,
       cover: p.cover_url,
+      covers: p.covers ?? [],
       title: p.name,
       sub: t('{n} 首', { n: p.trackCount }),
     }))

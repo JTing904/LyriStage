@@ -2,7 +2,7 @@
 // 「加到歌单」对话框：勾选一个或好几个歌单，按「加入」一次加进去；也可以马上新建一个
 import { computed, nextTick, ref, watch } from 'vue';
 import { useLibraryStore } from '../stores/library';
-import Cover from './Cover.vue';
+import PlaylistCover from './PlaylistCover.vue';
 import Icon from './Icon.vue';
 import { t } from '../i18n';
 
@@ -109,7 +109,7 @@ const title = computed(() => {
             <span class="check" :class="{ on: chosen.has(p.id) }" aria-hidden="true">
               <svg v-if="chosen.has(p.id)" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10" /></svg>
             </span>
-            <Cover :url="p.cover_url" :size="44" radius="8px" class="cover" />
+            <PlaylistCover :cover="p.cover_url" :covers="p.covers" :name="p.name" :size="44" radius="8px" class="cover" />
             <span class="meta">
               <strong>{{ p.name }}</strong>
               <span>{{ $t('{n} 首', { n: p.trackCount }) }}</span>

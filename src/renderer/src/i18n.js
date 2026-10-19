@@ -45,6 +45,9 @@ watch(
   { immediate: true }
 );
 
+// 开发时改了这个文件：整页重新载入（不然新旧两份 locale 会同时存在，画面中英混在一起）
+if (import.meta.hot) import.meta.hot.accept(() => window.location.reload());
+
 /**
  * @param {string} text 中文原文
  * @param {Record<string, string | number>} [params]
