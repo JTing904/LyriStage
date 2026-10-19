@@ -7,7 +7,7 @@
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import { getSupabase, toSnapshot } from '@core/data';
-import { player } from '../services';
+import { player, sharedSources } from '../services';
 import { useAuthStore } from './auth';
 
 /** 房间码：6 个字，去掉了容易看错的 0 O 1 I L */
@@ -57,6 +57,8 @@ export const useRoomStore = defineStore('room', () => {
     const s = player.getState();
     return {
       track: s.track ? toSnapshot(s.track) : null,
+      // 房主找到的音频链接也分享出去（网页版的朋友自己找不到 VIP 歌）
+      source: s.source?.url ? { url: s.source.url, br: s.source.br, source: 'room' } : null,
       playing: s.playing,
       position: player.currentTime(),
     };
@@ -69,9 +71,13 @@ export const useRoomStore = defineStore('room', () => {
   // ---- 成员：照着房主的状态播 ----
   let applying = Promise.resolve();
   function applySync(payload) {
+    if (payload.track && payload.source?.url) {
+      if (sharedSources.size > 50) sharedSources.clear();
+      sharedSources.set(payload.track.id, payload.source);
+    }
     applying = applying.then(() => apply(payload)).catch(() => {});
   }
-  async function apply({ track, playing, position }) {
+  async function apply({ track, source, playing, position }) {
     if (role.value !== 'guest') return;
     const target = position + (playing ? LATENCY_SECONDS : 0);
     if (!track) {
@@ -79,7 +85,9 @@ export const useRoomStore = defineStore('room', () => {
       return;
     }
     const s = player.getState();
-    if (s.track?.id !== track.id) {
+    // 换歌了；或是同一首但刚才自己拿不到音频、现在房主分享了链接，就重新载入
+    const needsReload = s.track?.id !== track.id || (!s.source && !s.loading && source);
+    if (needsReload) {
       await player.playList([track], 0, `room:${code.value}`);
       player.seek(target);
       if (!playing) player.pause();

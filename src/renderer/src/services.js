@@ -73,13 +73,22 @@ export async function getLyrics(track) {
 }
 
 /**
- * 播放链接：先找网易云，拿不到再解灰
+ * 一起听：房主分享的音频链接（歌曲 ID → 链接）。
+ * 网页版自己没办法解灰，VIP 歌就用房主找到的链接播
+ * @type {Map<number, { url: string, br?: number, source?: string }>}
+ */
+export const sharedSources = new Map();
+
+/**
+ * 播放链接：先找网易云，拿不到再用房主分享的，再拿不到才自己解灰
  * - 电脑版：本机的 API 解灰
  * - 手机 App：手机自己去找（Vercel 上的 API 解灰连不上音源）
  */
 async function resolveSource(track) {
   const official = await netease.songUrl(track.id);
   if (official) return official;
+  const shared = sharedSources.get(track.id);
+  if (shared) return shared;
   if (isNativeApp) {
     const { unblockOnDevice } = await import('./unblockOnDevice');
     return unblockOnDevice(track.id);
