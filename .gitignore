@@ -37,3 +37,6 @@ vercel.json
 
 # pre-commit
 .pre-commit-config.yaml
+
+# Vercel
+.vercel
