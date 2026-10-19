@@ -70,6 +70,10 @@ if (!app.requestSingleInstanceLock()) {
   ipcMain.on('lyristage:desktop-lyrics', (event, enabled) => {
     if (fromMain(event)) desktopLyrics.setEnabled(Boolean(enabled));
   });
+  // 设置页的「锁定桌面歌词」
+  ipcMain.on('lyristage:desktop-lyrics-lock', (event, locked) => {
+    if (fromMain(event)) desktopLyrics.setLocked(Boolean(locked));
+  });
   // 桌面歌词窗口上的按钮：锁定、关闭
   ipcMain.on('lyristage:lyrics-window', (event, action) => {
     if (!desktopLyrics.isLyricsWindow(event.sender)) return;
@@ -158,6 +162,12 @@ if (!app.requestSingleInstanceLock()) {
     });
     if (state.maximized) mainWindow.maximize();
     trackWindowState(mainWindow);
+
+    // 桌面歌词只在主窗口收起来（最小化、关到托盘）时出现
+    const appVisible = () => mainWindow.isVisible() && !mainWindow.isMinimized();
+    for (const event of ['show', 'hide', 'minimize', 'restore']) {
+      mainWindow.on(event, () => desktopLyrics.setAppVisible(appVisible()));
+    }
 
     // 系统切换深浅色时，系统按钮的颜色跟着变
     const onThemeChange = () => {

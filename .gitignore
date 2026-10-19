@@ -49,3 +49,6 @@ dist-web/
 # 网页版部署的构建结果
 /deploy
 /dist-web
+
+# Windows 安装包
+/release

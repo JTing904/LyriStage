@@ -35,6 +35,11 @@ export function setDesktopLyrics(enabled) {
   bridge?.setDesktopLyrics?.(enabled);
 }
 
+/** 电脑版：锁定桌面歌词（鼠标穿透） */
+export function setDesktopLyricsLocked(locked) {
+  bridge?.setDesktopLyricsLocked?.(locked);
+}
+
 /**
  * 第三方登录（GitHub / Google）授权完会打开 lyristage://auth/callback?code=…，回到 App：
  * - 电脑版：主进程收到网址后转过来

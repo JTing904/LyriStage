@@ -32,6 +32,8 @@ contextBridge.exposeInMainWorld('lyristage', {
   /** 现在唱到的这一句（传给桌面歌词窗口） */
   sendLyric: payload => ipcRenderer.send('lyristage:lyric', payload),
   setDesktopLyrics: enabled => ipcRenderer.send('lyristage:desktop-lyrics', Boolean(enabled)),
+  setDesktopLyricsLocked: locked =>
+    ipcRenderer.send('lyristage:desktop-lyrics-lock', Boolean(locked)),
   /** 桌面歌词开着没有、锁定没有 */
   onDesktopLyricsState: callback => {
     ipcRenderer.on('lyristage:desktop-lyrics-state', (_event, state) => callback(state));

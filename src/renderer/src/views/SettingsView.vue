@@ -1,5 +1,6 @@
 <script setup>
-// 设置：账号（退出登录）、邀请朋友（管理员才有）、我的公仔（换衣服）、外观（深色 / 浅色 / 跟随系统）
+// 设置：账号（退出登录）、邀请朋友（管理员才有）、我的公仔（换衣服）、外观（深色 / 浅色 / 跟随系统）、
+// 桌面歌词（电脑版才有）
 import { ref, watch } from 'vue';
 import { createInvite, listInvites } from '@core/data';
 import { useAuthStore } from '../stores/auth';
@@ -7,6 +8,8 @@ import { useThemeStore, THEME_OPTIONS } from '../stores/theme';
 import { useAvatarStore, OUTFITS } from '../stores/avatar';
 import Cover from '../components/Cover.vue';
 import AvatarFigure from '../components/AvatarFigure.vue';
+import { isElectron, setDesktopLyrics, setDesktopLyricsLocked } from '../platform';
+import { desktopLyrics } from '../desktop';
 
 const auth = useAuthStore();
 const theme = useThemeStore();
@@ -152,6 +155,37 @@ async function logout() {
       </div>
     </div>
 
+    <div v-if="isElectron" class="group">
+      <h2>桌面歌词</h2>
+      <div class="row switch-row">
+        <span class="label">
+          显示桌面歌词
+          <small>App 收起来（最小化或关到托盘）时，在桌面上显示正在唱的歌词</small>
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          class="switch"
+          :checked="desktopLyrics.enabled"
+          @change="setDesktopLyrics($event.target.checked)"
+        />
+      </div>
+      <div class="row switch-row">
+        <span class="label">
+          锁定位置
+          <small>锁定后鼠标会穿过歌词，点得到后面的东西；在托盘图标按右键也能解锁</small>
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          class="switch"
+          :checked="desktopLyrics.locked"
+          :disabled="!desktopLyrics.enabled"
+          @change="setDesktopLyricsLocked($event.target.checked)"
+        />
+      </div>
+    </div>
+
     <div class="group">
       <h2>外观</h2>
       <div class="row">
@@ -267,6 +301,54 @@ button {
   background: var(--bg);
   color: var(--text);
   font-weight: 700;
+}
+.switch-row + .switch-row {
+  margin-top: 8px;
+}
+.label small {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+/* 开关 */
+.switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--line-strong);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+.switch:checked {
+  background: var(--accent);
+}
+.switch:checked::after {
+  transform: translateX(18px);
+}
+.switch:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .invite-row {
   flex-direction: column;
