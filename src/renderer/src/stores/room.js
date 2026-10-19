@@ -100,6 +100,8 @@ export const useRoomStore = defineStore('room', () => {
   }
 
   function onPresence() {
+    // 刚离开房间时可能还会收到一次更新，频道已经关了就不理它
+    if (!channel) return;
     const list = Object.values(channel.presenceState()).flat();
     // 同一个人开了两个装置只算一次
     const seen = new Set();

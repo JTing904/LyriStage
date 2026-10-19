@@ -17,11 +17,15 @@ const { playAll } = usePlayCollection();
 
 // 我喜欢的音乐
 const likedRows = ref([]);
+/** 第一次载入完之前不显示「0 首」，不然会先闪一下「还没有喜欢的歌」 */
+const likedReady = ref(false);
 async function loadLiked() {
   try {
     likedRows.value = await listLikedTracks();
   } catch (err) {
     library.say(t('载入失败：{error}', { error: err.message || err }));
+  } finally {
+    likedReady.value = true;
   }
 }
 // 数据库写好之后（version 变了）才重新载入；取消喜欢的先从画面上拿掉
@@ -90,12 +94,13 @@ async function create() {
       <RouterLink to="/liked" class="liked-card">
         <span class="label"><Icon name="heart-fill" :size="18" />{{ $t('我喜欢的音乐') }}</span>
         <p class="names display">
-          <template v-if="liked.length">
+          <template v-if="!likedReady">&nbsp;</template>
+          <template v-else-if="liked.length">
             {{ liked.slice(0, 3).map(t => t.name).join(' · ') }}
           </template>
           <template v-else>{{ $t('按 ♡ 收藏喜欢的歌') }}</template>
         </p>
-        <span class="count">
+        <span v-if="likedReady" class="count">
           {{ $t('{n} 首', { n: liked.length }) }}<template v-if="liked[0]"> · {{ $t('最近喜欢：{name}', { name: liked[0].name }) }}</template>
         </span>
         <button
