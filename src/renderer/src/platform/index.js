@@ -30,6 +30,11 @@ export function setNativeTheme(mode) {
   bridge?.setTheme?.(mode);
 }
 
+/** 电脑版：打开 / 关掉桌面歌词 */
+export function setDesktopLyrics(enabled) {
+  bridge?.setDesktopLyrics?.(enabled);
+}
+
 /**
  * 第三方登录（GitHub / Google）授权完会打开 lyristage://auth/callback?code=…，回到 App：
  * - 电脑版：主进程收到网址后转过来

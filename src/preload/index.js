@@ -19,4 +19,33 @@ contextBridge.exposeInMainWorld('lyristage', {
     // 页面准备好了：如果是被登录回调网址叫起来的，主进程这时才把网址发过来
     ipcRenderer.send('lyristage:auth-ready');
   },
+
+  // ---- 主窗口：托盘控制、桌面歌词 ----
+  /** 托盘按了播放 / 暂停、上一首、下一首 */
+  onCommand: callback => {
+    ipcRenderer.on('lyristage:command', (_event, command) => {
+      if (['toggle', 'prev', 'next'].includes(command)) callback(command);
+    });
+  },
+  /** 正在播什么（托盘显示） */
+  sendNowPlaying: info => ipcRenderer.send('lyristage:now-playing', info),
+  /** 现在唱到的这一句（传给桌面歌词窗口） */
+  sendLyric: payload => ipcRenderer.send('lyristage:lyric', payload),
+  setDesktopLyrics: enabled => ipcRenderer.send('lyristage:desktop-lyrics', Boolean(enabled)),
+  /** 桌面歌词开着没有、锁定没有 */
+  onDesktopLyricsState: callback => {
+    ipcRenderer.on('lyristage:desktop-lyrics-state', (_event, state) => callback(state));
+  },
+
+  // ---- 桌面歌词窗口 ----
+  onLyric: callback => {
+    ipcRenderer.on('lyristage:lyric', (_event, payload) => callback(payload));
+  },
+  onLyricsWindowState: callback => {
+    ipcRenderer.on('lyristage:lyrics-window-state', (_event, state) => callback(state));
+  },
+  /** 'lock' 锁定 | 'close' 关掉桌面歌词 */
+  lyricsWindow: action => {
+    if (['lock', 'close'].includes(action)) ipcRenderer.send('lyristage:lyrics-window', action);
+  },
 });

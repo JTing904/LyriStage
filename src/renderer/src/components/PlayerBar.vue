@@ -6,6 +6,9 @@
 import { computed, ref } from 'vue';
 import LikeButton from './LikeButton.vue';
 import AddToPlaylistButton from './AddToPlaylistButton.vue';
+import Icon from './Icon.vue';
+import { isElectron, setDesktopLyrics } from '../platform';
+import { desktopLyrics } from '../desktop';
 
 const props = defineProps({
   state: { type: Object, required: true },
@@ -242,6 +245,16 @@ function toggleMute() {
           歌词
         </button>
         <button
+          v-if="isElectron && !compact"
+          class="icon toggle"
+          :class="{ on: desktopLyrics.enabled }"
+          :title="desktopLyrics.enabled ? '关掉桌面歌词' : '打开桌面歌词'"
+          :aria-pressed="desktopLyrics.enabled"
+          @click="setDesktopLyrics(!desktopLyrics.enabled)"
+        >
+          <Icon name="desktop-lyrics" :size="20" />
+        </button>
+        <button
           v-if="!compact"
           class="icon toggle mode"
           :class="{ on: mode !== 'order' }"
@@ -476,6 +489,12 @@ button.icon svg {
   width: 24px;
   height: 24px;
   fill: currentColor;
+}
+/* 线条图标（Icon 组件，例如桌面歌词）不要被填满 */
+button.icon svg.icon {
+  width: 20px;
+  height: 20px;
+  fill: none;
 }
 button.icon:hover {
   background: color-mix(in srgb, var(--bar-fg) 10%, transparent);

@@ -26,5 +26,14 @@ export default defineConfig({
     plugins: [vue()],
     // 网页版用 5173（Supabase 登录回调白名单里的地址），电脑版错开避免同时开发时冲突
     server: { port: 5174 },
+    // 两个页面：主窗口、桌面歌词窗口
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve('src/renderer/index.html'),
+          'desktop-lyrics': resolve('src/renderer/desktop-lyrics.html'),
+        },
+      },
+    },
   },
 });

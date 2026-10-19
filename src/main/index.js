@@ -3,6 +3,11 @@ import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron';
 import { join, resolve } from 'node:path';
 import { startApiServer, API_PORT } from './apiServer';
 import { loadWindowState, trackWindowState } from './windowState';
+import { createTray } from './tray';
+import { createDesktopLyricsController } from './desktopLyrics';
+import { getSettings, updateSettings } from './settings';
+import appIcon from '../../resources/icon.png?asset';
+import trayIcon from '../../resources/tray.png?asset';
 
 const isMac = process.platform === 'darwin';
 
@@ -28,6 +33,49 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   let mainWindow = null;
+  let tray = null;
+  /** 真的要退出（托盘「退出」、系统关机）；不然关窗口只是缩到托盘 */
+  let quitting = false;
+  app.on('before-quit', () => {
+    quitting = true;
+  });
+
+  const sendToMain = (channel, payload) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload);
+  };
+  const fromMain = event => event.sender === mainWindow?.webContents;
+
+  // 桌面歌词
+  const desktopLyrics = createDesktopLyricsController({
+    onStateChange: state => {
+      sendToMain('lyristage:desktop-lyrics-state', state);
+      tray?.setLyricsState(state);
+    },
+  });
+
+  // 主窗口 → 托盘：正在播什么（托盘的提示文字和菜单）
+  ipcMain.on('lyristage:now-playing', (event, info) => {
+    if (!fromMain(event) || typeof info !== 'object' || !info) return;
+    tray?.setNowPlaying({
+      title: String(info.title ?? ''),
+      artist: String(info.artist ?? ''),
+      playing: Boolean(info.playing),
+    });
+  });
+  // 主窗口 → 桌面歌词窗口：现在这一句
+  ipcMain.on('lyristage:lyric', (event, payload) => {
+    if (fromMain(event)) desktopLyrics.send(payload);
+  });
+  // 主窗口的「桌面歌词」按钮
+  ipcMain.on('lyristage:desktop-lyrics', (event, enabled) => {
+    if (fromMain(event)) desktopLyrics.setEnabled(Boolean(enabled));
+  });
+  // 桌面歌词窗口上的按钮：锁定、关闭
+  ipcMain.on('lyristage:lyrics-window', (event, action) => {
+    if (!desktopLyrics.isLyricsWindow(event.sender)) return;
+    if (action === 'lock') desktopLyrics.setLocked(true);
+    else if (action === 'close') desktopLyrics.setEnabled(false);
+  });
 
   function focusWindow() {
     if (!mainWindow) return;
@@ -90,6 +138,7 @@ if (!app.requestSingleInstanceLock()) {
     const state = loadWindowState();
     mainWindow = new BrowserWindow({
       ...state.bounds,
+      icon: appIcon,
       minWidth: 360, // 允许拉到手机宽度，方便调响应式布局
       minHeight: 560,
       show: false,
@@ -120,6 +169,25 @@ if (!app.requestSingleInstanceLock()) {
     mainWindow.on('closed', () => nativeTheme.off('updated', onThemeChange));
 
     mainWindow.once('ready-to-show', () => mainWindow.show());
+    // 页面载入好：告诉它桌面歌词现在开着没有
+    mainWindow.webContents.on('did-finish-load', () =>
+      sendToMain('lyristage:desktop-lyrics-state', desktopLyrics.state())
+    );
+
+    // 关窗口 = 缩到托盘，歌继续播；第一次提示一下
+    mainWindow.on('close', event => {
+      if (quitting || isMac) return;
+      event.preventDefault();
+      mainWindow.hide();
+      if (!getSettings().trayHintShown) {
+        updateSettings({ trayHintShown: true });
+        tray?.displayBalloon({
+          iconType: 'info',
+          title: 'LyriStage 还在播放',
+          content: '窗口缩到右下角的托盘了。要完全关掉，在托盘图标按右键选「退出」。',
+        });
+      }
+    });
 
     // 页面里的外部链接用系统浏览器打开，不在 App 里开新窗口
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -139,6 +207,19 @@ if (!app.requestSingleInstanceLock()) {
       console.error(`[LyriStage] 网易云 API 启动失败（端口 ${API_PORT}）`, err);
     });
     createWindow();
+
+    tray = createTray({
+      icon: trayIcon,
+      onShow: focusWindow,
+      onCommand: command => sendToMain('lyristage:command', command),
+      onToggleLyrics: () => desktopLyrics.toggle(),
+      onToggleLock: () => desktopLyrics.toggleLock(),
+      onQuit: () => {
+        quitting = true;
+        app.quit();
+      },
+    });
+    desktopLyrics.restore();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
