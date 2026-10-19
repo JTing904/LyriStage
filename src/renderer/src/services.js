@@ -14,6 +14,7 @@ import {
 } from '@core/data';
 import { PersonalFM } from '@core/recommend';
 import { apiBase, isElectron } from './platform';
+import { connectMediaSession } from './mediaSession';
 
 configureSupabase({
   url: import.meta.env.VITE_SUPABASE_URL,
@@ -80,6 +81,7 @@ async function resolveSource(track) {
 
 const audio = createHtmlAudio();
 export const player = createPlayer({ audio, resolveSource });
+connectMediaSession(player);
 
 // 开发时：这个文件或它用到的任何文件（core/ 里的播放器、歌词解析…）改了，
 // Vite 会重新执行这个文件、建一个新的播放器，旧的如果正在播放会继续响，变成两首歌一起播。
