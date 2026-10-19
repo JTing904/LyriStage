@@ -4,14 +4,17 @@ import Icon from './Icon.vue';
 import Cover from './Cover.vue';
 import { useAuthStore } from '../stores/auth';
 import { useLibraryStore } from '../stores/library';
+import { useRoomStore } from '../stores/room';
 
 const auth = useAuthStore();
 const library = useLibraryStore();
+const room = useRoomStore();
 
 const NAV = [
   { to: '/', icon: 'home', label: '首页' },
   { to: '/search', icon: 'search', label: '搜索' },
   { to: '/library', icon: 'library', label: '我的音乐库' },
+  { to: '/room', icon: 'users', label: '一起听' },
 ];
 </script>
 
@@ -29,6 +32,8 @@ const NAV = [
         exact-active-class="active"
       >
         <Icon :name="item.icon" />{{ item.label }}
+        <!-- 在房间里：显示几个人在一起听 -->
+        <span v-if="item.to === '/room' && room.inRoom" class="live">{{ room.members.length }} 人</span>
       </RouterLink>
     </div>
 
@@ -119,6 +124,15 @@ const NAV = [
 .nav-item.active {
   color: var(--text);
   background: var(--surface-hover);
+  font-weight: 700;
+}
+.live {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
   font-weight: 700;
 }
 .mine {

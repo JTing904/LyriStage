@@ -6,6 +6,7 @@ const TABS = [
   { to: '/', icon: 'home', label: '首页' },
   { to: '/search', icon: 'search', label: '搜索' },
   { to: '/library', icon: 'library', label: '音乐库' },
+  { to: '/room', icon: 'users', label: '一起听' },
 ];
 </script>
 
@@ -28,7 +29,7 @@ const TABS = [
 <style scoped>
 .tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   height: calc(60px + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--sidebar);
