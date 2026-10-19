@@ -45,10 +45,12 @@ async function resolveSource(track) {
 const audio = createHtmlAudio();
 export const player = createPlayer({ audio, resolveSource });
 
-// 开发时改了这个文件，Vite 会重新执行它、建一个新的播放器；
-// 旧的那个如果正在播放会继续响，变成两首歌一起播，所以先停掉
+// 开发时：这个文件或它用到的任何文件（core/ 里的播放器、歌词解析…）改了，
+// Vite 会重新执行这个文件、建一个新的播放器，旧的如果正在播放会继续响，变成两首歌一起播。
+// 所以让这里成为热更新的边界：先停掉旧的，再整页重新加载（进度会从保存的位置恢复）。
 if (import.meta.hot) {
   import.meta.hot.dispose(() => audio.dispose());
+  import.meta.hot.accept(() => window.location.reload());
 }
 
 // 听完一首（或切歌）时写进听歌记录；没登录 LyriStage 账号就不记

@@ -48,8 +48,11 @@ function weightOf(token) {
   return Math.max(1, letters / 3);
 }
 
-// 每份最多唱多久：一行后面常有很长的停顿，不能把停顿也平均分进去
-const MAX_MS_PER_WEIGHT = 600;
+// 一行后面常有停顿或拉长的尾音，不能把这些时间也平均分给每个字，
+// 否则越后面的字出现得越晚（实测《有你爱就明媚》最后一个字慢了约 0.5 秒）。
+// 按一般流行歌的速度估：每个字约 0.32 秒，最多用到两行间隔的 85%
+const MS_PER_WEIGHT = 320;
+const MAX_GAP_RATIO = 0.85;
 const MIN_LINE_MS = 800;
 
 /**
@@ -67,13 +70,17 @@ export function estimateWords(text, start, end) {
   if (tokens.length === 0) return [];
   if (total === 0) return [{ text, start, duration: gap }];
 
-  // 实际唱的时间：不超过到下一行的间隔，也不超过按字数估的上限
-  const span = Math.min(gap, Math.max(MIN_LINE_MS, total * MAX_MS_PER_WEIGHT));
-  let cursor = start;
+  // 实际唱的时间：按字数估算，但不超过到下一行间隔的 85%
+  const span = Math.min(
+    gap * MAX_GAP_RATIO,
+    Math.max(MIN_LINE_MS, total * MS_PER_WEIGHT)
+  );
+  // 用累计比例算每个字的开始时间再取整，避免每个字各自取整后误差越积越多
+  let before = 0;
   return tokens.map((token, i) => {
-    const duration = Math.round((span * weights[i]) / total);
-    const word = { text: token, start: cursor, duration };
-    cursor += duration;
-    return word;
+    const wordStart = start + Math.round((span * before) / total);
+    before += weights[i];
+    const wordEnd = start + Math.round((span * before) / total);
+    return { text: token, start: wordStart, duration: wordEnd - wordStart };
   });
 }

@@ -6,6 +6,9 @@ import { findLineIndex, wordProgress } from '@core/lyrics';
 import { netease, getLyrics } from './services';
 import { usePlayer } from './composables/usePlayer';
 import { isElectron, platform, apiBase } from './platform';
+import LyricStage from './lyric-stage/LyricStage.vue';
+
+const stageOpen = ref(false);
 
 const { state, player } = usePlayer();
 
@@ -155,6 +158,7 @@ const nextRepeat = { off: 'all', all: 'one', one: 'off' };
           <button @click="player.setShuffle(!state.shuffle)">
             {{ state.shuffle ? '随机：开' : '随机：关' }}
           </button>
+          <button class="primary" @click="stageOpen = true">歌词舞台</button>
         </div>
         <div v-if="state.track" class="progress">
           <span>{{ clock(state.time) }}</span>
@@ -198,6 +202,14 @@ const nextRepeat = { off: 'all', all: 'one', one: 'off' };
     </div>
 
     <footer>{{ platform }} · API {{ apiBase }}</footer>
+
+    <LyricStage
+      v-if="stageOpen"
+      :state="state"
+      :player="player"
+      :get-lyrics="getLyrics"
+      @close="stageOpen = false"
+    />
   </div>
 </template>
 

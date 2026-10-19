@@ -116,10 +116,16 @@ describe('estimateWords', () => {
     }
   });
 
-  it('下一行隔很久时，不会把停顿也平均分进去（每个字最多约 0.6 秒）', () => {
-    const words = estimateWords('天黑', 0, 20000);
+  it('下一行隔很久时，不会把停顿也平均分进去（按每字约 0.32 秒估算）', () => {
+    const words = estimateWords('不用再怕天黑', 0, 20000);
     const total = words.reduce((sum, w) => sum + w.duration, 0);
-    expect(total).toBeLessThanOrEqual(1200);
+    expect(total).toBe(6 * 320);
+  });
+
+  it('两行很近时，最多用到间隔的 85%，最后一个字不会拖到下一行', () => {
+    const words = estimateWords('有你爱就明媚', 0, 1000);
+    const last = words[words.length - 1];
+    expect(last.start + last.duration).toBeLessThanOrEqual(850);
   });
 
   it('长英文词比短词分到的时间多', () => {
