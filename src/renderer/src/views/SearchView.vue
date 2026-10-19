@@ -1,0 +1,368 @@
+<script setup>
+// 搜索：综合（最佳结果 + 单曲 + 专辑 + 歌单）和各分类（可以加载更多）。
+// 关键词和分类放在网址里（/search?q=晴天&tab=album），返回时结果还在
+import { computed, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { netease } from '../services';
+import { usePlayer } from '../composables/usePlayer';
+import { artistNames, year } from '../utils/format';
+import Cover from '../components/Cover.vue';
+import Icon from '../components/Icon.vue';
+import TileGrid from '../components/TileGrid.vue';
+import TrackList from '../components/TrackList.vue';
+
+const TABS = [
+  { id: 'all', label: '综合' },
+  { id: 'song', label: '单曲' },
+  { id: 'artist', label: '歌手' },
+  { id: 'album', label: '专辑' },
+  { id: 'playlist', label: '歌单' },
+];
+const PAGE = 30;
+
+const route = useRoute();
+const router = useRouter();
+const { player } = usePlayer();
+
+const q = computed(() => String(route.query.q ?? '').trim());
+const tab = computed(() =>
+  TABS.some(t => t.id === route.query.tab) ? route.query.tab : 'all'
+);
+
+const input = ref(q.value);
+watch(q, value => (input.value = value));
+function submit() {
+  const keywords = input.value.trim();
+  if (keywords) router.replace({ query: { q: keywords, tab: tab.value } });
+}
+const selectTab = id => router.replace({ query: { q: q.value, tab: id } });
+
+// 综合
+const overview = ref({ song: [], artist: [], album: [], playlist: [] });
+// 某个分类
+const items = ref([]);
+const hasMore = ref(false);
+const loading = ref(false);
+const loadingMore = ref(false);
+const error = ref('');
+
+let requestId = 0;
+async function load() {
+  const id = ++requestId;
+  error.value = '';
+  items.value = [];
+  hasMore.value = false;
+  if (!q.value) return;
+  loading.value = true;
+  try {
+    if (tab.value === 'all') {
+      const [song, artist, album, playlist] = await Promise.allSettled([
+        netease.search(q.value, { type: 'song', limit: 10 }),
+        netease.search(q.value, { type: 'artist', limit: 6 }),
+        netease.search(q.value, { type: 'album', limit: 12 }),
+        netease.search(q.value, { type: 'playlist', limit: 12 }),
+      ]);
+      if (id !== requestId) return;
+      const value = r => (r.status === 'fulfilled' ? r.value : []);
+      overview.value = {
+        song: value(song),
+        artist: value(artist),
+        album: value(album),
+        playlist: value(playlist),
+      };
+      if ([song, artist, album, playlist].every(r => r.status === 'rejected')) {
+        throw song.reason;
+      }
+    } else {
+      const list = await netease.search(q.value, { type: tab.value, limit: PAGE });
+      if (id !== requestId) return;
+      items.value = list;
+      hasMore.value = list.length === PAGE;
+    }
+  } catch (err) {
+    if (id === requestId) error.value = err.message || String(err);
+  } finally {
+    if (id === requestId) loading.value = false;
+  }
+}
+watch([q, tab], load, { immediate: true });
+
+async function loadMore() {
+  const id = requestId;
+  loadingMore.value = true;
+  try {
+    const list = await netease.search(q.value, {
+      type: tab.value,
+      limit: PAGE,
+      offset: items.value.length,
+    });
+    if (id !== requestId) return;
+    items.value = [...items.value, ...list];
+    hasMore.value = list.length === PAGE;
+  } catch (err) {
+    error.value = err.message || String(err);
+  } finally {
+    loadingMore.value = false;
+  }
+}
+
+// 最佳结果：歌手名字和关键词一样就放歌手，不然放第一首歌
+const best = computed(() => {
+  const artist = overview.value.artist[0];
+  const keyword = q.value.toLowerCase();
+  if (artist && artist.name.toLowerCase() === keyword) {
+    return { type: 'artist', item: artist };
+  }
+  const song = overview.value.song[0];
+  return song ? { type: 'song', item: song } : null;
+});
+function playBest() {
+  player.playList(overview.value.song, 0, `search:${q.value}`);
+}
+
+const albumTiles = list =>
+  list.map(al => ({
+    key: al.id,
+    to: `/album/${al.id}`,
+    cover: al.picUrl,
+    title: al.name,
+    sub: [artistNames({ ar: al.artists ?? (al.artist ? [al.artist] : []) }), year(al.publishTime)]
+      .filter(Boolean)
+      .join(' · '),
+  }));
+const playlistTiles = list =>
+  list.map(pl => ({
+    key: pl.id,
+    to: `/playlist/${pl.id}`,
+    cover: pl.coverImgUrl,
+    title: pl.name,
+    sub: [pl.creator?.nickname, pl.trackCount ? `${pl.trackCount} 首` : '']
+      .filter(Boolean)
+      .join(' · '),
+  }));
+const artistTiles = list =>
+  list.map(ar => ({
+    key: ar.id,
+    to: `/artist/${ar.id}`,
+    cover: ar.picUrl || ar.img1v1Url,
+    title: ar.name,
+    round: true,
+  }));
+
+const context = computed(() => `search:${q.value}`);
+const empty = computed(() =>
+  tab.value === 'all'
+    ? !overview.value.song.length &&
+      !overview.value.artist.length &&
+      !overview.value.album.length &&
+      !overview.value.playlist.length
+    : !items.value.length
+);
+</script>
+
+<template>
+  <div class="page search-page">
+    <form class="search" role="search" @submit.prevent="submit">
+      <Icon name="search" :size="18" />
+      <input
+        v-model="input"
+        placeholder="搜索歌曲、歌手、专辑、歌单"
+        aria-label="搜索"
+        enterkeyhint="search"
+        :autofocus="!q"
+      />
+    </form>
+
+    <template v-if="q">
+      <nav class="tabs" aria-label="搜索分类">
+        <button
+          v-for="t in TABS"
+          :key="t.id"
+          :class="{ on: tab === t.id }"
+          :aria-pressed="tab === t.id"
+          @click="selectTab(t.id)"
+        >
+          {{ t.label }}
+        </button>
+      </nav>
+
+      <p v-if="loading" class="page-state">搜索中…</p>
+      <p v-else-if="error" class="page-state">搜索失败：{{ error }}</p>
+      <p v-else-if="empty" class="page-state">没有找到「{{ q }}」相关的结果</p>
+
+      <!-- 综合 -->
+      <template v-else-if="tab === 'all'">
+        <div class="top">
+          <section v-if="best" class="best-wrap">
+            <h2 class="section-title">最佳结果</h2>
+            <RouterLink
+              v-if="best.type === 'artist'"
+              :to="`/artist/${best.item.id}`"
+              class="best"
+            >
+              <Cover :url="best.item.picUrl || best.item.img1v1Url" :size="120" round class="best-cover" />
+              <strong class="display">{{ best.item.name }}</strong>
+              <span class="tag">歌手</span>
+            </RouterLink>
+            <button v-else class="best" @click="playBest">
+              <Cover :url="best.item.al?.picUrl" :size="120" radius="10px" class="best-cover" />
+              <strong class="display">{{ best.item.name }}</strong>
+              <span class="tag">单曲 · {{ artistNames(best.item) }}</span>
+            </button>
+          </section>
+          <section v-if="overview.song.length" class="songs">
+            <h2 class="section-title">单曲</h2>
+            <TrackList
+              :tracks="overview.song.slice(0, 5)"
+              :context="context"
+              :show-header="false"
+              :show-album="false"
+            />
+          </section>
+        </div>
+
+        <section v-if="overview.artist.length">
+          <h2 class="section-title">歌手</h2>
+          <TileGrid :items="artistTiles(overview.artist)" />
+        </section>
+        <section v-if="overview.album.length">
+          <h2 class="section-title">专辑</h2>
+          <TileGrid :items="albumTiles(overview.album)" />
+        </section>
+        <section v-if="overview.playlist.length">
+          <h2 class="section-title">歌单</h2>
+          <TileGrid :items="playlistTiles(overview.playlist)" />
+        </section>
+      </template>
+
+      <!-- 单一分类 -->
+      <template v-else>
+        <TrackList v-if="tab === 'song'" :tracks="items" :context="context" />
+        <TileGrid v-else-if="tab === 'artist'" :items="artistTiles(items)" />
+        <TileGrid v-else-if="tab === 'album'" :items="albumTiles(items)" />
+        <TileGrid v-else :items="playlistTiles(items)" />
+        <button v-if="hasMore" class="more" :disabled="loadingMore" @click="loadMore">
+          {{ loadingMore ? '加载中…' : '加载更多' }}
+        </button>
+      </template>
+    </template>
+
+    <p v-else class="page-state">输入歌名、歌手或歌单名字开始搜索</p>
+  </div>
+</template>
+
+<style scoped>
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 560px;
+  height: 48px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+.search:focus-within {
+  border-color: var(--accent);
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: -12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs button {
+  flex: none;
+  padding: 8px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.tabs button:hover {
+  color: var(--text);
+}
+.tabs button.on {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+.top {
+  display: grid;
+  grid-template-columns: minmax(260px, 2fr) minmax(0, 3fr);
+  gap: 32px;
+}
+.best {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 22px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.best:hover {
+  background: var(--surface-hover);
+}
+.best-cover {
+  width: 120px;
+}
+.best strong {
+  font-size: 30px;
+  line-height: 1.2;
+}
+.tag {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.more {
+  align-self: center;
+  padding: 10px 24px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.more:disabled {
+  opacity: 0.6;
+}
+
+@media (max-width: 900px) {
+  .top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+</style>

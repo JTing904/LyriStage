@@ -110,3 +110,23 @@ img {
   font-family: var(--font-display);
   font-weight: 900;
 }
+
+/* 内容页共用：歌单、专辑、歌手、搜索、每日推荐 */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px clamp(16px, 3vw, 40px) 48px;
+}
+.page-state {
+  margin: 0;
+  padding: 64px 0;
+  text-align: center;
+  color: var(--text-dim);
+}
+.section-title {
+  margin: 0 0 16px;
+  font-size: 22px;
+}

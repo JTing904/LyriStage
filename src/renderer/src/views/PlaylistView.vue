@@ -1,0 +1,72 @@
+<script setup>
+// 网易云歌单
+import { computed, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { netease } from '../services';
+import { usePlayCollection } from '../composables/usePlayCollection';
+import { count, totalLength } from '../utils/format';
+import CollectionHeader from '../components/CollectionHeader.vue';
+import TrackList from '../components/TrackList.vue';
+
+const route = useRoute();
+const { playAll, shuffleAll } = usePlayCollection();
+
+const info = ref(null);
+const tracks = ref([]);
+const loading = ref(true);
+const error = ref('');
+
+async function load(id) {
+  loading.value = true;
+  error.value = '';
+  info.value = null;
+  tracks.value = [];
+  try {
+    const [detail, songs] = await Promise.all([
+      netease.playlist(id),
+      netease.playlistTracks(id),
+    ]);
+    if (String(id) !== String(route.params.id)) return; // 等的时候换了别的歌单
+    info.value = detail;
+    tracks.value = songs;
+  } catch (err) {
+    error.value = err.message || String(err);
+  } finally {
+    loading.value = false;
+  }
+}
+watch(() => route.params.id, id => id && load(id), { immediate: true });
+
+const context = computed(() => `playlist:${route.params.id}`);
+const meta = computed(() => {
+  if (!info.value) return '';
+  return [
+    info.value.creator?.nickname,
+    `${info.value.trackCount ?? tracks.value.length} 首`,
+    totalLength(tracks.value),
+    info.value.playCount ? `${count(info.value.playCount)} 次播放` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+});
+</script>
+
+<template>
+  <div class="page">
+    <p v-if="loading" class="page-state">加载中…</p>
+    <p v-else-if="error" class="page-state">歌单加载失败：{{ error }}</p>
+    <template v-else-if="info">
+      <CollectionHeader
+        kind="歌单"
+        :cover="info.coverImgUrl"
+        :title="info.name"
+        :description="info.description || ''"
+        :meta="meta"
+        :playable="tracks.length > 0"
+        @play="playAll(tracks, context)"
+        @shuffle="shuffleAll(tracks, context)"
+      />
+      <TrackList :tracks="tracks" :context="context" />
+    </template>
+  </div>
+</template>

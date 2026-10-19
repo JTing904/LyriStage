@@ -8,12 +8,12 @@ export const router = createRouter({
   history: createWebHashHistory(),
   routes: [
     { path: '/', name: 'home', component: () => import('./views/HomeView.vue') },
-    { path: '/search', name: 'search', component: soon },
+    { path: '/search', name: 'search', component: () => import('./views/SearchView.vue') },
     { path: '/library', name: 'library', component: soon },
-    { path: '/daily', name: 'daily', component: soon },
-    { path: '/playlist/:id', name: 'playlist', component: soon },
-    { path: '/album/:id', name: 'album', component: soon },
-    { path: '/artist/:id', name: 'artist', component: soon },
+    { path: '/daily', name: 'daily', component: () => import('./views/DailyView.vue') },
+    { path: '/playlist/:id', name: 'playlist', component: () => import('./views/PlaylistView.vue') },
+    { path: '/album/:id', name: 'album', component: () => import('./views/AlbumView.vue') },
+    { path: '/artist/:id', name: 'artist', component: () => import('./views/ArtistView.vue') },
     { path: '/my/:id', name: 'my-playlist', component: soon },
     {
       path: '/login',
