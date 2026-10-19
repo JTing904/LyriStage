@@ -1,6 +1,6 @@
 // 我的音乐库：喜欢的歌（红心）、自己的歌单。
 // 登录（成为成员）后自动载入；按红心、加歌时先改画面再写数据库，失败就改回来
-import { defineStore } from 'pinia';
+import { acceptHMRUpdate, defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import {
   addTracksToPlaylist,
@@ -148,3 +148,6 @@ export const useLibraryStore = defineStore('library', () => {
     closeAddDialog,
   };
 });
+
+// 开发时改了这个文件：直接换成新版本（不然页面会继续用旧的 store）
+if (import.meta.hot) import.meta.hot.accept(acceptHMRUpdate(useLibraryStore, import.meta.hot));

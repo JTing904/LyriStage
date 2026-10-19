@@ -1,5 +1,5 @@
 // 最近播放（存在本机，不需要登录）：首页"继续播放"用
-import { defineStore } from 'pinia';
+import { acceptHMRUpdate, defineStore } from 'pinia';
 import { ref } from 'vue';
 import { toSnapshot } from '@core/data';
 import { player } from '../services';
@@ -31,3 +31,6 @@ export const useRecentStore = defineStore('recent', () => {
 
   return { tracks };
 });
+
+// 开发时改了这个文件：直接换成新版本（不然页面会继续用旧的 store）
+if (import.meta.hot) import.meta.hot.accept(acceptHMRUpdate(useRecentStore, import.meta.hot));

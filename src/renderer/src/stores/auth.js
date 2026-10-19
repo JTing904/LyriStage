@@ -1,6 +1,6 @@
 // LyriStage 账号（Supabase）的登录状态。
 // 邀请制：登录了还不够，要兑换过邀请码（成为成员）才能使用 App，见 router.js 的路由守卫
-import { defineStore } from 'pinia';
+import { acceptHMRUpdate, defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import {
   exchangeAuthCode,
@@ -177,3 +177,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
   };
 });
+
+// 开发时改了这个文件：直接换成新版本（不然页面会继续用旧的 store）
+if (import.meta.hot) import.meta.hot.accept(acceptHMRUpdate(useAuthStore, import.meta.hot));

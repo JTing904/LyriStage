@@ -1,5 +1,5 @@
 // 我的 3D 公仔：选哪一套衣服（设置页可以换），或按时间自动换
-import { defineStore } from 'pinia';
+import { acceptHMRUpdate, defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 
 const KEY = 'lyristage:avatar';
@@ -64,3 +64,6 @@ export const useAvatarStore = defineStore('avatar', () => {
 
   return { choice, outfit, url };
 });
+
+// 开发时改了这个文件：直接换成新版本（不然页面会继续用旧的 store）
+if (import.meta.hot) import.meta.hot.accept(acceptHMRUpdate(useAvatarStore, import.meta.hot));

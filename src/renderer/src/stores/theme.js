@@ -1,5 +1,5 @@
 // 主题：深色 / 浅色 / 跟随系统
-import { defineStore } from 'pinia';
+import { acceptHMRUpdate, defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 import { setNativeTheme } from '../platform';
 
@@ -44,3 +44,6 @@ export const useThemeStore = defineStore('theme', () => {
 
   return { mode };
 });
+
+// 开发时改了这个文件：直接换成新版本（不然页面会继续用旧的 store）
+if (import.meta.hot) import.meta.hot.accept(acceptHMRUpdate(useThemeStore, import.meta.hot));
