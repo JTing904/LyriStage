@@ -45,6 +45,8 @@ const sleep = (/** @type {number} */ ms) =>
  * @param {number} [options.timeout] 毫秒
  * @param {Params} [options.defaultParams] 每个请求都带上的参数
  * @param {number[]} [options.retryDelays] 每次重试前等多久（毫秒），长度就是最多重试几次
+ * @param {() => Promise<Record<string, string>> | Record<string, string>} [options.getHeaders]
+ *   每个请求要带的 header（例如登录 token，会过期所以每次现取）
  * @returns {Http}
  */
 export function createHttp({
@@ -53,6 +55,7 @@ export function createHttp({
   timeout = 15000,
   defaultParams = {},
   retryDelays = [300, 900],
+  getHeaders,
 }) {
   const base = baseURL.replace(/\/+$/, '');
 
@@ -78,11 +81,12 @@ export function createHttp({
     const qs = query.toString();
     const url = `${base}/${path.replace(/^\/+/, '')}${qs ? `?${qs}` : ''}`;
 
+    const headers = getHeaders ? await getHeaders() : undefined;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     let res;
     try {
-      res = await fetchImpl(url, { signal: controller.signal });
+      res = await fetchImpl(url, { signal: controller.signal, headers });
     } catch (err) {
       const reason = controller.signal.aborted
         ? `超时（${timeout}ms）`

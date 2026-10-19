@@ -119,3 +119,15 @@ it('toHttps', () => {
   expect(toHttps('http://a/b')).toBe('https://a/b');
   expect(toHttps('https://a/b')).toBe('https://a/b');
 });
+
+it('personalFm 统一成新格式', async () => {
+  const netease = createNetease(
+    fakeHttp({
+      '/personal_fm': {
+        data: [{ id: 7, name: 'x', artists: [{ id: 1, name: 'a' }], album: { id: 2 }, duration: 1000 }],
+      },
+    })
+  );
+  const [song] = await netease.personalFm();
+  expect(song).toMatchObject({ id: 7, ar: [{ id: 1 }], al: { id: 2 }, dt: 1000 });
+});

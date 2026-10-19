@@ -51,6 +51,8 @@ img {
   inset: -8%;
   width: 116%;
   height: 116%;
+  /* 全局样式有 img { max-width: 100% }，不取消的话右边会露出一条黑边 */
+  max-width: none;
 }
 .dim {
   position: absolute;

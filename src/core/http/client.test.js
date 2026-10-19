@@ -44,6 +44,23 @@ describe('createHttp', () => {
     );
   });
 
+  it('每个请求都现取 getHeaders 的 header（登录 token 会过期）', async () => {
+    const fetch = fakeFetch(ok({ code: 200 }), ok({ code: 200 }));
+    let token = 'a';
+    const http = createHttp({
+      baseURL: '/api',
+      fetch,
+      getHeaders: async () => ({ Authorization: `Bearer ${token}` }),
+    });
+    await http.get('/x');
+    token = 'b';
+    await http.get('/x');
+    expect(fetch.mock.calls.map(([, init]) => init.headers)).toEqual([
+      { Authorization: 'Bearer a' },
+      { Authorization: 'Bearer b' },
+    ]);
+  });
+
   it('body.code >= 400 时抛出 ApiError（网易云有时 HTTP 200 但 code 是错误码）', async () => {
     const http = createHttp({
       baseURL: 'http://x',

@@ -6,16 +6,52 @@ import { createPlayer } from '@core/player/player';
 import { createHtmlAudio } from '@core/player/audio';
 import { createCache } from '@core/cache';
 import { createDexieStore } from '@core/cache/dexie';
-import { configureSupabase, getCurrentUser, recordPlay } from '@core/data';
-import { apiBase } from './platform';
-
-export const http = createHttp({ baseURL: apiBase });
-export const netease = createNetease(http);
+import {
+  configureSupabase,
+  getAccessToken,
+  getCurrentUser,
+  recordPlay,
+} from '@core/data';
+import { PersonalFM } from '@core/recommend';
+import { apiBase, isElectron } from './platform';
 
 configureSupabase({
   url: import.meta.env.VITE_SUPABASE_URL,
   anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
 });
+
+/** 网页版的 API 在 Vercel 上，只让成员用，要带登录 token；电脑版连本机的 API，不用带 */
+async function authHeaders() {
+  const token = await getAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export const http = createHttp({
+  baseURL: apiBase,
+  getHeaders: isElectron ? undefined : authHeaders,
+});
+export const netease = createNetease(http);
+
+/**
+ * 私人 FM 的歌从哪里来：
+ * - 登录了 LyriStage：用自己的推荐算法（按听歌记录、喜欢）
+ * - 没登录：用网易云的匿名私人 FM（一次给几首，先存着一首一首给）
+ * @param {boolean} loggedIn
+ */
+export function createFmSource(loggedIn) {
+  if (loggedIn) return new PersonalFM({ netease });
+  const buffer = [];
+  return {
+    async next(count = 1) {
+      while (buffer.length < count) {
+        const more = await netease.personalFm();
+        if (more.length === 0) break;
+        buffer.push(...more);
+      }
+      return buffer.splice(0, count);
+    },
+  };
+}
 
 // 歌词很少变，缓存 7 天、最多 500 首
 const DAY = 86400 * 1000;

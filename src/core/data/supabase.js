@@ -16,8 +16,10 @@ export function configureSupabase({ url, anonKey, storage } = {}) {
           auth: {
             persistSession: true,
             autoRefreshToken: true,
-            // 第三方登录（GitHub / Google）回调由我们自己处理，见阶段 4
+            // 第三方登录（GitHub / Google）回调由我们自己处理（auth.js 的 exchangeAuthCode）。
+            // PKCE：回调网址里只带一次性的 code，不会把 token 直接放在网址里
             detectSessionInUrl: false,
+            flowType: 'pkce',
             ...(storage ? { storage } : {}),
           },
         })

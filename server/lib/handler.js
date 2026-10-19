@@ -38,6 +38,73 @@ function sendJson(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+// 网页版请求时会带 Authorization（登录 token），浏览器会先发 OPTIONS 预检。
+// 网易云 API 自己的预检回应不允许 Authorization，所以这里先回应
+function sendPreflight(req, res) {
+  res.statusCode = 204;
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.end();
+}
+
+/**
+ * 只让 LyriStage 成员（兑换过邀请码的账号）使用 API：
+ * 拿请求里的登录 token 去调 Supabase 的 is_member()，token 无效或不是成员都会被拒绝。
+ * 结果缓存一会儿，不用每个请求都去问 Supabase。
+ * @param {{ supabaseUrl: string, anonKey: string }} options
+ */
+function createMemberCheck({ supabaseUrl, anonKey }) {
+  const cache = new Map(); // token -> { ok, until }
+  const MEMBER_TTL = 10 * 60 * 1000;
+  const REJECT_TTL = 30 * 1000;
+
+  /** token 自己的过期时间（毫秒），读不出来就当作马上过期 */
+  function tokenExpiry(token) {
+    try {
+      const payload = JSON.parse(
+        Buffer.from(token.split('.')[1], 'base64url').toString('utf-8')
+      );
+      return payload.exp * 1000;
+    } catch {
+      return 0;
+    }
+  }
+
+  return async function isMember(req) {
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+    if (!token) return false;
+    const cached = cache.get(token);
+    if (cached && cached.until > Date.now()) return cached.ok;
+
+    let ok = false;
+    try {
+      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/is_member`, {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      });
+      ok = res.ok && (await res.json()) === true;
+    } catch {
+      // Supabase 连不上：这次先拒绝，也不缓存
+      return false;
+    }
+    if (cache.size > 1000) cache.clear();
+    const ttl = ok ? MEMBER_TTL : REJECT_TTL;
+    cache.set(token, {
+      ok,
+      until: Math.min(Date.now() + ttl, ok ? tokenExpiry(token) : Infinity),
+    });
+    return ok;
+  };
+}
+
 async function unblock(res, url, sources) {
   const id = url.searchParams.get('id');
   if (!id) return sendJson(res, 400, { code: 400, msg: '缺少 id' });
@@ -68,11 +135,18 @@ async function unblock(res, url, sources) {
 
 /**
  * 创建请求处理函数 (req, res) => Promise<void>
- * @param {{ realIP?: string, unmSources?: string[] }} [options]
+ * @param {object} [options]
+ * @param {string} [options.realIP]
+ * @param {string[]} [options.unmSources]
+ * @param {{ supabaseUrl: string, anonKey: string }} [options.requireMember]
+ *   设了就只让 LyriStage 成员使用（Vercel 上用；电脑版本地 API 不需要）
  */
 function createHandler(options = {}) {
   const realIP = options.realIP || DEFAULT_REAL_IP;
   const unmSources = options.unmSources || DEFAULT_UNM_SOURCES;
+  const isMember = options.requireMember
+    ? createMemberCheck(options.requireMember)
+    : null;
 
   // API 的 util/request.js 在加载时就会读这个文件，必须先建好
   const tokenPath = path.join(os.tmpdir(), 'anonymous_token');
@@ -104,6 +178,13 @@ function createHandler(options = {}) {
   }
 
   const handler = async (req, res) => {
+    if (req.method === 'OPTIONS') return sendPreflight(req, res);
+    if (isMember && !(await isMember(req))) {
+      return sendJson(res, 401, {
+        code: 401,
+        msg: '请先登录 LyriStage（需要邀请码）',
+      });
+    }
     const url = new URL(req.url, 'http://localhost');
     if (url.pathname === '/song/url/match') {
       return unblock(res, url, unmSources);

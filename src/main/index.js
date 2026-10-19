@@ -1,10 +1,27 @@
 // Electron 主进程
-import { app, BrowserWindow, nativeTheme, shell } from 'electron';
-import { join } from 'node:path';
+import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron';
+import { join, resolve } from 'node:path';
 import { startApiServer, API_PORT } from './apiServer';
 import { loadWindowState, trackWindowState } from './windowState';
 
 const isMac = process.platform === 'darwin';
+
+// 界面语言用简体中文（表单的"请填写此字段"等浏览器自带提示也会是中文）
+app.commandLine.appendSwitch('lang', 'zh-CN');
+
+// 第三方登录（GitHub / Google）：系统浏览器授权完会打开 lyristage://auth/callback?code=…
+// 把 lyristage:// 注册给这个 App。开发时是 "electron.exe 项目目录" 这样跑的，要把目录也告诉系统
+const PROTOCOL = 'lyristage';
+const AUTH_CALLBACK = `${PROTOCOL}://auth/callback`;
+if (process.defaultApp && process.argv.length >= 2) {
+  app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [
+    resolve(process.argv[1]),
+  ]);
+} else {
+  app.setAsDefaultProtocolClient(PROTOCOL);
+}
+/** Windows / Linux 把网址放在启动参数里 */
+const findAuthUrl = argv => argv.find(arg => arg.startsWith(AUTH_CALLBACK));
 
 // 只允许开一个 LyriStage；第二次打开时把已有窗口叫到前面
 if (!app.requestSingleInstanceLock()) {
@@ -12,18 +29,55 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   let mainWindow = null;
 
-  app.on('second-instance', () => {
+  function focusWindow() {
     if (!mainWindow) return;
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     mainWindow.focus();
+  }
+
+  // 登录回调网址：页面准备好（preload 发 auth-ready）之前先存着
+  let pageReady = false;
+  let pendingAuthUrl = findAuthUrl(process.argv) ?? null;
+  function deliverAuthUrl(url) {
+    if (!url?.startsWith(AUTH_CALLBACK)) return;
+    if (pageReady && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('lyristage:auth-callback', url);
+    } else {
+      pendingAuthUrl = url;
+    }
+  }
+  ipcMain.on('lyristage:auth-ready', event => {
+    if (event.sender !== mainWindow?.webContents) return;
+    pageReady = true;
+    if (pendingAuthUrl) {
+      event.sender.send('lyristage:auth-callback', pendingAuthUrl);
+      pendingAuthUrl = null;
+    }
+  });
+
+  // App 已经开着时，点登录回调网址会再开一个 LyriStage，被单实例锁挡下，网址转到这里
+  app.on('second-instance', (_event, argv) => {
+    deliverAuthUrl(findAuthUrl(argv));
+    focusWindow();
+  });
+  // macOS 用 open-url 事件
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    deliverAuthUrl(url);
+    focusWindow();
   });
 
   // 和 src/renderer/src/styles/base.css 的 --bg / --text 保持一致
   const themeColors = () =>
     nativeTheme.shouldUseDarkColors
-      ? { background: '#111111', symbol: '#f2f2f2' }
-      : { background: '#f5f5f7', symbol: '#1c1c1e' };
+      ? { background: '#0e0e10', symbol: '#f4f4f5' }
+      : { background: '#f4f4f6', symbol: '#18181b' };
+
+  // 页面里切换"深色 / 浅色 / 跟随系统"时，窗口也跟着切（会触发 nativeTheme 的 updated 事件）
+  ipcMain.on('lyristage:set-theme', (_event, mode) => {
+    if (['system', 'dark', 'light'].includes(mode)) nativeTheme.themeSource = mode;
+  });
 
   // Windows / Linux 右上角系统按钮的样式（透明底，图标颜色跟随深浅色）
   const titleBarOverlay = () => ({

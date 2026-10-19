@@ -15,6 +15,7 @@ const props = defineProps({
   /** 浅色背景上用：文字和图标换成深色 */
   light: { type: Boolean, default: false },
 });
+const emit = defineEmits(['open-stage']);
 
 const track = computed(() => props.state.track);
 const artists = computed(() =>
@@ -202,6 +203,15 @@ function toggleMute() {
       <div class="side side-right">
         <button
           v-if="!compact"
+          class="stage-btn"
+          title="打开歌词舞台"
+          :disabled="!track"
+          @click="emit('open-stage')"
+        >
+          歌词
+        </button>
+        <button
+          v-if="!compact"
           class="icon toggle"
           :class="{ on: state.repeat !== 'off' }"
           :title="REPEAT_LABEL[state.repeat]"
@@ -266,20 +276,41 @@ function toggleMute() {
 </template>
 
 <style scoped>
+/* 完整模式跟随 App 的深色 / 浅色主题 */
 .player-bar {
-  --bar-bg: rgba(18, 18, 18, 0.92);
-  --bar-fg: #fff;
-  --bar-dim: rgba(255, 255, 255, 0.64);
-  --bar-accent: #ff0033;
+  --bar-bg: var(--bar, #18181b);
+  --bar-fg: var(--text, #fff);
+  --bar-dim: var(--text-dim, rgba(255, 255, 255, 0.64));
+  --bar-accent: var(--accent, #ff3b5c);
   position: relative;
   background: var(--bar-bg);
   color: var(--bar-fg);
-  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--line, transparent);
 }
+/* 透明模式（歌词舞台）：叠在画面上，固定白字 */
 .player-bar.transparent {
+  --bar-fg: #fff;
+  --bar-dim: rgba(255, 255, 255, 0.64);
+  --bar-accent: #ff3b5c;
   background: transparent;
-  backdrop-filter: none;
+  border-top: 0;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+.stage-btn {
+  height: 34px;
+  margin-right: 6px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 17px;
+  background: var(--bar-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-shadow: none;
+}
+.stage-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 .player-bar.transparent button.icon svg {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
@@ -322,7 +353,7 @@ function toggleMute() {
   right: 0;
   top: 7px;
   height: 2px;
-  background: rgba(255, 255, 255, 0.22);
+  background: color-mix(in srgb, var(--bar-fg) 22%, transparent);
   transition: height 0.12s, top 0.12s;
 }
 .scrubber:hover .track-line,
@@ -339,7 +370,7 @@ function toggleMute() {
   bottom: 0;
 }
 .hover-fill {
-  background: rgba(255, 255, 255, 0.25);
+  background: color-mix(in srgb, var(--bar-fg) 25%, transparent);
 }
 .played {
   background: var(--bar-accent);
@@ -419,7 +450,7 @@ button.icon svg {
   fill: currentColor;
 }
 button.icon:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--bar-fg) 10%, transparent);
 }
 button.icon:focus-visible {
   outline: 2px solid #fff;
@@ -500,7 +531,7 @@ button.icon.toggle.on {
   background: linear-gradient(
     90deg,
     var(--bar-fg) var(--v),
-    rgba(255, 255, 255, 0.25) var(--v)
+    color-mix(in srgb, var(--bar-fg) 25%, transparent) var(--v)
   );
   cursor: pointer;
 }

@@ -1,8 +1,9 @@
 // Supabase 冒烟测试：用真实的 src/lyristage 代码跑一遍注册、喜欢、歌单、听歌记录，
 // 再用第二个用户验证 RLS（看不到、改不了别人的数据）。
+// 邀请制：测试账号要用 .env 的 SMOKE_INVITE_CODE 成为成员（这个邀请码要能用多次）。
 // 运行：node scripts/smoke/run.js
 import assert from 'assert';
-import { signUp, signOut, getCurrentUser } from '@core/data/auth';
+import { signUp, signOut, getCurrentUser, redeemInvite } from '@core/data/auth';
 import {
   likeTrack,
   unlikeTrack,
@@ -43,6 +44,15 @@ const t1 = track(3445595679, '有你爱就明媚', 33937543);
 const t2 = track(186016, '晴天', 6452);
 const t3 = track(1901371647, '孤勇者', 5781);
 
+const invite = process.env.SMOKE_INVITE_CODE;
+if (!invite) {
+  console.error(
+    "请先在 .env 设置 SMOKE_INVITE_CODE。生成方法：Supabase SQL Editor 执行
+  select public.create_invite(100, '冒烟测试');"
+  );
+  process.exit(1);
+}
+
 const domain = process.env.SMOKE_EMAIL_DOMAIN || 'example.com';
 const stamp = Date.now();
 const password = `Smoke-${stamp}-pw`;
@@ -55,6 +65,9 @@ async function newUser(tag) {
       '注册后没有拿到 session：请在 Supabase → Authentication → Sign In / Providers → Email 关闭 "Confirm email"'
     );
   }
+  // 还不是成员：什么都不能写
+  await assert.rejects(likeTrack(t1), Error, '非成员不能写数据');
+  await redeemInvite(invite);
   return email;
 }
 

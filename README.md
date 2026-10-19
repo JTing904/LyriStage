@@ -34,7 +34,7 @@ npm run smoke          # Supabase 冒烟测试
 | `src/preload/` | 页面和 Electron 之间的桥梁（`window.lyristage`） |
 | `src/renderer/` | Vue 界面，电脑版和网页版共用 |
 | `src/core/` | 不依赖 Vue 的核心逻辑：请求、网易云接口、歌词、用户数据、推荐算法 |
-| `server/` | 网易云 API 的 Vercel 项目，已部署到 https://lyristage-api.vercel.app |
+| `server/` | 网易云 API 的 Vercel 项目，已部署到 https://lyristage-api.vercel.app（只让成员使用，Vercel 要设环境变量 `SUPABASE_URL` / `SUPABASE_ANON_KEY`） |
 | `supabase/` | 数据库结构 |
 
 ## 用户数据（Supabase）
@@ -44,15 +44,38 @@ LyriStage 不需要网易云账号：网易云只提供歌曲、音频和歌词�
 1. 在 [supabase.com](https://supabase.com) 新建项目（Region 选 Singapore）
    - 数据库密码（Database Password）保存在本机 `.env` 的 `SUPABASE_DB_PASSWORD`，
      `.env` 不会提交到 git；换电脑时要自己带过去，忘了可以在 Project Settings → Database 重置
-2. 打开 SQL Editor，执行 [supabase/migrations/20261019000000_init.sql](supabase/migrations/20261019000000_init.sql)
+2. 打开 SQL Editor，按顺序执行 [supabase/migrations/](supabase/migrations/) 里的文件：
+   - `20261019000000_init.sql`：用户数据表
+   - `20261020000000_invites.sql`：邀请制（要有邀请码才能用，见下面）
 3. Authentication → Sign In / Providers → Email，学习阶段可以关闭 "Confirm email"
-4. 把 Project Settings → API 里的 URL 和 anon key 填进 `.env` 的 `VUE_APP_SUPABASE_URL` / `VUE_APP_SUPABASE_ANON_KEY`
+4. 把 Project Settings → API 里的 URL 和 anon key 填进 `.env` 的 `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`
+5. Authentication → URL Configuration → Redirect URLs 加上 `lyristage://auth/callback`（电脑版 GitHub 登录）
+   和 `http://localhost:5173/**`（网页版开发）
+
+### 邀请制
+
+没登录、或登录了但没兑换过邀请码的人，App 里只看得到登录页；数据库和 Vercel 上的 API 也只让"成员"使用。
+
+管理员（迁移时把 kengtingtan@gmail.com 设成管理员）可以在 App 的**设置 → 邀请朋友**一键生成邀请码。
+设别人当管理员：`update public.members set is_admin = true where user_id = '…';`
+
+也可以在 SQL Editor 里管理：
+
+```sql
+select public.create_invite();                -- 生成一次性邀请码
+select public.create_invite(5, '给大学同学');   -- 可以用 5 次
+select * from public.invite_codes order by created_at desc;   -- 查看邀请码和用了几次
+select * from public.members;                  -- 查看成员
+delete from public.members where user_id = '…';               -- 移除成员
+```
+
+冒烟测试（`npm run smoke`）需要一个能用多次的邀请码，填在 `.env` 的 `SMOKE_INVITE_CODE`。
 
 代码在 [src/core/data/](src/core/data/) 和 [src/core/recommend/](src/core/recommend/)，和界面无关：
 
 | 文件 | 内容 |
 |---|---|
-| `data/auth.js` | LyriStage 账号（邮箱 + 密码，之后加 GitHub / Google） |
+| `data/auth.js` | LyriStage 账号（邮箱 + 密码、GitHub）、邀请码 |
 | `data/library.js` | 我喜欢的音乐、歌单 |
 | `data/history.js` | 听歌记录、听歌排行、不喜欢 |
 | `recommend/engine.js` | 推荐算法（纯函数，参数在 `WEIGHTS`） |

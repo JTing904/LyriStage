@@ -15,3 +15,20 @@ export const platform = bridge?.platform ?? 'web';
 export const apiBase = isElectron
   ? bridge.apiBase
   : import.meta.env.VITE_API_BASE || '/api';
+
+/**
+ * 电脑版：让窗口（系统按钮颜色、窗口底色）跟着 App 的主题切换；网页版不需要
+ * @param {'system' | 'dark' | 'light'} mode
+ */
+export function setNativeTheme(mode) {
+  bridge?.setTheme?.(mode);
+}
+
+/**
+ * 电脑版：GitHub / Google 在系统浏览器授权完，会打开 lyristage://auth/callback?code=…，
+ * 主进程把这个网址转过来。网页版没有这回事（直接跳回网页）
+ * @param {(url: string) => void} callback
+ */
+export function onAuthCallback(callback) {
+  bridge?.onAuthCallback?.(callback);
+}

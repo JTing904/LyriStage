@@ -138,6 +138,8 @@ const particles = Array.from({ length: 18 }, (_, i) => ({
   inset: -10%;
   width: 120%;
   height: 120%;
+  /* 全局样式有 img { max-width: 100% }，不取消的话右边会露出一条黑边 */
+  max-width: none;
   object-fit: cover;
   filter: grayscale(0.55) brightness(0.42) contrast(1.1);
   transform: scale(1.05);

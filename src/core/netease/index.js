@@ -162,6 +162,15 @@ export function createNetease(http) {
       return (data.result ?? []).map(item => normalizeSong(item.song ?? item));
     },
 
+    /**
+     * 网易云的私人 FM（不登录时是匿名推荐），一次给几首；也是旧格式。
+     * 登录 LyriStage 后改用 core/recommend 的 PersonalFM（按自己的听歌记录推荐）
+     */
+    async personalFm() {
+      const data = await http.get('/personal_fm', { timestamp: Date.now() });
+      return (data.data ?? []).map(normalizeSong);
+    },
+
     // 推荐算法用（core/recommend） ----------------------------------------------
     /** 歌手热门 50 首 */
     async artistTopSongs(artistId) {
