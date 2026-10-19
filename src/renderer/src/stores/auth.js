@@ -10,9 +10,12 @@ import {
   isSupabaseConfigured,
   onAuthChange,
   redeemInvite,
+  resetAvatar,
   signIn,
   signOut,
   signUp,
+  updateDisplayName,
+  uploadAvatar,
 } from '@core/data';
 import { isElectron, isNativeApp, onAuthCallback, openAuthPage } from '../platform';
 import { t } from '../i18n';
@@ -109,6 +112,7 @@ export const useAuthStore = defineStore('auth', () => {
   const displayName = computed(() => {
     const meta = user.value?.user_metadata ?? {};
     return (
+      meta.custom_name ||
       meta.user_name ||
       meta.full_name ||
       meta.name ||
@@ -116,7 +120,18 @@ export const useAuthStore = defineStore('auth', () => {
       ''
     );
   });
-  const avatarUrl = computed(() => user.value?.user_metadata?.avatar_url ?? null);
+  // 自定义头像优先，没有就用 GitHub / Google 的
+  const avatarUrl = computed(() => {
+    const meta = user.value?.user_metadata ?? {};
+    return meta.custom_avatar || meta.avatar_url || meta.picture || null;
+  });
+  /** 有没有自定义头像（设置页显示"用回 GitHub 头像"） */
+  const customAvatar = computed(() => Boolean(user.value?.user_metadata?.custom_avatar));
+  /** GitHub / Google 原本的头像（没有就是 null，例如邮箱注册） */
+  const providerAvatar = computed(() => {
+    const meta = user.value?.user_metadata ?? {};
+    return meta.avatar_url || meta.picture || null;
+  });
   const providerLabel = computed(
     () => t(PROVIDER_LABEL[user.value?.app_metadata?.provider] ?? '已登录')
   );
@@ -160,6 +175,21 @@ export const useAuthStore = defineStore('auth', () => {
     await checkMember();
   }
 
+  // ---- 编辑资料（设置页）----
+
+  async function saveName(name) {
+    user.value = await updateDisplayName(name);
+  }
+
+  /** @param {Blob} image 已经裁成正方形、缩小过的图片 */
+  async function saveAvatar(image) {
+    user.value = await uploadAvatar(image);
+  }
+
+  async function restoreProviderAvatar() {
+    user.value = await resetAvatar();
+  }
+
   async function logout() {
     await signOut();
     user.value = null;
@@ -178,11 +208,16 @@ export const useAuthStore = defineStore('auth', () => {
     allowed,
     displayName,
     avatarUrl,
+    customAvatar,
+    providerAvatar,
     providerLabel,
     whenReady,
     loginWithEmail,
     registerWithEmail,
     loginWithProvider,
+    saveName,
+    saveAvatar,
+    restoreProviderAvatar,
     redeem,
     logout,
   };

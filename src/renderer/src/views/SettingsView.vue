@@ -1,14 +1,16 @@
 <script setup>
-// 设置：账号（退出登录）、邀请朋友（管理员才有）、我的公仔（换衣服）、外观（深色 / 浅色 / 跟随系统）、
+// 设置：账号（编辑头像和名字、退出登录）、邀请朋友（管理员才有）、我的公仔（换衣服）、外观（深色 / 浅色 / 跟随系统）、
 // 桌面歌词（电脑版才有）
-import { ref, watch } from 'vue';
-import { clearHistory, createInvite, listInvites } from '@core/data';
+import { computed, ref, watch } from 'vue';
+import { NAME_MAX, clearHistory, createInvite, listInvites } from '@core/data';
 import { useAuthStore } from '../stores/auth';
 import { useLibraryStore } from '../stores/library';
 import { useThemeStore, THEME_OPTIONS } from '../stores/theme';
 import { useAvatarStore, OUTFITS } from '../stores/avatar';
 import Cover from '../components/Cover.vue';
 import AvatarFigure from '../components/AvatarFigure.vue';
+import Icon from '../components/Icon.vue';
+import { squareAvatar } from '../utils/image';
 import { isElectron, setDesktopLyrics, setDesktopLyricsLocked } from '../platform';
 import { desktopLyrics } from '../desktop';
 import { t, locale, LOCALES } from '../i18n';
@@ -93,6 +95,80 @@ async function clearAllHistory() {
   }
 }
 
+// ---- 编辑资料：头像、名字 ----
+const editing = ref(false);
+const nameDraft = ref('');
+/** 选好、裁好的新头像（还没上传） */
+const avatarDraft = ref(null);
+const previewUrl = ref('');
+/** 按了"用回 GitHub 头像"（保存时才生效） */
+const resetAvatarDraft = ref(false);
+const saving = ref(false);
+const profileError = ref('');
+const fileInput = ref(null);
+
+/** GitHub / Google / 邮箱原本的名字（名字留空就用这个） */
+const providerName = computed(() => {
+  const meta = auth.user?.user_metadata ?? {};
+  return meta.user_name || meta.full_name || meta.name || auth.user?.email?.split('@')[0] || '';
+});
+/** 编辑时显示的头像（还没选新图时） */
+const currentAvatar = computed(() => (resetAvatarDraft.value ? auth.providerAvatar : auth.avatarUrl));
+
+function clearPreview() {
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
+  previewUrl.value = '';
+  avatarDraft.value = null;
+}
+
+function startEdit() {
+  nameDraft.value = auth.user?.user_metadata?.custom_name || auth.displayName;
+  resetAvatarDraft.value = false;
+  profileError.value = '';
+  clearPreview();
+  editing.value = true;
+}
+
+function cancelEdit() {
+  clearPreview();
+  editing.value = false;
+}
+
+async function pickImage(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  profileError.value = '';
+  try {
+    const image = await squareAvatar(file);
+    clearPreview();
+    avatarDraft.value = image;
+    previewUrl.value = URL.createObjectURL(image);
+    resetAvatarDraft.value = false;
+  } catch {
+    profileError.value = t('这张图片打不开，换一张试试');
+  }
+}
+
+async function saveProfile() {
+  saving.value = true;
+  profileError.value = '';
+  try {
+    if (avatarDraft.value) await auth.saveAvatar(avatarDraft.value);
+    else if (resetAvatarDraft.value) await auth.restoreProviderAvatar();
+    // 和原本的名字一样就不存自定义名字（以后 GitHub 改名会跟着变）
+    const name = nameDraft.value.trim();
+    const custom = name && name !== providerName.value ? name : '';
+    if (custom !== (auth.user?.user_metadata?.custom_name || '')) await auth.saveName(custom);
+    cancelEdit();
+    library.say(t('资料已更新'));
+  } catch (err) {
+    profileError.value = t('保存失败：{error}', { error: t(err.message || String(err)) });
+  } finally {
+    saving.value = false;
+  }
+}
+
 const busy = ref(false);
 async function logout() {
   busy.value = true;
@@ -110,15 +186,58 @@ async function logout() {
 
     <div class="group">
       <h2>{{ $t('账号') }}</h2>
-      <div class="row account">
+      <div v-if="!editing" class="row account">
         <Cover v-if="auth.avatarUrl" :url="auth.avatarUrl" :size="48" round class="avatar" />
         <span v-else class="avatar initial">{{ auth.displayName.slice(0, 1).toUpperCase() }}</span>
         <span class="who">
           <strong>{{ auth.displayName }}</strong>
           <span>{{ auth.providerLabel }}<template v-if="auth.user?.email"> · {{ auth.user.email }}</template></span>
         </span>
+        <button v-if="auth.allowed" class="ghost" @click="startEdit">{{ $t('编辑资料') }}</button>
         <button class="ghost" :disabled="busy" @click="logout">{{ $t('退出登录') }}</button>
       </div>
+
+      <!-- 编辑资料：换头像（选图片 → 裁成正方形预览）、改名字，按保存才生效 -->
+      <form v-else class="row profile" @submit.prevent="saveProfile">
+        <button
+          type="button"
+          class="avatar-pick"
+          :title="$t('换头像')"
+          :aria-label="$t('换头像')"
+          @click="fileInput.click()"
+        >
+          <img v-if="previewUrl" :src="previewUrl" alt="" />
+          <Cover v-else-if="currentAvatar" :url="currentAvatar" :size="72" round />
+          <span v-else class="initial big">{{ (nameDraft || auth.displayName).slice(0, 1).toUpperCase() }}</span>
+          <span class="camera"><Icon name="camera" :size="16" /></span>
+        </button>
+        <input ref="fileInput" type="file" accept="image/*" hidden @change="pickImage" />
+
+        <div class="profile-fields">
+          <label class="field">
+            <span>{{ $t('名字') }}</span>
+            <input
+              v-model="nameDraft"
+              :maxlength="NAME_MAX"
+              :placeholder="providerName"
+              autocomplete="nickname"
+            />
+          </label>
+          <button
+            v-if="!previewUrl && auth.customAvatar && !resetAvatarDraft"
+            type="button"
+            class="text-link"
+            @click="resetAvatarDraft = true"
+          >
+            {{ auth.providerAvatar ? $t('用回 {provider} 的头像', { provider: auth.providerLabel }) : $t('不用头像') }}
+          </button>
+          <p v-if="profileError" class="invite-error">{{ profileError }}</p>
+          <div class="profile-buttons">
+            <button type="button" class="ghost" :disabled="saving" @click="cancelEdit">{{ $t('取消') }}</button>
+            <button type="submit" class="primary" :disabled="saving">{{ saving ? $t('保存中…') : $t('保存') }}</button>
+          </div>
+        </div>
+      </form>
       <div class="row privacy-row">
         <span class="label">
           {{ $t('听歌记录') }}
@@ -318,6 +437,115 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.account .ghost {
+  flex: none;
+}
+/* 编辑资料 */
+.profile {
+  align-items: flex-start;
+  gap: 18px;
+}
+.avatar-pick {
+  position: relative;
+  flex: none;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+.avatar-pick img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.initial.big {
+  width: 72px;
+  height: 72px;
+  font-size: 28px;
+}
+.camera {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.avatar-pick:hover .camera,
+.avatar-pick:focus-visible .camera {
+  transform: scale(1.08);
+}
+.avatar-pick:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.profile-fields {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.field {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.field input {
+  padding: 10px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 400;
+}
+.field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.text-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+.text-link:hover {
+  text-decoration: underline;
+}
+.profile-buttons {
+  align-self: flex-end;
+  display: flex;
+  gap: 10px;
+}
+@media (max-width: 520px) {
+  .account {
+    flex-wrap: wrap;
+  }
+  .account .who {
+    flex-basis: calc(100% - 62px);
+  }
+  .account .ghost {
+    flex: 1;
+  }
 }
 .label {
   flex: 1;

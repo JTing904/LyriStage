@@ -4,3 +4,4 @@ export * from './library';
 export * from './history';
 export * from './track';
 export * from './invites';
+export * from './profile';
