@@ -15,7 +15,7 @@ const art = computed(
   () => coverUrl.value && `${coverUrl.value}?param=1024y1024`
 );
 const { viewport, lineRef, offset } = useCenteredList(lineIndex, {
-  anchor: 0.45,
+  anchor: 0.56, // 歌词区底部让出了播放条，0.56 大约是整个画面的 45%
 });
 
 const shownLines = computed(() =>

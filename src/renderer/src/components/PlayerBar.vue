@@ -83,8 +83,24 @@ function onKeydown(event) {
   );
 }
 
-const REPEAT_NEXT = { off: 'all', all: 'one', one: 'off' };
-const REPEAT_LABEL = { off: '循环：关', all: '列表循环', one: '单曲循环' };
+// 播放模式（像网易云一样一个按钮轮流切换，循环和随机不会同时开、互相打架）
+const MODES = ['order', 'loop', 'one', 'shuffle'];
+const MODE_LABEL = {
+  order: '顺序播放',
+  loop: '列表循环',
+  one: '单曲循环',
+  shuffle: '随机播放',
+};
+const mode = computed(() => {
+  if (props.state.shuffle) return 'shuffle';
+  if (props.state.repeat === 'one') return 'one';
+  return props.state.repeat === 'all' ? 'loop' : 'order';
+});
+function nextMode() {
+  const next = MODES[(MODES.indexOf(mode.value) + 1) % MODES.length];
+  props.player.setShuffle(next === 'shuffle');
+  props.player.setRepeat(next === 'one' ? 'one' : next === 'order' ? 'off' : 'all');
+}
 
 const volumeIcon = computed(() => {
   const v = props.state.volume;
@@ -153,20 +169,29 @@ function toggleMute() {
     </div>
 
     <div class="row">
-      <!-- 精简：循环放左边，和右边的随机对称 -->
+      <!-- 精简：播放模式放左边，和右边的音量对称 -->
       <div v-if="compact" class="side side-left">
         <button
-          class="icon toggle"
-          :class="{ on: state.repeat !== 'off' }"
-          :title="REPEAT_LABEL[state.repeat]"
-          @click="player.setRepeat(REPEAT_NEXT[state.repeat])"
+          class="icon toggle mode"
+          :class="{ on: mode !== 'order' }"
+          :title="`${MODE_LABEL[mode]}（点一下切换）`"
+          :aria-label="`播放模式：${MODE_LABEL[mode]}`"
+          @click="nextMode"
         >
-          <svg viewBox="0 0 24 24">
+          <svg v-if="mode === 'shuffle'" viewBox="0 0 24 24">
+            <path
+              d="M10.6 9.2 5.4 4 4 5.4l5.2 5.2zM14.5 4l2 2L4 18.6 5.4 20 18 7.5l2 2V4zm.3 9.4-1.4 1.4 3.1 3.1-2 2H20v-5.5l-2 2z"
+            />
+          </svg>
+          <svg v-else-if="mode === 'order'" viewBox="0 0 24 24">
+            <path d="M4 6h11v2H4zm0 5h11v2H4zm0 5h7v2H4zm13-4v6.2l-2-2-1.4 1.4L18 22l4.4-4.4-1.4-1.4-2 2V12z" />
+          </svg>
+          <svg v-else viewBox="0 0 24 24">
             <path
               d="M7 7h10v3l4-4-4-4v3H5v6h2zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2z"
             />
           </svg>
-          <span v-if="state.repeat === 'one'" class="badge">1</span>
+          <span v-if="mode === 'one'" class="badge">1</span>
         </button>
       </div>
 
@@ -218,29 +243,26 @@ function toggleMute() {
         </button>
         <button
           v-if="!compact"
-          class="icon toggle"
-          :class="{ on: state.repeat !== 'off' }"
-          :title="REPEAT_LABEL[state.repeat]"
-          @click="player.setRepeat(REPEAT_NEXT[state.repeat])"
+          class="icon toggle mode"
+          :class="{ on: mode !== 'order' }"
+          :title="`${MODE_LABEL[mode]}（点一下切换）`"
+          :aria-label="`播放模式：${MODE_LABEL[mode]}`"
+          @click="nextMode"
         >
-          <svg viewBox="0 0 24 24">
-            <path
-              d="M7 7h10v3l4-4-4-4v3H5v6h2zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2z"
-            />
-          </svg>
-          <span v-if="state.repeat === 'one'" class="badge">1</span>
-        </button>
-        <button
-          class="icon toggle"
-          :class="{ on: state.shuffle }"
-          :title="state.shuffle ? '随机播放：开' : '随机播放：关'"
-          @click="player.setShuffle(!state.shuffle)"
-        >
-          <svg viewBox="0 0 24 24">
+          <svg v-if="mode === 'shuffle'" viewBox="0 0 24 24">
             <path
               d="M10.6 9.2 5.4 4 4 5.4l5.2 5.2zM14.5 4l2 2L4 18.6 5.4 20 18 7.5l2 2V4zm.3 9.4-1.4 1.4 3.1 3.1-2 2H20v-5.5l-2 2z"
             />
           </svg>
+          <svg v-else-if="mode === 'order'" viewBox="0 0 24 24">
+            <path d="M4 6h11v2H4zm0 5h11v2H4zm0 5h7v2H4zm13-4v6.2l-2-2-1.4 1.4L18 22l4.4-4.4-1.4-1.4-2 2V12z" />
+          </svg>
+          <svg v-else viewBox="0 0 24 24">
+            <path
+              d="M7 7h10v3l4-4-4-4v3H5v6h2zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2z"
+            />
+          </svg>
+          <span v-if="mode === 'one'" class="badge">1</span>
         </button>
         <div class="volume">
           <button
