@@ -101,13 +101,19 @@ export const useLibraryStore = defineStore('library', () => {
     version.value++;
   }
 
-  async function addToPlaylist(playlistId, tracks) {
-    await addTracksToPlaylist(playlistId, tracks);
-    const name = playlists.value.find(p => p.id === playlistId)?.name ?? '歌单';
-    say(tracks.length > 1 ? `已把 ${tracks.length} 首歌加到「${name}」` : `已加到「${name}」`);
+  /** 把歌加到一个或好几个歌单 */
+  async function addToPlaylists(playlistIds, tracks) {
+    for (const id of playlistIds) await addTracksToPlaylist(id, tracks);
+    const what = tracks.length > 1 ? `${tracks.length} 首歌` : `「${tracks[0].name}」`;
+    const where =
+      playlistIds.length > 1
+        ? `${playlistIds.length} 个歌单`
+        : `「${playlists.value.find(p => p.id === playlistIds[0])?.name ?? '歌单'}」`;
+    say(`已把${what}加到${where}`);
     await refreshPlaylists();
     version.value++;
   }
+  const addToPlaylist = (playlistId, tracks) => addToPlaylists([playlistId], tracks);
 
   async function removeFromPlaylist(playlistId, trackIds) {
     await removeTracksFromPlaylist(playlistId, trackIds);
@@ -135,6 +141,7 @@ export const useLibraryStore = defineStore('library', () => {
     renamePlaylist,
     deletePlaylist,
     addToPlaylist,
+    addToPlaylists,
     removeFromPlaylist,
     pendingTracks,
     openAddDialog,

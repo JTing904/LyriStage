@@ -8,6 +8,7 @@ import { usePlayCollection } from '../composables/usePlayCollection';
 import { totalLength } from '../utils/format';
 import CollectionHeader from '../components/CollectionHeader.vue';
 import TrackList from '../components/TrackList.vue';
+import SongPicker from '../components/SongPicker.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -49,6 +50,21 @@ async function remove(list) {
   } catch (err) {
     playlist.value.tracks = before;
     library.say(`移除失败：${err.message || err}`);
+  }
+}
+
+// 添加歌曲（搜索 / 我喜欢的 / 最近播放里勾选好几首）
+const picker = ref(null);
+const adding = ref(false);
+async function addSongs(list) {
+  adding.value = true;
+  try {
+    await library.addToPlaylist(playlist.value.id, list);
+    playlist.value = await getPlaylist(playlist.value.id);
+  } catch (err) {
+    library.say(`加入失败：${err.message || err}`);
+  } finally {
+    adding.value = false;
   }
 }
 
@@ -102,17 +118,25 @@ async function removePlaylist() {
         @shuffle="shuffleAll(tracks, context)"
       >
         <template #actions>
+          <button @click="picker.open()">＋ 添加歌曲</button>
           <button @click="openEditor">编辑</button>
           <button @click="confirmBox.showModal()">删除歌单</button>
         </template>
       </CollectionHeader>
 
       <p v-if="!tracks.length" class="page-state">
-        歌单还是空的。按底部播放条红心旁边的 ＋，就能把正在播的歌加进来；<br />
-        歌单、专辑、搜索结果里，鼠标移到歌上也会出现 ＋。
+        歌单还是空的。按上面的「＋ 添加歌曲」一次挑好几首，<br />
+        或者按播放条红心旁边的 ＋ 把正在播的歌加进来。
       </p>
       <TrackList v-else :tracks="tracks" :context="context" removable @remove="remove" />
     </template>
+
+    <SongPicker
+      ref="picker"
+      :existing-ids="tracks.map(t => t.id)"
+      :busy="adding"
+      @add="addSongs"
+    />
 
     <dialog ref="confirmBox" class="editor" @click.self="confirmBox.close()">
       <div v-if="playlist" class="box">

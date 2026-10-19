@@ -1,5 +1,5 @@
 <script setup>
-// 「加到歌单」对话框：列出自己的歌单，也可以马上新建一个
+// 「加到歌单」对话框：勾选一个或好几个歌单，按「加入」一次加进去；也可以马上新建一个
 import { computed, nextTick, ref, watch } from 'vue';
 import { useLibraryStore } from '../stores/library';
 import Cover from './Cover.vue';
@@ -12,22 +12,32 @@ const newName = ref('');
 const creating = ref(false);
 const busy = ref(false);
 const nameInput = ref(null);
+/** 勾选的歌单 id */
+const chosen = ref(new Set());
 
 watch(tracks, value => {
   if (value) {
     newName.value = '';
     creating.value = false;
+    chosen.value = new Set();
     nextTick(() => dialog.value?.showModal());
   } else {
     dialog.value?.close();
   }
 });
 
-async function addTo(playlistId) {
-  if (busy.value) return;
+function toggle(id) {
+  const next = new Set(chosen.value);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  chosen.value = next;
+}
+
+async function addChosen() {
+  if (busy.value || !chosen.value.size) return;
   busy.value = true;
   try {
-    await library.addToPlaylist(playlistId, tracks.value);
+    await library.addToPlaylists([...chosen.value], tracks.value);
     library.closeAddDialog();
   } catch (err) {
     library.say(`加入失败：${err.message || err}`);
@@ -42,16 +52,19 @@ async function startCreate() {
   nameInput.value?.focus();
 }
 
-async function createAndAdd() {
+/** 新建的歌单自动勾上 */
+async function create() {
   const name = newName.value.trim();
   if (!name || busy.value) return;
   busy.value = true;
   try {
     const row = await library.createPlaylist(name);
-    busy.value = false;
-    await addTo(row.id);
+    chosen.value = new Set([...chosen.value, row.id]);
+    newName.value = '';
+    creating.value = false;
   } catch (err) {
     library.say(`新建失败：${err.message || err}`);
+  } finally {
     busy.value = false;
   }
 }
@@ -72,9 +85,9 @@ const title = computed(() => {
         </button>
       </header>
 
-      <form v-if="creating" class="create" @submit.prevent="createAndAdd">
+      <form v-if="creating" class="create" @submit.prevent="create">
         <input ref="nameInput" v-model="newName" placeholder="歌单名字" maxlength="60" required />
-        <button class="primary" :disabled="busy || !newName.trim()">新建并加入</button>
+        <button class="primary" :disabled="busy || !newName.trim()">新建</button>
       </form>
       <button v-else class="row new" @click="startCreate">
         <span class="plus"><Icon name="plus" /></span>
@@ -83,7 +96,16 @@ const title = computed(() => {
 
       <ul class="list">
         <li v-for="p in library.playlists" :key="p.id">
-          <button class="row" :disabled="busy" @click="addTo(p.id)">
+          <button
+            class="row"
+            :class="{ on: chosen.has(p.id) }"
+            :aria-pressed="chosen.has(p.id)"
+            :disabled="busy"
+            @click="toggle(p.id)"
+          >
+            <span class="check" :class="{ on: chosen.has(p.id) }" aria-hidden="true">
+              <svg v-if="chosen.has(p.id)" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10" /></svg>
+            </span>
             <Cover :url="p.cover_url" :size="44" radius="8px" class="cover" />
             <span class="meta">
               <strong>{{ p.name }}</strong>
@@ -93,6 +115,13 @@ const title = computed(() => {
         </li>
       </ul>
       <p v-if="!library.playlists.length && !creating" class="empty">还没有歌单，先新建一个吧。</p>
+
+      <footer v-if="library.playlists.length">
+        <span>{{ chosen.size ? `已选 ${chosen.size} 个歌单` : '可以选好几个' }}</span>
+        <button class="primary" :disabled="busy || !chosen.size" @click="addChosen">
+          {{ busy ? '加入中…' : '加入' }}
+        </button>
+      </footer>
     </div>
   </dialog>
 </template>
@@ -166,6 +195,50 @@ h2 {
 }
 .row:hover:not(:disabled) {
   background: var(--surface-hover);
+}
+.row.on {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.check {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--line-strong);
+  border-radius: 6px;
+}
+.check.on {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.check svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--on-accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* 歌单很多时，「加入」固定在底部 */
+footer {
+  position: sticky;
+  bottom: -18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 6px -18px -18px;
+  padding: 12px 18px 18px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  color: var(--text-dim);
+}
+footer .primary {
+  padding: 10px 26px;
+  border-radius: 999px;
 }
 .cover {
   width: 44px;
