@@ -41,7 +41,19 @@ yrc 格式：`[行开始ms,行时长ms](字开始ms,字时长ms,0)字(…)字…
 `cd server && npm install && node dev.js`，然后访问 `http://localhost:3001/...`。
 冷启动首个请求约 5.5 秒，之后单个请求 0.7–1.3 秒。
 
-## 还需要你操作的
+## Vercel 正式部署（2026-10-19）
+
+- 网址：**https://lyristage-api.vercel.app**（项目 `lyristage-api`，用 Vercel CLI 从 `server/` 直接部署，没有连 GitHub）
+- 函数在 **hkg1**（香港）运行（`X-Vercel-Id: sin1::hkg1::…`，sin1 是入口节点）
+- 冷启动约 2 秒，之后单个请求 1–1.3 秒；匿名推荐约 3 秒
+- **踩坑**：Vercel 的 Node 运行时会预先把参数解析进 `req.query`，网易云 API 读的是它，
+  只改 `req.url` 补 realIP 不生效 → 播放链接全部为空。`server/lib/handler.js` 已经同时改 `req.query`。
+- 播放链接：有你爱就明媚 ✓ 320k、孤勇者 ✓ 128k、晴天 ✗（和本地一样）
+- **解灰在 Vercel 上全部失败**（本地能找到的 pyncmd 也失败，推测 pyncmd 拦截数据中心 IP）。
+  手机版暂时只能播网易云直接给链接的歌。
+- 重新部署：`cd server && npx vercel@62.2.0 deploy --prod --yes`
+
+## 当时还需要你操作的（已完成）
 
 1. **Supabase**：建项目（Singapore）→ SQL Editor 执行 `supabase/migrations/20261019000000_init.sql`
    → 关闭 Email 的 "Confirm email" → 把 URL 和 anon key 填进 `.env` → 运行 `node scripts/smoke/run.js`。
