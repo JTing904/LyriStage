@@ -1,6 +1,6 @@
 // LyriStage 自己的账号（邮箱 + 密码 / GitHub），和网易云账号无关。
 // 邀请制：登录之后还要兑换邀请码成为"成员"才能使用（见 supabase/migrations/20261020000000_invites.sql）
-import { requireSupabase, getSupabase, unwrap } from './supabase';
+import { requireSupabase, getSupabase, getSupabaseConfig, unwrap } from './supabase';
 
 export async function signUp(email, password) {
   return unwrap(await requireSupabase().auth.signUp({ email, password }));
@@ -28,6 +28,23 @@ export async function getOAuthUrl(provider, redirectTo) {
     })
   );
   return data.url;
+}
+
+/**
+ * Supabase 上已经开启的第三方登录（例如 ['github', 'google']）。
+ * 登录页按这个显示按钮：在 Supabase 后台开了 Google，按钮就自己出现
+ * @returns {Promise<string[]>}
+ */
+export async function listOAuthProviders() {
+  const config = getSupabaseConfig();
+  if (!config) return [];
+  const res = await fetch(`${config.url}/auth/v1/settings`, {
+    headers: { apikey: config.anonKey },
+  });
+  const { external = {} } = await res.json();
+  return Object.entries(external)
+    .filter(([name, on]) => on && name !== 'email' && name !== 'phone' && name !== 'anonymous_users')
+    .map(([name]) => name);
 }
 
 /** 第三方登录第二步：用回调网址里的 code 换成登录状态 */

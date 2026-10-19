@@ -2,6 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 
 /** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let client = null;
+/** 设定时的网址和 anon key（查询登录方式等不经过 supabase-js 的请求用） */
+let config = null;
 
 /**
  * 设定 Supabase（界面启动时调用一次，配置来自 .env 的 VITE_SUPABASE_*）。
@@ -10,6 +12,7 @@ let client = null;
  *   storage：保存登录状态的地方，默认用浏览器的 localStorage（Node 测试里用内存）
  */
 export function configureSupabase({ url, anonKey, storage } = {}) {
+  config = url && anonKey ? { url, anonKey } : null;
   client =
     url && anonKey
       ? createClient(url, anonKey, {
@@ -25,6 +28,11 @@ export function configureSupabase({ url, anonKey, storage } = {}) {
         })
       : null;
   return client;
+}
+
+/** @returns {{ url: string, anonKey: string } | null} */
+export function getSupabaseConfig() {
+  return config;
 }
 
 /** @returns {import('@supabase/supabase-js').SupabaseClient | null} */

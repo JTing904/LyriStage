@@ -8,7 +8,7 @@ export default {
     "This build isn't set up with the LyriStage account service (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY in .env).",
   '正在读取登录状态…': 'Checking login status…',
   输入邀请码: 'Enter invite code',
-  'LyriStage 目前只开放给受邀的朋友。你已经用': 'LyriStage is currently invite-only. You’re logged in as',
+  'LyriStage 目前只开放给受邀的朋友。你已经用': 'LyriStage is currently invite-only. You\'re logged in as',
   '登录，输入邀请码就能开始使用。': '— enter an invite code to get started.',
   邀请码: 'Invite code',
   '例如 7KQ3MZ9TXA': 'e.g. 7KQ3MZ9TXA',
@@ -23,6 +23,7 @@ export default {
   'LyriStage 目前只开放给受邀的朋友，注册需要邀请码。':
     'LyriStage is currently invite-only. You need an invite code to sign up.',
   '使用 GitHub 登录': 'Continue with GitHub',
+  '使用 Google 登录': 'Continue with Google',
   '第三方登录失败：{error}': 'Login failed: {error}',
   或用邮箱: 'or use email',
   邮箱: 'Email',
@@ -60,7 +61,7 @@ export default {
   退出登录: 'Log out',
   邀请朋友: 'Invite friends',
   '每个邀请码只能用一次。生成后会自动复制，直接贴给朋友就好。':
-    'Each invite code works once. It’s copied automatically, so just paste it to your friend.',
+    'Each invite code works once. It\'s copied automatically, so just paste it to your friend.',
   '生成中…': 'Generating…',
   一键生成邀请码: 'Generate invite code',
   '已复制 ✓': 'Copied ✓',
@@ -69,7 +70,7 @@ export default {
   '已用 {used} / {max}': '{used} / {max} used',
   未使用: 'Unused',
   '用这个码注册的人也会是管理员，不要给朋友':
-    'Anyone who signs up with this code becomes an admin. Don’t give it to friends.',
+    'Anyone who signs up with this code becomes an admin. Don\'t give it to friends.',
   管理员码: 'Admin code',
   我的公仔: 'My figure',
   '首页和登录页都会出现。选"按时间自动换"的话，早上、中午、下午、晚上各穿一套。':
@@ -145,7 +146,7 @@ export default {
   '动态 MV': 'Music Video',
   '每段不同大小、角度和颜色，弹出来': 'Each phrase pops in with its own size, angle and color',
   打字机: 'Typewriter',
-  '复古终端，跟着演唱一个字一个字打出来': 'Retro terminal that types each word as it’s sung',
+  '复古终端，跟着演唱一个字一个字打出来': 'Retro terminal that types each word as it\'s sung',
   黑胶唱片: 'Vinyl',
   '转动的黑胶和唱臂，旁边五行歌词': 'A spinning record and tonearm, with five lines of lyrics alongside',
 };

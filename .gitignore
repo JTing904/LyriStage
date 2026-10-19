@@ -52,3 +52,6 @@ dist-web/
 
 # Windows 安装包
 /release
+
+# 宣传影片的临时导演页和截图
+/src/renderer/public/promo

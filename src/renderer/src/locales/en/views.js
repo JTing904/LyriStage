@@ -26,7 +26,7 @@ export default {
   设置: 'Settings',
   为你准备: 'Made for you',
   每日推荐: 'Daily Mix',
-  按你最近的听歌记录挑选: 'Picked from what you’ve been playing',
+  按你最近的听歌记录挑选: 'Picked from what you\'ve been playing',
   登录后会按你的口味推荐: 'Log in for picks based on your taste',
   '私人 FM': 'Personal FM',
   '随便听听，遇见没听过的歌': 'Press play and discover something new',
@@ -34,7 +34,7 @@ export default {
   '播放私人 FM': 'Play Personal FM',
   继续播放: 'Jump back in',
   播过的歌会出现在这里: 'Songs you play will show up here',
-  '有些内容没有载入成功。': 'Some content didn’t load.',
+  '有些内容没有载入成功。': 'Some content didn\'t load.',
   重试: 'Retry',
   推荐歌单: 'Recommended playlists',
   新歌速递: 'New releases',
@@ -81,9 +81,9 @@ export default {
   本周: 'This week',
   全部: 'All',
   '这周还没有听歌记录，听完一首歌就会出现在这里。':
-    'Nothing played this week yet. Finish a song and it’ll show up here.',
+    'Nothing played this week yet. Finish a song and it\'ll show up here.',
   '还没有听歌记录，听完一首歌就会出现在这里。':
-    'No listening history yet. Finish a song and it’ll show up here.',
+    'No listening history yet. Finish a song and it\'ll show up here.',
   '{n} 次': '{n} play | {n} plays',
   我的歌单: 'Your Playlists',
   排序: 'Sort by',
@@ -114,7 +114,7 @@ export default {
     'or tap the ＋ next to the heart in the player bar to add the current song.',
   '删除歌单「{name}」？': 'Delete “{name}”?',
   '只删除这个歌单，里面的歌不会受影响。删除后不能复原。':
-    'Only the playlist is deleted; the songs aren’t affected. This can’t be undone.',
+    'Only the playlist is deleted; the songs aren\'t affected. This can\'t be undone.',
   删除: 'Delete',
   编辑歌单: 'Edit playlist',
   名字: 'Name',

@@ -3,7 +3,8 @@
 // - 登录：GitHub 或邮箱 + 密码
 // - 注册：邮箱 + 密码 + 邀请码
 // - 登录了但还不是成员（例如第一次用 GitHub 登录）：输入邀请码
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { listOAuthProviders } from '@core/data';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useAvatarStore } from '../stores/avatar';
@@ -17,8 +18,18 @@ const avatar = useAvatarStore();
 const route = useRoute();
 const router = useRouter();
 
-// Google 登录还没在 Supabase 设置好，先只开 GitHub
-const PROVIDERS = [{ id: 'github', label: '使用 GitHub 登录' }];
+// 第三方登录按钮：只显示 Supabase 上已经开启的（后台开了 Google，按钮就会出现）
+const PROVIDERS = [
+  { id: 'github', label: '使用 GitHub 登录' },
+  { id: 'google', label: '使用 Google 登录' },
+];
+const enabledProviders = ref(['github']);
+onMounted(() => {
+  listOAuthProviders()
+    .then(list => (enabledProviders.value = list))
+    .catch(() => {});
+});
+const providers = computed(() => PROVIDERS.filter(p => enabledProviders.value.includes(p.id)));
 
 const mode = ref('login'); // 'login' | 'register'
 const email = ref('');
@@ -152,14 +163,18 @@ function submitInvite() {
 
           <template v-if="mode === 'login'">
             <button
-              v-for="p in PROVIDERS"
+              v-for="p in providers"
               :key="p.id"
               type="button"
               class="provider"
+              :class="p.id"
               :disabled="busy"
               @click="run(() => auth.loginWithProvider(p.id))"
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg v-if="p.id === 'google'" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#EA4335" d="M12 10.2v3.9h5.4c-.2 1.3-1.6 3.9-5.4 3.9-3.3 0-5.9-2.7-5.9-6s2.6-6 5.9-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.5 14.6 2.5 12 2.5 6.8 2.5 2.6 6.7 2.6 12s4.2 9.5 9.4 9.5c5.4 0 9-3.8 9-9.2 0-.6-.1-1.1-.2-1.6H12z" />
+              </svg>
+              <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.2-3.4-1.2-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.4 1.1 2.9.8.1-.6.4-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.6 9.6 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.7-4.6 5 .4.3.7.9.7 1.9V21c0 .3.2.6.7.5A10 10 0 0 0 12 2z" />
               </svg>
               {{ $t(p.label) }}
@@ -411,6 +426,11 @@ button:disabled {
   font-size: 16px;
   background: var(--accent);
   color: var(--on-accent);
+}
+.provider.google {
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text);
 }
 .provider:not(:disabled):hover,
 .primary:not(:disabled):hover {
