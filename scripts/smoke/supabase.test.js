@@ -157,8 +157,15 @@ const step = msg => console.log(`✓ ${msg}`);
   console.log(
     `\n全部通过 🎉  两个测试账号仍在 Authentication → Users 里，可以手动删除：\n  ${emailA}\n  ${emailB}`
   );
-  process.exit(0);
-})().catch(err => {
-  console.error('\n✗ 失败：', err.message || err);
-  process.exit(1);
-});
+})()
+  .catch(err => {
+    console.error('\n✗ 失败：', err.message || err);
+    process.exitCode = 1;
+  })
+  .finally(() => {
+    // Supabase 的自动刷新 token 定时器会让进程一直挂着；
+    // 直接 process.exit() 在 Windows 上会因为还有连接在关闭而触发 libuv 断言，
+    // 所以先停掉定时器，等连接关完再退出
+    requireSupabase().auth.stopAutoRefresh();
+    setTimeout(() => process.exit(), 200);
+  });
