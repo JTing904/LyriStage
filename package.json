@@ -16,13 +16,20 @@
     "api:dev": "node server/dev.js",
     "test": "vitest run",
     "smoke": "node scripts/smoke/run.js",
-    "test:integration": "vitest run --config vitest.integration.config.mjs"
+    "test:integration": "vitest run --config vitest.integration.config.mjs",
+    "app:build": "vite build --config vite.web.config.mjs --mode app && cap sync android",
+    "app:apk": "npm run app:build && cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
     "@neteasecloudmusicapienhanced/api": "4.41.1",
     "@unblockneteasemusic/server": "0.28.0"
   },
   "devDependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/browser": "8.0.5",
+    "@capacitor/cli": "8.5.2",
+    "@capacitor/core": "8.5.2",
     "@supabase/supabase-js": "2.117.2",
     "@vitejs/plugin-vue": "6.0.9",
     "dexie": "4.4.6",

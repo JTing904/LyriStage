@@ -14,13 +14,13 @@ import {
   signOut,
   signUp,
 } from '@core/data';
-import { isElectron, onAuthCallback } from '../platform';
+import { isElectron, isNativeApp, onAuthCallback, openAuthPage } from '../platform';
 
 const PROVIDER_LABEL = { github: 'GitHub', google: 'Google', email: '邮箱' };
 
-/** 第三方登录授权完回到哪里：电脑版回到 App（自定义协议），网页版回到当前网址 */
+/** 第三方登录授权完回到哪里：电脑版 / 手机 App 回到 App（自定义协议），网页版回到当前网址 */
 const oauthRedirect = () =>
-  isElectron
+  isElectron || isNativeApp
     ? 'lyristage://auth/callback'
     : `${location.origin}${location.pathname}`;
 
@@ -72,7 +72,7 @@ export const useAuthStore = defineStore('auth', () => {
   const readyPromise = (async () => {
     try {
       // 网页版：GitHub 授权完跳回来，网址里带着 ?code=…
-      if (!isElectron && new URLSearchParams(location.search).has('code')) {
+      if (!isElectron && !isNativeApp && new URLSearchParams(location.search).has('code')) {
         try {
           await finishOAuth(location.href);
         } catch (err) {
@@ -88,7 +88,7 @@ export const useAuthStore = defineStore('auth', () => {
   })();
   onAuthChange(u => (user.value = u));
 
-  // 电脑版：系统浏览器授权完，通过 lyristage://auth/callback?code=… 回到 App
+  // 电脑版 / 手机 App：系统浏览器授权完，通过 lyristage://auth/callback?code=… 回到 App
   onAuthCallback(url => {
     oauthError.value = '';
     finishOAuth(url).catch(err => {
@@ -138,13 +138,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function loginWithProvider(provider) {
     oauthError.value = '';
-    const url = await getOAuthUrl(provider, oauthRedirect());
-    if (isElectron) {
-      // 在系统浏览器里授权（主进程把 window.open 的 https 网址交给系统浏览器）
-      window.open(url, '_blank');
-    } else {
-      location.assign(url);
-    }
+    await openAuthPage(await getOAuthUrl(provider, oauthRedirect()));
   }
 
   async function redeem(invite) {

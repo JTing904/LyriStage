@@ -178,7 +178,8 @@ onBeforeUnmount(() => {
 }
 .topbar {
   position: absolute;
-  top: 0;
+  /* 手机 App：避开状态栏 */
+  top: env(safe-area-inset-top);
   left: 0;
   right: 0;
   display: flex;
@@ -253,6 +254,7 @@ button:focus-visible {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
+  /* 手机 App：避开底部导航条 */
+  bottom: env(safe-area-inset-bottom);
 }
 </style>
