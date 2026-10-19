@@ -41,3 +41,7 @@ vercel.json
 
 # Vercel
 .vercel
+
+# v2 构建输出
+out/
+dist-web/
