@@ -217,6 +217,7 @@ const empty = computed(() =>
               :context="context"
               :show-header="false"
               :show-album="false"
+              :selectable="false"
             />
           </section>
         </div>

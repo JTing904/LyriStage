@@ -39,11 +39,13 @@ const meta = computed(() =>
   tracks.value.length ? `${tracks.value.length} 首 · ${totalLength(tracks.value)}` : '还没有歌'
 );
 
-async function remove(track) {
+/** 从歌单移除（一首或多选的好几首） */
+async function remove(list) {
+  const ids = new Set(list.map(t => t.id));
   const before = playlist.value.tracks;
-  playlist.value.tracks = before.filter(t => t.id !== track.id);
+  playlist.value.tracks = before.filter(t => !ids.has(t.id));
   try {
-    await library.removeFromPlaylist(playlist.value.id, [track.id]);
+    await library.removeFromPlaylist(playlist.value.id, [...ids]);
   } catch (err) {
     playlist.value.tracks = before;
     library.say(`移除失败：${err.message || err}`);
@@ -71,8 +73,10 @@ async function save() {
   }
 }
 
+// 删除（用 App 自己的确认框，不用系统弹窗）
+const confirmBox = ref(null);
 async function removePlaylist() {
-  if (!window.confirm(`确定要删除歌单「${playlist.value.name}」吗？歌单里的歌不会被删除。`)) return;
+  confirmBox.value.close();
   try {
     await library.deletePlaylist(playlist.value.id);
     router.replace('/library');
@@ -99,15 +103,27 @@ async function removePlaylist() {
       >
         <template #actions>
           <button @click="openEditor">编辑</button>
-          <button @click="removePlaylist">删除歌单</button>
+          <button @click="confirmBox.showModal()">删除歌单</button>
         </template>
       </CollectionHeader>
 
       <p v-if="!tracks.length" class="page-state">
-        歌单还是空的。在任何一首歌旁边按 ＋ 就能加进来。
+        歌单还是空的。按底部播放条红心旁边的 ＋，就能把正在播的歌加进来；<br />
+        歌单、专辑、搜索结果里，鼠标移到歌上也会出现 ＋。
       </p>
       <TrackList v-else :tracks="tracks" :context="context" removable @remove="remove" />
     </template>
+
+    <dialog ref="confirmBox" class="editor" @click.self="confirmBox.close()">
+      <div v-if="playlist" class="box">
+        <h2>删除歌单「{{ playlist.name }}」？</h2>
+        <p class="note">只删除这个歌单，里面的歌不会受影响。删除后不能复原。</p>
+        <div class="buttons">
+          <button type="button" class="ghost" @click="confirmBox.close()">取消</button>
+          <button type="button" class="primary" @click="removePlaylist">删除</button>
+        </div>
+      </div>
+    </dialog>
 
     <dialog ref="editor" class="editor" @click.self="editor.close()">
       <form class="box" @submit.prevent="save">
@@ -174,6 +190,12 @@ input:focus,
 textarea:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
+}
+.note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-dim);
 }
 .buttons {
   display: flex;

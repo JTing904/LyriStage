@@ -5,6 +5,7 @@
 // - 精简（compact）：放在底部中间，封面和歌名在上，进度条两边是时间，下面一排按钮；歌词舞台用
 import { computed, ref } from 'vue';
 import LikeButton from './LikeButton.vue';
+import AddToPlaylistButton from './AddToPlaylistButton.vue';
 
 const props = defineProps({
   state: { type: Object, required: true },
@@ -110,6 +111,7 @@ function toggleMute() {
         <span>{{ artists }}</span>
       </div>
       <LikeButton v-if="track" :track="track" />
+      <AddToPlaylistButton v-if="track" :track="track" />
     </div>
     <div class="progress">
       <span v-if="compact" class="time">{{ currentClock }}</span>
@@ -201,6 +203,7 @@ function toggleMute() {
           <span>{{ subtitle }}</span>
         </div>
         <LikeButton v-if="track" :track="track" />
+      <AddToPlaylistButton v-if="track" :track="track" />
       </div>
 
       <div class="side side-right">

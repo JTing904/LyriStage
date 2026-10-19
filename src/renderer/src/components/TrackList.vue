@@ -1,7 +1,9 @@
 <script setup>
 // 歌曲列表（歌单、专辑、歌手热门、每日推荐、搜索结果共用）：
 // 点一首就从这首开始播放整个列表；正在播放的那首标红。
-// 每首右边：红心、加到歌单（自己的歌单里还有「移除」）
+// 每首右边：红心、加到歌单（自己的歌单里还有「移除」）。
+// 「多选」：勾选好几首，一次加到歌单 / 从歌单移除
+import { computed, ref, watch } from 'vue';
 import { usePlayer } from '../composables/usePlayer';
 import { useLibraryStore } from '../stores/library';
 import LikeButton from './LikeButton.vue';
@@ -20,9 +22,50 @@ const props = defineProps({
   showHeader: { type: Boolean, default: true },
   /** 自己的歌单：每首多一个「从歌单移除」 */
   removable: { type: Boolean, default: false },
+  /** 可以多选（搜索综合页那种只显示几首的就不用） */
+  selectable: { type: Boolean, default: true },
 });
 const emit = defineEmits(['remove']);
 const library = useLibraryStore();
+
+// ---- 多选 ----
+const selecting = ref(false);
+/** 选中的是第几首（同一首歌可能出现两次，所以用位置） */
+const selected = ref(new Set());
+const selectedTracks = computed(() =>
+  [...selected.value].sort((a, b) => a - b).map(i => props.tracks[i]).filter(Boolean)
+);
+const allSelected = computed(
+  () => props.tracks.length > 0 && selected.value.size === props.tracks.length
+);
+function toggleSelect(i) {
+  const next = new Set(selected.value);
+  if (next.has(i)) next.delete(i);
+  else next.add(i);
+  selected.value = next;
+}
+function toggleAll() {
+  selected.value = allSelected.value ? new Set() : new Set(props.tracks.map((_, i) => i));
+}
+function stopSelecting() {
+  selecting.value = false;
+  selected.value = new Set();
+}
+function addSelected() {
+  if (selectedTracks.value.length) library.openAddDialog(selectedTracks.value);
+}
+function removeSelected() {
+  if (!selectedTracks.value.length) return;
+  emit('remove', selectedTracks.value);
+  stopSelecting();
+}
+// 列表换了（换页面、移除了歌）就清掉选择
+watch(() => props.tracks, stopSelecting);
+
+function onRowClick(i) {
+  if (selecting.value) toggleSelect(i);
+  else play(i);
+}
 
 const { state, player } = usePlayer();
 const isCurrent = track => state.track?.id === track.id;
@@ -35,7 +78,25 @@ function play(index) {
 </script>
 
 <template>
-  <div class="track-list" :class="{ 'no-album': !showAlbum }">
+  <div class="track-list" :class="{ 'no-album': !showAlbum, selecting }">
+    <div v-if="selectable && tracks.length > 1" class="toolbar" :class="{ active: selecting }">
+      <template v-if="selecting">
+        <span class="picked">已选 {{ selected.size }} 首</span>
+        <button class="tool" @click="toggleAll">{{ allSelected ? '取消全选' : '全选' }}</button>
+        <span class="grow" />
+        <button class="tool primary" :disabled="!selected.size" @click="addSelected">
+          <Icon name="plus" :size="16" />加到歌单
+        </button>
+        <button v-if="removable" class="tool" :disabled="!selected.size" @click="removeSelected">
+          <Icon name="trash" :size="15" />移除
+        </button>
+        <button class="tool" @click="stopSelecting">完成</button>
+      </template>
+      <template v-else>
+        <span class="grow" />
+        <button class="tool" @click="selecting = true">多选</button>
+      </template>
+    </div>
     <div v-if="showHeader" class="track head" aria-hidden="true">
       <span class="no">#</span>
       <span>标题</span>
@@ -47,17 +108,25 @@ function play(index) {
       v-for="(t, i) in tracks"
       :key="`${t.id}-${i}`"
       class="track"
-      :class="{ current: isCurrent(t) }"
-      @click="play(i)"
+      :class="{ current: isCurrent(t), picked: selected.has(i) }"
+      @click="onRowClick(i)"
     >
       <span class="no">
-        <Icon v-if="isCurrent(t) && state.playing" name="volume" :size="16" />
+        <span v-if="selecting" class="check" :class="{ on: selected.has(i) }" aria-hidden="true">
+          <svg v-if="selected.has(i)" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10" /></svg>
+        </span>
+        <Icon v-else-if="isCurrent(t) && state.playing" name="volume" :size="16" />
         <template v-else>{{ i + 1 }}</template>
       </span>
       <span class="main">
         <Cover v-if="showCover" class="cover" :url="t.al?.picUrl" :size="44" radius="6px" />
         <span class="meta">
-          <button class="name" :aria-label="`播放 ${t.name}`" @click.stop="play(i)">
+          <button
+            class="name"
+            :aria-label="selecting ? `选择 ${t.name}` : `播放 ${t.name}`"
+            :aria-pressed="selecting ? selected.has(i) : undefined"
+            @click.stop="onRowClick(i)"
+          >
             {{ t.name }}
           </button>
           <span class="artists">
@@ -73,7 +142,7 @@ function play(index) {
       <span v-if="showAlbum" class="album">
         <RouterLink v-if="t.al?.id" :to="`/album/${t.al.id}`" @click.stop>{{ t.al.name }}</RouterLink>
       </span>
-      <span class="actions" :class="{ pinned: library.isLiked(t.id) }">
+      <span v-show="!selecting" class="actions" :class="{ pinned: library.isLiked(t.id) }">
         <LikeButton :track="t" :size="18" />
         <button
           class="act"
@@ -88,7 +157,7 @@ function play(index) {
           class="act"
           title="从歌单移除"
           aria-label="从歌单移除"
-          @click.stop="emit('remove', t)"
+          @click.stop="emit('remove', [t])"
         >
           <Icon name="trash" :size="17" />
         </button>
@@ -117,6 +186,84 @@ function play(index) {
 }
 .track:not(.head):hover {
   background: var(--surface-hover);
+}
+.track.picked {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* 多选工具列：选的时候固定在上面 */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-bottom: 4px;
+}
+.toolbar.active {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.12);
+}
+.electron .toolbar.active {
+  top: var(--titlebar-height);
+}
+.picked {
+  font-size: 14px;
+  font-weight: 700;
+}
+.grow {
+  flex: 1;
+}
+.tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tool:hover:not(:disabled) {
+  border-color: var(--text-dim);
+}
+.tool.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.tool:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.check {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--line-strong);
+  border-radius: 6px;
+}
+.check.on {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.check svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--on-accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .head {
   padding-bottom: 10px;
@@ -234,6 +381,13 @@ function play(index) {
   .album,
   .time {
     display: none;
+  }
+  /* 手机多选：勾选框要看得到 */
+  .selecting .track:not(.head) {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+  .selecting .no {
+    display: grid;
   }
 }
 </style>
