@@ -79,6 +79,11 @@ const longDescription = computed(() => props.description.length > 90);
   background: linear-gradient(to bottom, var(--tint), transparent);
   transition: background 0.6s;
 }
+/* 电脑版：内容区顶部让出了 40px 给标题栏，渐变要往上盖到窗口顶端 */
+.electron .collection-header {
+  margin-top: calc(-24px - var(--titlebar-height));
+  padding-top: calc(48px + var(--titlebar-height));
+}
 .cover {
   flex: none;
   width: 232px;

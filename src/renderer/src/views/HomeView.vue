@@ -362,12 +362,12 @@ h2 {
   color: #e3e9e5;
   background: radial-gradient(ellipse at 30% 30%, #3e4b46, #141917 75%);
 }
-:global([data-theme='light']) .fm {
+[data-theme='light'] .fm {
   color: #1f2a24;
   background: linear-gradient(150deg, #e6eeea, #c8d6ce);
 }
 @media (prefers-color-scheme: light) {
-  :global(:root:not([data-theme='dark'])) .fm {
+  :root:not([data-theme='dark']) .fm {
     color: #1f2a24;
     background: linear-gradient(150deg, #e6eeea, #c8d6ce);
   }
