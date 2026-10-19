@@ -53,15 +53,15 @@ const longDescription = computed(() => props.description.length > 90);
         class="more"
         @click="expanded = !expanded"
       >
-        {{ expanded ? '收起' : '展开' }}
+        {{ expanded ? $t('收起') : $t('展开') }}
       </button>
       <p v-if="meta" class="meta">{{ meta }}</p>
       <div class="actions">
         <button class="play" :disabled="!playable" @click="emit('play')">
-          <Icon name="play" :size="20" />播放全部
+          <Icon name="play" :size="20" />{{ $t('播放全部') }}
         </button>
         <button class="shuffle" :disabled="!playable" @click="emit('shuffle')">
-          <Icon name="shuffle" :size="18" />随机播放
+          <Icon name="shuffle" :size="18" />{{ $t('随机播放') }}
         </button>
         <slot name="actions" />
       </div>

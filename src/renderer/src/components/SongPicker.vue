@@ -7,6 +7,7 @@ import { netease } from '../services';
 import { artistNames, clock } from '../utils/format';
 import Cover from './Cover.vue';
 import Icon from './Icon.vue';
+import { t } from '../i18n';
 
 const props = defineProps({
   /** 已经在歌单里的歌（显示「已加入」，不能再选） */
@@ -104,9 +105,9 @@ const TABS = [
 ];
 const emptyText = computed(() =>
   ({
-    search: keywords.value.trim() ? '没有找到' : '输入歌名或歌手，按 Enter 搜索',
-    liked: '还没有喜欢的歌',
-    recent: '最近 60 天没有听歌记录',
+    search: keywords.value.trim() ? t('没有找到') : t('输入歌名或歌手，按 Enter 搜索'),
+    liked: t('还没有喜欢的歌'),
+    recent: t('最近 60 天没有听歌记录'),
   })[tab.value]
 );
 </script>
@@ -115,27 +116,27 @@ const emptyText = computed(() =>
   <dialog ref="dialog" class="picker" @click.self="close">
     <div class="box">
       <header>
-        <h2>添加歌曲</h2>
-        <button class="icon-btn" aria-label="关闭" @click="close"><Icon name="x" :size="20" /></button>
+        <h2>{{ $t('添加歌曲') }}</h2>
+        <button class="icon-btn" :aria-label="$t('关闭')" @click="close"><Icon name="x" :size="20" /></button>
       </header>
 
       <form class="search" role="search" @submit.prevent="search">
         <Icon name="search" :size="18" />
-        <input ref="searchInput" v-model="keywords" placeholder="搜索歌曲、歌手" enterkeyhint="search" />
+        <input ref="searchInput" v-model="keywords" :placeholder="$t('搜索歌曲、歌手')" enterkeyhint="search" />
       </form>
 
       <nav class="tabs">
         <button v-for="t in TABS" :key="t.id" :class="{ on: tab === t.id }" @click="tab = t.id">
-          {{ t.label }}
+          {{ $t(t.label) }}
         </button>
         <span class="grow" />
         <button v-if="selectable.length" class="link" @click="toggleAll">
-          {{ allPicked ? '取消全选' : '全选' }}
+          {{ allPicked ? $t('取消全选') : $t('全选') }}
         </button>
       </nav>
 
       <div class="list">
-        <p v-if="loading && tab === 'search'" class="empty">搜索中…</p>
+        <p v-if="loading && tab === 'search'" class="empty">{{ $t('搜索中…') }}</p>
         <p v-else-if="!list.length" class="empty">{{ emptyText }}</p>
         <button
           v-for="t in list"
@@ -153,16 +154,16 @@ const emptyText = computed(() =>
           <Cover :url="t.al?.picUrl" :size="40" radius="6px" class="cover" />
           <span class="meta">
             <strong>{{ t.name }}</strong>
-            <span>{{ existing.has(Number(t.id)) ? '已在歌单里' : artistNames(t) }}</span>
+            <span>{{ existing.has(Number(t.id)) ? $t('已在歌单里') : artistNames(t) }}</span>
           </span>
           <span class="time">{{ clock(t.dt) }}</span>
         </button>
       </div>
 
       <footer>
-        <span>已选 {{ picked.size }} 首</span>
+        <span>{{ $t('已选 {n} 首', { n: picked.size }) }}</span>
         <button class="primary" :disabled="!picked.size || busy" @click="confirm">
-          {{ busy ? '加入中…' : `加入歌单` }}
+          {{ busy ? $t('加入中…') : $t('加入歌单') }}
         </button>
       </footer>
     </div>

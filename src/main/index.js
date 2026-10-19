@@ -70,6 +70,14 @@ if (!app.requestSingleInstanceLock()) {
   ipcMain.on('lyristage:desktop-lyrics', (event, enabled) => {
     if (fromMain(event)) desktopLyrics.setEnabled(Boolean(enabled));
   });
+  // App 的语言（托盘菜单、桌面歌词窗口跟着换）
+  let locale = 'zh-CN';
+  ipcMain.on('lyristage:set-locale', (event, value) => {
+    if (!fromMain(event) || !['zh-CN', 'en'].includes(value)) return;
+    locale = value;
+    tray?.setLocale(value);
+    desktopLyrics.setLocale(value);
+  });
   // 设置页的「锁定桌面歌词」
   ipcMain.on('lyristage:desktop-lyrics-lock', (event, locked) => {
     if (fromMain(event)) desktopLyrics.setLocked(Boolean(locked));
@@ -191,11 +199,19 @@ if (!app.requestSingleInstanceLock()) {
       mainWindow.hide();
       if (!getSettings().trayHintShown) {
         updateSettings({ trayHintShown: true });
-        tray?.displayBalloon({
-          iconType: 'info',
-          title: 'LyriStage 还在播放',
-          content: '窗口缩到右下角的托盘了。要完全关掉，在托盘图标按右键选「退出」。',
-        });
+        tray?.displayBalloon(
+          locale === 'en'
+            ? {
+                iconType: 'info',
+                title: 'LyriStage is still playing',
+                content: 'It is now in the tray. To quit, right-click the tray icon and choose Quit.',
+              }
+            : {
+                iconType: 'info',
+                title: 'LyriStage 还在播放',
+                content: '窗口缩到右下角的托盘了。要完全关掉，在托盘图标按右键选「退出」。',
+              }
+        );
       }
     });
 
@@ -229,6 +245,7 @@ if (!app.requestSingleInstanceLock()) {
         app.quit();
       },
     });
+    tray.setLocale(locale);
     desktopLyrics.restore();
 
     app.on('activate', () => {

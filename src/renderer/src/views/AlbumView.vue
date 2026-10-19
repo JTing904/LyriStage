@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router';
 import { netease } from '../services';
 import { usePlayCollection } from '../composables/usePlayCollection';
 import { artistNames, totalLength, year } from '../utils/format';
+import { t } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
 import TrackList from '../components/TrackList.vue';
 
@@ -44,7 +45,7 @@ const meta = computed(() => {
   return [
     artistNames({ ar: album.value.artists }),
     year(album.value.publishTime),
-    `${tracks.value.length} 首`,
+    t('{n} 首', { n: tracks.value.length }),
     totalLength(tracks.value),
   ]
     .filter(Boolean)
@@ -54,11 +55,11 @@ const meta = computed(() => {
 
 <template>
   <div class="page">
-    <p v-if="loading" class="page-state">加载中…</p>
-    <p v-else-if="error" class="page-state">专辑加载失败：{{ error }}</p>
+    <p v-if="loading" class="page-state">{{ $t('加载中…') }}</p>
+    <p v-else-if="error" class="page-state">{{ $t('专辑加载失败：{error}', { error }) }}</p>
     <template v-else-if="album">
       <CollectionHeader
-        kind="专辑"
+        :kind="$t('专辑')"
         :cover="album.picUrl"
         :title="album.name"
         :description="album.description || ''"
@@ -69,7 +70,7 @@ const meta = computed(() => {
       >
         <template v-if="album.artist?.id" #actions>
           <RouterLink :to="`/artist/${album.artist.id}`" custom v-slot="{ navigate }">
-            <button @click="navigate">歌手：{{ album.artist.name }}</button>
+            <button @click="navigate">{{ $t('歌手：{name}', { name: album.artist.name }) }}</button>
           </RouterLink>
         </template>
       </CollectionHeader>

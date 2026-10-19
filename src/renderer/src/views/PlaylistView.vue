@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router';
 import { netease } from '../services';
 import { usePlayCollection } from '../composables/usePlayCollection';
 import { count, totalLength } from '../utils/format';
+import { t } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
 import TrackList from '../components/TrackList.vue';
 
@@ -42,9 +43,9 @@ const meta = computed(() => {
   if (!info.value) return '';
   return [
     info.value.creator?.nickname,
-    `${info.value.trackCount ?? tracks.value.length} 首`,
+    t('{n} 首', { n: info.value.trackCount ?? tracks.value.length }),
     totalLength(tracks.value),
-    info.value.playCount ? `${count(info.value.playCount)} 次播放` : '',
+    info.value.playCount ? t('{n} 次播放', { n: count(info.value.playCount) }) : '',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -53,11 +54,11 @@ const meta = computed(() => {
 
 <template>
   <div class="page">
-    <p v-if="loading" class="page-state">加载中…</p>
-    <p v-else-if="error" class="page-state">歌单加载失败：{{ error }}</p>
+    <p v-if="loading" class="page-state">{{ $t('加载中…') }}</p>
+    <p v-else-if="error" class="page-state">{{ $t('歌单加载失败：{error}', { error }) }}</p>
     <template v-else-if="info">
       <CollectionHeader
-        kind="歌单"
+        :kind="$t('歌单')"
         :cover="info.coverImgUrl"
         :title="info.name"
         :description="info.description || ''"

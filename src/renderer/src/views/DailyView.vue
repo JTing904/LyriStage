@@ -5,6 +5,7 @@ import { getDailyRecommendations } from '@core/recommend';
 import { netease } from '../services';
 import { usePlayCollection } from '../composables/usePlayCollection';
 import { totalLength } from '../utils/format';
+import { t, locale } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
 import TrackList from '../components/TrackList.vue';
 
@@ -34,11 +35,15 @@ function refresh() {
 }
 
 const now = new Date();
-const title = `${now.getMonth() + 1} 月 ${now.getDate()} 日`;
+const title = computed(() =>
+  locale.value === 'en'
+    ? now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : `${now.getMonth() + 1} 月 ${now.getDate()} 日`
+);
 const context = computed(() => `daily:${now.toISOString().slice(0, 10)}`);
 const meta = computed(() =>
   tracks.value.length
-    ? `${tracks.value.length} 首 · ${totalLength(tracks.value)}`
+    ? `${t('{n} 首', { n: tracks.value.length })} · ${totalLength(tracks.value)}`
     : ''
 );
 </script>
@@ -46,10 +51,10 @@ const meta = computed(() =>
 <template>
   <div class="page">
     <CollectionHeader
-      kind="每日推荐"
+      :kind="$t('每日推荐')"
       :cover="tracks[0]?.al?.picUrl || ''"
       :title="title"
-      description="按你最近听的歌、喜欢的歌手挑的，每天更新一次。"
+      :description="$t('按你最近听的歌、喜欢的歌手挑的，每天更新一次。')"
       :meta="meta"
       :playable="tracks.length > 0"
       @play="playAll(tracks, context)"
@@ -57,13 +62,13 @@ const meta = computed(() =>
     >
       <template #actions>
         <button :disabled="loading || refreshing" @click="refresh">
-          {{ refreshing ? '正在重新挑…' : '换一批' }}
+          {{ refreshing ? $t('正在重新挑…') : $t('换一批') }}
         </button>
       </template>
     </CollectionHeader>
 
-    <p v-if="loading" class="page-state">正在按你的口味挑歌，第一次会久一点…</p>
-    <p v-else-if="error" class="page-state">每日推荐加载失败：{{ error }}</p>
+    <p v-if="loading" class="page-state">{{ $t('正在按你的口味挑歌，第一次会久一点…') }}</p>
+    <p v-else-if="error" class="page-state">{{ $t('每日推荐加载失败：{error}', { error }) }}</p>
     <TrackList v-else :tracks="tracks" :context="context" />
   </div>
 </template>

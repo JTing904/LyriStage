@@ -84,21 +84,21 @@ onBeforeUnmount(() => {
     <div v-else class="placeholder">
       <p class="placeholder-title">{{ track?.name ?? 'LyriStage' }}</p>
       <p class="placeholder-sub">
-        <template v-if="status === 'empty'">还没有在播放的歌</template>
-        <template v-else-if="status === 'loading'">歌词加载中…</template>
+        <template v-if="status === 'empty'">{{ $t('还没有在播放的歌') }}</template>
+        <template v-else-if="status === 'loading'">{{ $t('歌词加载中…') }}</template>
         <template v-else-if="status === 'instrumental'"
-          >纯音乐，请欣赏</template
+          >{{ $t('纯音乐，请欣赏') }}</template
         >
         <template v-else-if="status === 'no-lyrics'"
-          >这首歌暂时没有歌词</template
+          >{{ $t('这首歌暂时没有歌词') }}</template
         >
-        <template v-else>歌词加载失败：{{ lyricsError?.message }}</template>
+        <template v-else>{{ $t('歌词加载失败：{error}', { error: lyricsError?.message }) }}</template>
       </p>
     </div>
 
     <!-- 顶部：关闭、风格（电脑版这一条也是拖动窗口的地方） -->
     <header class="topbar">
-      <button class="icon-button" title="关闭（Esc）" @click="emit('close')"
+      <button class="icon-button" :title="$t('关闭（Esc）')" @click="emit('close')"
         >✕</button
       >
       <span class="spacer" />
@@ -107,7 +107,7 @@ onBeforeUnmount(() => {
         :aria-expanded="pickerOpen"
         @click="pickerOpen = !pickerOpen"
       >
-        风格：{{ style.name }}
+        {{ $t('风格：{name}', { name: $t(style.name) }) }}
       </button>
     </header>
 

@@ -10,6 +10,7 @@ import { useAvatarStore } from '../stores/avatar';
 import { redirectTarget } from '../router';
 import AvatarFigure from '../components/AvatarFigure.vue';
 import Icon from '../components/Icon.vue';
+import { t } from '../i18n';
 
 const auth = useAuthStore();
 const avatar = useAvatarStore();
@@ -45,15 +46,16 @@ watch([mode, needInvite], () => (error.value = ''));
 /** Supabase 的英文错误换成中文 */
 function describe(err) {
   const message = err?.message || String(err);
-  if (/invalid login credentials/i.test(message)) return '邮箱或密码不对';
+  if (/invalid login credentials/i.test(message)) return t('邮箱或密码不对');
   if (/already registered|already been registered/i.test(message))
-    return '这个邮箱已经注册过了，请直接登录（之前用 GitHub 登录过的话，请按"使用 GitHub 登录"）';
-  if (/password should be at least/i.test(message)) return '密码太短了';
+    return t('这个邮箱已经注册过了，请直接登录（之前用 GitHub 登录过的话，请按"使用 GitHub 登录"）');
+  if (/password should be at least/i.test(message)) return t('密码太短了');
   if (/unable to validate email|invalid.*email/i.test(message))
-    return '邮箱格式不对';
-  if (/rate limit|too many/i.test(message)) return '尝试太多次了，请稍后再试';
-  if (/failed to fetch|network/i.test(message)) return '连不上服务器，请检查网络';
-  return message;
+    return t('邮箱格式不对');
+  if (/rate limit|too many/i.test(message)) return t('尝试太多次了，请稍后再试');
+  if (/failed to fetch|network/i.test(message)) return t('连不上服务器，请检查网络');
+  // 自己丢出的中文错误（例如邀请码不对）有对照就换成目前的语言
+  return t(message);
 }
 
 async function run(action) {
@@ -88,7 +90,7 @@ function submitInvite() {
     <aside class="brand">
       <div class="logo display">Lyri<span>Stage</span></div>
       <AvatarFigure class="figure" :url="avatar.url" />
-      <p class="tagline">以歌词为主角的音乐播放器。九种歌词舞台，电脑和手机都能听。</p>
+      <p class="tagline">{{ $t('以歌词为主角的音乐播放器。九种歌词舞台，电脑和手机都能听。') }}</p>
     </aside>
 
     <main class="panel">
@@ -98,54 +100,54 @@ function submitInvite() {
 
         <!-- 没设置 Supabase：没办法登录 -->
         <section v-if="!auth.enabled" class="head">
-          <h1 class="display">还不能登录</h1>
-          <p>这个版本没有设置 LyriStage 账号服务（.env 的 VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY）。</p>
+          <h1 class="display">{{ $t('还不能登录') }}</h1>
+          <p>{{ $t('这个版本没有设置 LyriStage 账号服务（.env 的 VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY）。') }}</p>
         </section>
 
         <!-- 还在读登录状态 -->
         <section v-else-if="!auth.ready" class="head">
-          <p>正在读取登录状态…</p>
+          <p>{{ $t('正在读取登录状态…') }}</p>
         </section>
 
         <!-- 登录了，但还不是成员 -->
         <form v-else-if="needInvite" class="form" @submit.prevent="submitInvite">
           <div class="head">
-            <h1 class="display">输入邀请码</h1>
+            <h1 class="display">{{ $t('输入邀请码') }}</h1>
             <p>
-              LyriStage 目前只开放给受邀的朋友。你已经用
+              {{ $t('LyriStage 目前只开放给受邀的朋友。你已经用') }}
               <strong>{{ auth.user?.email || auth.displayName }}</strong>
-              登录，输入邀请码就能开始使用。
+              {{ $t('登录，输入邀请码就能开始使用。') }}
             </p>
           </div>
           <label>
-            邀请码
+            {{ $t('邀请码') }}
             <input
               v-model="invite"
               class="code"
               autocomplete="off"
               autocapitalize="characters"
               spellcheck="false"
-              placeholder="例如 7KQ3MZ9TXA"
+              :placeholder="$t('例如 7KQ3MZ9TXA')"
               required
             />
           </label>
           <p v-if="error" class="error" role="alert">{{ error }}</p>
           <button type="submit" class="primary" :disabled="busy">
-            {{ busy ? '正在验证…' : '开始使用' }}
+            {{ busy ? $t('正在验证…') : $t('开始使用') }}
           </button>
           <p class="switch">
-            不是这个账号？<button type="button" class="link" @click="auth.logout()">换个账号</button>
+            {{ $t('不是这个账号？') }}<button type="button" class="link" @click="auth.logout()">{{ $t('换个账号') }}</button>
           </p>
         </form>
 
         <!-- 登录 / 注册 -->
         <form v-else class="form" @submit.prevent="submit">
           <div class="head">
-            <h1 class="display">{{ mode === 'login' ? '登录 LyriStage' : '注册 LyriStage' }}</h1>
+            <h1 class="display">{{ mode === 'login' ? $t('登录 LyriStage') : $t('注册 LyriStage') }}</h1>
             <p v-if="mode === 'login'">
-              不需要网易云账号。你的喜欢、歌单和听歌记录保存在 LyriStage 自己的账号里，电脑和手机同步。
+              {{ $t('不需要网易云账号。你的喜欢、歌单和听歌记录保存在 LyriStage 自己的账号里，电脑和手机同步。') }}
             </p>
-            <p v-else>LyriStage 目前只开放给受邀的朋友，注册需要邀请码。</p>
+            <p v-else>{{ $t('LyriStage 目前只开放给受邀的朋友，注册需要邀请码。') }}</p>
           </div>
 
           <template v-if="mode === 'login'">
@@ -160,16 +162,16 @@ function submitInvite() {
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.2-3.4-1.2-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.4 1.1 2.9.8.1-.6.4-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.6 9.6 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.7-4.6 5 .4.3.7.9.7 1.9V21c0 .3.2.6.7.5A10 10 0 0 0 12 2z" />
               </svg>
-              {{ p.label }}
+              {{ $t(p.label) }}
             </button>
             <p v-if="auth.oauthError" class="error" role="alert">
-              第三方登录失败：{{ auth.oauthError }}
+              {{ $t('第三方登录失败：{error}', { error: auth.oauthError }) }}
             </p>
-            <div class="divider"><span />或用邮箱<span /></div>
+            <div class="divider"><span />{{ $t('或用邮箱') }}<span /></div>
           </template>
 
           <label>
-            邮箱
+            {{ $t('邮箱') }}
             <input
               v-model="email"
               type="email"
@@ -179,20 +181,20 @@ function submitInvite() {
             />
           </label>
           <label>
-            密码
+            {{ $t('密码') }}
             <span class="password-field">
               <input
                 v-model="password"
                 :type="showPassword ? 'text' : 'password'"
                 :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
-                placeholder="至少 8 位"
+                :placeholder="$t('至少 8 位')"
                 minlength="8"
                 required
               />
               <button
                 type="button"
                 class="eye"
-                :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                :aria-label="showPassword ? $t('隐藏密码') : $t('显示密码')"
                 :aria-pressed="showPassword"
                 @click="showPassword = !showPassword"
               >
@@ -201,33 +203,33 @@ function submitInvite() {
             </span>
           </label>
           <label v-if="mode === 'register'">
-            邀请码
+            {{ $t('邀请码') }}
             <input
               v-model="invite"
               class="code"
               autocomplete="off"
               autocapitalize="characters"
               spellcheck="false"
-              placeholder="向邀请你的朋友要"
+              :placeholder="$t('向邀请你的朋友要')"
               required
             />
           </label>
 
           <p v-if="error" class="error" role="alert">{{ error }}</p>
           <button type="submit" class="primary" :disabled="busy">
-            <template v-if="busy">请稍候…</template>
-            <template v-else>{{ mode === 'login' ? '登录' : '注册并开始使用' }}</template>
+            <template v-if="busy">{{ $t('请稍候…') }}</template>
+            <template v-else>{{ mode === 'login' ? $t('登录') : $t('注册并开始使用') }}</template>
           </button>
 
           <p class="switch">
-            <RouterLink to="/" class="browse">先不登录，随便看看</RouterLink>
+            <RouterLink to="/" class="browse">{{ $t('先不登录，随便看看') }}</RouterLink>
           </p>
           <p class="switch">
             <template v-if="mode === 'login'">
-              还没有账号？<button type="button" class="link" @click="mode = 'register'">用邀请码注册</button>
+              {{ $t('还没有账号？') }}<button type="button" class="link" @click="mode = 'register'">{{ $t('用邀请码注册') }}</button>
             </template>
             <template v-else>
-              已经有账号？<button type="button" class="link" @click="mode = 'login'">去登录</button>
+              {{ $t('已经有账号？') }}<button type="button" class="link" @click="mode = 'login'">{{ $t('去登录') }}</button>
             </template>
           </p>
         </form>

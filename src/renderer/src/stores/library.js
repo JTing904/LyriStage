@@ -14,6 +14,7 @@ import {
   updatePlaylist,
 } from '@core/data';
 import { useAuthStore } from './auth';
+import { t } from '../i18n';
 
 export const useLibraryStore = defineStore('library', () => {
   const auth = useAuthStore();
@@ -71,7 +72,7 @@ export const useLibraryStore = defineStore('library', () => {
       version.value++;
     } catch (err) {
       likedIds.value = before;
-      say(`操作失败：${err.message || err}`);
+      say(t('操作失败：{error}', { error: err.message || err }));
     }
   }
 
@@ -80,7 +81,7 @@ export const useLibraryStore = defineStore('library', () => {
     try {
       playlists.value = await listPlaylists();
     } catch (err) {
-      say(`歌单载入失败：${err.message || err}`);
+      say(t('歌单载入失败：{error}', { error: err.message || err }));
     }
   }
 
@@ -105,12 +106,17 @@ export const useLibraryStore = defineStore('library', () => {
   /** 把歌加到一个或好几个歌单 */
   async function addToPlaylists(playlistIds, tracks) {
     for (const id of playlistIds) await addTracksToPlaylist(id, tracks);
-    const what = tracks.length > 1 ? `${tracks.length} 首歌` : `「${tracks[0].name}」`;
+    const what =
+      tracks.length > 1
+        ? t('{n} 首歌', { n: tracks.length })
+        : t('「{name}」', { name: tracks[0].name });
     const where =
       playlistIds.length > 1
-        ? `${playlistIds.length} 个歌单`
-        : `「${playlists.value.find(p => p.id === playlistIds[0])?.name ?? '歌单'}」`;
-    say(`已把${what}加到${where}`);
+        ? t('{n} 个歌单', { n: playlistIds.length })
+        : t('「{name}」', {
+            name: playlists.value.find(p => p.id === playlistIds[0])?.name ?? t('歌单'),
+          });
+    say(t('已把{what}加到{where}', { what, where }));
     await refreshPlaylists();
     version.value++;
   }

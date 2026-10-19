@@ -6,6 +6,7 @@ import { getPlaylist } from '@core/data';
 import { useLibraryStore } from '../stores/library';
 import { usePlayCollection } from '../composables/usePlayCollection';
 import { totalLength } from '../utils/format';
+import { t } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
 import TrackList from '../components/TrackList.vue';
 import SongPicker from '../components/SongPicker.vue';
@@ -37,7 +38,9 @@ watch(() => route.params.id, id => id && load(id), { immediate: true });
 const tracks = computed(() => playlist.value?.tracks ?? []);
 const context = computed(() => `my:${route.params.id}`);
 const meta = computed(() =>
-  tracks.value.length ? `${tracks.value.length} 首 · ${totalLength(tracks.value)}` : '还没有歌'
+  tracks.value.length
+    ? `${t('{n} 首', { n: tracks.value.length })} · ${totalLength(tracks.value)}`
+    : t('还没有歌')
 );
 
 /** 从歌单移除（一首或多选的好几首） */
@@ -49,7 +52,7 @@ async function remove(list) {
     await library.removeFromPlaylist(playlist.value.id, [...ids]);
   } catch (err) {
     playlist.value.tracks = before;
-    library.say(`移除失败：${err.message || err}`);
+    library.say(t('移除失败：{error}', { error: err.message || err }));
   }
 }
 
@@ -62,7 +65,7 @@ async function addSongs(list) {
     await library.addToPlaylist(playlist.value.id, list);
     playlist.value = await getPlaylist(playlist.value.id);
   } catch (err) {
-    library.say(`加入失败：${err.message || err}`);
+    library.say(t('加入失败：{error}', { error: err.message || err }));
   } finally {
     adding.value = false;
   }
@@ -85,7 +88,7 @@ async function save() {
     playlist.value.description = description.value.trim() || null;
     editor.value.close();
   } catch (err) {
-    library.say(`保存失败：${err.message || err}`);
+    library.say(t('保存失败：{error}', { error: err.message || err }));
   }
 }
 
@@ -97,18 +100,18 @@ async function removePlaylist() {
     await library.deletePlaylist(playlist.value.id);
     router.replace('/library');
   } catch (err) {
-    library.say(`删除失败：${err.message || err}`);
+    library.say(t('删除失败：{error}', { error: err.message || err }));
   }
 }
 </script>
 
 <template>
   <div class="page">
-    <p v-if="loading && !playlist" class="page-state">加载中…</p>
-    <p v-else-if="error" class="page-state">歌单加载失败：{{ error }}</p>
+    <p v-if="loading && !playlist" class="page-state">{{ $t('加载中…') }}</p>
+    <p v-else-if="error" class="page-state">{{ $t('歌单加载失败：{error}', { error }) }}</p>
     <template v-else-if="playlist">
       <CollectionHeader
-        kind="我的歌单"
+        :kind="$t('我的歌单')"
         :cover="playlist.cover_url || tracks[0]?.al?.picUrl || ''"
         :title="playlist.name"
         :description="playlist.description || ''"
@@ -118,15 +121,15 @@ async function removePlaylist() {
         @shuffle="shuffleAll(tracks, context)"
       >
         <template #actions>
-          <button @click="picker.open()">＋ 添加歌曲</button>
-          <button @click="openEditor">编辑</button>
-          <button @click="confirmBox.showModal()">删除歌单</button>
+          <button @click="picker.open()">{{ $t('＋ 添加歌曲') }}</button>
+          <button @click="openEditor">{{ $t('编辑') }}</button>
+          <button @click="confirmBox.showModal()">{{ $t('删除歌单') }}</button>
         </template>
       </CollectionHeader>
 
       <p v-if="!tracks.length" class="page-state">
-        歌单还是空的。按上面的「＋ 添加歌曲」一次挑好几首，<br />
-        或者按播放条红心旁边的 ＋ 把正在播的歌加进来。
+        {{ $t('歌单还是空的。按上面的「＋ 添加歌曲」一次挑好几首，') }}<br />
+        {{ $t('或者按播放条红心旁边的 ＋ 把正在播的歌加进来。') }}
       </p>
       <TrackList v-else :tracks="tracks" :context="context" removable @remove="remove" />
     </template>
@@ -140,29 +143,29 @@ async function removePlaylist() {
 
     <dialog ref="confirmBox" class="editor" @click.self="confirmBox.close()">
       <div v-if="playlist" class="box">
-        <h2>删除歌单「{{ playlist.name }}」？</h2>
-        <p class="note">只删除这个歌单，里面的歌不会受影响。删除后不能复原。</p>
+        <h2>{{ $t('删除歌单「{name}」？', { name: playlist.name }) }}</h2>
+        <p class="note">{{ $t('只删除这个歌单，里面的歌不会受影响。删除后不能复原。') }}</p>
         <div class="buttons">
-          <button type="button" class="ghost" @click="confirmBox.close()">取消</button>
-          <button type="button" class="primary" @click="removePlaylist">删除</button>
+          <button type="button" class="ghost" @click="confirmBox.close()">{{ $t('取消') }}</button>
+          <button type="button" class="primary" @click="removePlaylist">{{ $t('删除') }}</button>
         </div>
       </div>
     </dialog>
 
     <dialog ref="editor" class="editor" @click.self="editor.close()">
       <form class="box" @submit.prevent="save">
-        <h2>编辑歌单</h2>
+        <h2>{{ $t('编辑歌单') }}</h2>
         <label>
-          名字
+          {{ $t('名字') }}
           <input v-model="name" maxlength="60" required />
         </label>
         <label>
-          介绍
-          <textarea v-model="description" rows="3" maxlength="300" placeholder="写点什么（可以不写）" />
+          {{ $t('介绍') }}
+          <textarea v-model="description" rows="3" maxlength="300" :placeholder="$t('写点什么（可以不写）')" />
         </label>
         <div class="buttons">
-          <button type="button" class="ghost" @click="editor.close()">取消</button>
-          <button class="primary" :disabled="!name.trim()">保存</button>
+          <button type="button" class="ghost" @click="editor.close()">{{ $t('取消') }}</button>
+          <button class="primary" :disabled="!name.trim()">{{ $t('保存') }}</button>
         </div>
       </form>
     </dialog>

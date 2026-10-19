@@ -20,7 +20,7 @@ const artists = computed(() =>
 
 <template>
   <div v-if="state.track" class="mini">
-    <button class="open" aria-label="打开歌词" @click="emit('open-stage')">
+    <button class="open" :aria-label="$t('打开歌词')" @click="emit('open-stage')">
       <Cover :url="state.track.al?.picUrl" :size="42" radius="8px" class="cover" />
       <span class="meta">
         <strong>{{ state.track.name }}</strong>
@@ -29,12 +29,12 @@ const artists = computed(() =>
     </button>
     <button
       class="icon-btn"
-      :aria-label="state.playing ? '暂停' : '播放'"
+      :aria-label="state.playing ? $t('暂停') : $t('播放')"
       @click="player.toggle()"
     >
       <Icon :name="state.playing ? 'pause' : 'play'" :size="26" />
     </button>
-    <button class="icon-btn" aria-label="下一首" @click="player.next()">
+    <button class="icon-btn" :aria-label="$t('下一首')" @click="player.next()">
       <Icon name="next" />
     </button>
     <span class="line"><span :style="{ width: `${progress * 100}%` }" /></span>

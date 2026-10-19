@@ -35,14 +35,20 @@ function goLogin() {
 <template>
   <dialog ref="dialog" class="login-prompt" @close="close" @click.self="close">
     <div class="box">
-      <h2 class="display">{{ needInvite ? '输入邀请码' : '登录' }}后才能{{ auth.loginPrompt }}</h2>
+      <h2 class="display">
+        {{
+          needInvite
+            ? $t('输入邀请码后才能{action}', { action: $t(auth.loginPrompt) })
+            : $t('登录后才能{action}', { action: $t(auth.loginPrompt) })
+        }}
+      </h2>
       <p>
-        LyriStage 目前只开放给受邀的朋友。<template v-if="needInvite">输入朋友给你的邀请码就能开始使用。</template>
-        <template v-else>没登录可以先随便看看，听歌、收藏和建歌单要登录。</template>
+        {{ $t('LyriStage 目前只开放给受邀的朋友。') }}<template v-if="needInvite">{{ $t('输入朋友给你的邀请码就能开始使用。') }}</template>
+        <template v-else>{{ $t('没登录可以先随便看看，听歌、收藏和建歌单要登录。') }}</template>
       </p>
       <div class="buttons">
-        <button class="ghost" @click="close">先看看</button>
-        <button class="primary" @click="goLogin">{{ needInvite ? '输入邀请码' : '去登录' }}</button>
+        <button class="ghost" @click="close">{{ $t('先看看') }}</button>
+        <button class="primary" @click="goLogin">{{ needInvite ? $t('输入邀请码') : $t('去登录') }}</button>
       </div>
     </div>
   </dialog>

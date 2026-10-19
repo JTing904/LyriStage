@@ -6,6 +6,7 @@ import { useLibraryStore } from '../stores/library';
 import { usePlayer } from '../composables/usePlayer';
 import { usePlayCollection } from '../composables/usePlayCollection';
 import { artistNames } from '../utils/format';
+import { t } from '../i18n';
 import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
 import TileGrid from '../components/TileGrid.vue';
@@ -20,7 +21,7 @@ async function loadLiked() {
   try {
     likedRows.value = await listLikedTracks();
   } catch (err) {
-    library.say(`载入失败：${err.message || err}`);
+    library.say(t('载入失败：{error}', { error: err.message || err }));
   }
 }
 // 数据库写好之后（version 变了）才重新载入；取消喜欢的先从画面上拿掉
@@ -59,7 +60,7 @@ const tiles = computed(() =>
       to: `/my/${p.id}`,
       cover: p.cover_url,
       title: p.name,
-      sub: `${p.trackCount} 首`,
+      sub: t('{n} 首', { n: p.trackCount }),
     }))
 );
 
@@ -74,31 +75,31 @@ async function create() {
     newName.value = '';
     creating.value = false;
   } catch (err) {
-    library.say(`新建失败：${err.message || err}`);
+    library.say(t('新建失败：{error}', { error: err.message || err }));
   }
 }
 </script>
 
 <template>
   <div class="page">
-    <h1 class="display title">我的音乐库</h1>
+    <h1 class="display title">{{ $t('我的音乐库') }}</h1>
 
     <div class="top">
       <!-- 我喜欢的音乐 -->
       <RouterLink to="/liked" class="liked-card">
-        <span class="label"><Icon name="heart-fill" :size="18" />我喜欢的音乐</span>
+        <span class="label"><Icon name="heart-fill" :size="18" />{{ $t('我喜欢的音乐') }}</span>
         <p class="names display">
           <template v-if="liked.length">
             {{ liked.slice(0, 3).map(t => t.name).join(' · ') }}
           </template>
-          <template v-else>按 ♡ 收藏喜欢的歌</template>
+          <template v-else>{{ $t('按 ♡ 收藏喜欢的歌') }}</template>
         </p>
         <span class="count">
-          {{ liked.length }} 首<template v-if="liked[0]"> · 最近喜欢：{{ liked[0].name }}</template>
+          {{ $t('{n} 首', { n: liked.length }) }}<template v-if="liked[0]"> · {{ $t('最近喜欢：{name}', { name: liked[0].name }) }}</template>
         </span>
         <button
           class="play"
-          aria-label="播放我喜欢的音乐"
+          :aria-label="$t('播放我喜欢的音乐')"
           :disabled="!liked.length"
           @click.prevent="playAll(liked, 'liked')"
         >
@@ -109,15 +110,19 @@ async function create() {
       <!-- 听歌排行 -->
       <section class="ranking">
         <div class="ranking-head">
-          <h2 class="section-title">听歌排行</h2>
-          <div class="segmented" role="radiogroup" aria-label="排行范围">
-            <button role="radio" :aria-checked="range === 'week'" :class="{ on: range === 'week' }" @click="range = 'week'">本周</button>
-            <button role="radio" :aria-checked="range === 'all'" :class="{ on: range === 'all' }" @click="range = 'all'">全部</button>
+          <h2 class="section-title">{{ $t('听歌排行') }}</h2>
+          <div class="segmented" role="radiogroup" :aria-label="$t('排行范围')">
+            <button role="radio" :aria-checked="range === 'week'" :class="{ on: range === 'week' }" @click="range = 'week'">{{ $t('本周') }}</button>
+            <button role="radio" :aria-checked="range === 'all'" :class="{ on: range === 'all' }" @click="range = 'all'">{{ $t('全部') }}</button>
           </div>
         </div>
-        <p v-if="rankingLoading" class="hint">载入中…</p>
+        <p v-if="rankingLoading" class="hint">{{ $t('载入中…') }}</p>
         <p v-else-if="!ranking.length" class="hint">
-          {{ range === 'week' ? '这周还没有听歌记录' : '还没有听歌记录' }}，听完一首歌就会出现在这里。
+          {{
+            range === 'week'
+              ? $t('这周还没有听歌记录，听完一首歌就会出现在这里。')
+              : $t('还没有听歌记录，听完一首歌就会出现在这里。')
+          }}
         </p>
         <ol v-else class="rank-list">
           <li v-for="(t, i) in rankingShown" :key="t.id">
@@ -128,7 +133,7 @@ async function create() {
                 <strong>{{ t.name }}</strong>
                 <span>{{ artistNames(t) }}</span>
               </span>
-              <span class="plays">{{ t.playCount }} 次</span>
+              <span class="plays">{{ $t('{n} 次', { n: t.playCount }) }}</span>
             </button>
           </li>
         </ol>
@@ -138,22 +143,22 @@ async function create() {
     <!-- 我的歌单 -->
     <section>
       <div class="lists-head">
-        <h2 class="section-title">我的歌单</h2>
-        <div class="segmented" role="radiogroup" aria-label="排序">
-          <button role="radio" :aria-checked="sort === 'updated'" :class="{ on: sort === 'updated' }" @click="sort = 'updated'">最近更新</button>
-          <button role="radio" :aria-checked="sort === 'name'" :class="{ on: sort === 'name' }" @click="sort = 'name'">名称</button>
+        <h2 class="section-title">{{ $t('我的歌单') }}</h2>
+        <div class="segmented" role="radiogroup" :aria-label="$t('排序')">
+          <button role="radio" :aria-checked="sort === 'updated'" :class="{ on: sort === 'updated' }" @click="sort = 'updated'">{{ $t('最近更新') }}</button>
+          <button role="radio" :aria-checked="sort === 'name'" :class="{ on: sort === 'name' }" @click="sort = 'name'">{{ $t('名称') }}</button>
         </div>
         <button class="new-btn" @click="creating = !creating">
-          <Icon name="plus" :size="18" />新建歌单
+          <Icon name="plus" :size="18" />{{ $t('新建歌单') }}
         </button>
       </div>
       <form v-if="creating" class="create" @submit.prevent="create">
-        <input v-model="newName" placeholder="歌单名字" maxlength="60" required autofocus />
-        <button class="primary" :disabled="!newName.trim()">新建</button>
-        <button type="button" class="ghost" @click="creating = false">取消</button>
+        <input v-model="newName" :placeholder="$t('歌单名字')" maxlength="60" required autofocus />
+        <button class="primary" :disabled="!newName.trim()">{{ $t('新建') }}</button>
+        <button type="button" class="ghost" @click="creating = false">{{ $t('取消') }}</button>
       </form>
       <TileGrid v-if="tiles.length" :items="tiles" />
-      <p v-else-if="!creating" class="hint">还没有歌单。在任何一首歌旁边按 ＋ 就能加进歌单。</p>
+      <p v-else-if="!creating" class="hint">{{ $t('还没有歌单。在任何一首歌旁边按 ＋ 就能加进歌单。') }}</p>
     </section>
   </div>
 </template>

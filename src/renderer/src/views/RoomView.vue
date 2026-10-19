@@ -39,35 +39,35 @@ async function copy(text) {
 <template>
   <div class="page room-page">
     <header>
-      <h1 class="display">一起听</h1>
-      <p>开一个房间，把房间码发给朋友。你播什么、暂停、切歌，大家都会同步。</p>
+      <h1 class="display">{{ $t('一起听') }}</h1>
+      <p>{{ $t('开一个房间，把房间码发给朋友。你播什么、暂停、切歌，大家都会同步。') }}</p>
     </header>
 
     <!-- 还没在房间里 -->
     <div v-if="!room.inRoom" class="start">
       <section class="card">
-        <h2>开一个房间</h2>
-        <p>你当房主，大家跟着你的歌听。</p>
+        <h2>{{ $t('开一个房间') }}</h2>
+        <p>{{ $t('你当房主，大家跟着你的歌听。') }}</p>
         <button class="primary" :disabled="room.status === 'connecting'" @click="room.createRoom()">
-          {{ room.status === 'connecting' && room.role === 'host' ? '正在开房间…' : '开房间' }}
+          {{ room.status === 'connecting' && room.role === 'host' ? $t('正在开房间…') : $t('开房间') }}
         </button>
       </section>
 
       <section class="card">
-        <h2>加入朋友的房间</h2>
-        <p>输入朋友给你的 6 位房间码。</p>
+        <h2>{{ $t('加入朋友的房间') }}</h2>
+        <p>{{ $t('输入朋友给你的 6 位房间码。') }}</p>
         <form class="join" @submit.prevent="room.joinRoom(input)">
           <input
             v-model="input"
             class="code-input"
             maxlength="6"
-            placeholder="例如 7KQ3MZ"
+            :placeholder="$t('例如 7KQ3MZ')"
             autocapitalize="characters"
             autocomplete="off"
             spellcheck="false"
           />
           <button class="primary" :disabled="room.status === 'connecting'">
-            {{ room.status === 'connecting' && room.role === 'guest' ? '加入中…' : '加入' }}
+            {{ room.status === 'connecting' && room.role === 'guest' ? $t('加入中…') : $t('加入') }}
           </button>
         </form>
       </section>
@@ -78,43 +78,43 @@ async function copy(text) {
     <!-- 在房间里 -->
     <div v-else class="inside">
       <section class="card code-card">
-        <span class="label">{{ room.role === 'host' ? '你是房主 · 房间码' : '房间码' }}</span>
+        <span class="label">{{ room.role === 'host' ? $t('你是房主 · 房间码') : $t('房间码') }}</span>
         <div class="code">{{ room.code }}</div>
         <div class="actions">
-          <button class="ghost" @click="copy(room.code)">{{ copied ? '已复制 ✓' : '复制房间码' }}</button>
-          <button class="ghost" @click="copy(shareLink)">复制网页链接</button>
+          <button class="ghost" @click="copy(room.code)">{{ copied ? $t('已复制 ✓') : $t('复制房间码') }}</button>
+          <button class="ghost" @click="copy(shareLink)">{{ $t('复制网页链接') }}</button>
           <button class="ghost danger" @click="room.leave()">
-            {{ room.role === 'host' ? '关闭房间' : '离开房间' }}
+            {{ room.role === 'host' ? $t('关闭房间') : $t('离开房间') }}
           </button>
         </div>
         <p v-if="room.notice" class="notice">{{ room.notice }}</p>
       </section>
 
       <section class="card">
-        <h2>正在听</h2>
+        <h2>{{ $t('正在听') }}</h2>
         <div v-if="state.track" class="now">
           <Cover :url="state.track.al?.picUrl" :size="72" radius="10px" class="cover" />
           <div class="meta">
             <strong>{{ state.track.name }}</strong>
             <span>{{ artistNames(state.track) }}</span>
             <span class="hint">
-              {{ room.role === 'host' ? '你播什么大家就听什么，去别的页面点歌也会同步。' : `跟着 ${room.host?.name ?? '房主'} 一起听` }}
+              {{ room.role === 'host' ? $t('你播什么大家就听什么，去别的页面点歌也会同步。') : $t('跟着 {name} 一起听', { name: room.host?.name ?? $t('房主') }) }}
             </span>
           </div>
         </div>
         <p v-else class="hint">
-          {{ room.role === 'host' ? '还没播歌。去首页或搜索点一首，大家就会一起听。' : '等房主播歌…' }}
+          {{ room.role === 'host' ? $t('还没播歌。去首页或搜索点一首，大家就会一起听。') : $t('等房主播歌…') }}
         </p>
       </section>
 
       <section class="card">
-        <h2>房间里 {{ room.members.length }} 个人</h2>
+        <h2>{{ $t('房间里 {n} 个人', { n: room.members.length }) }}</h2>
         <ul class="members">
           <li v-for="m in room.members" :key="m.id">
             <Cover v-if="m.avatar" :url="m.avatar" :size="40" round class="avatar" />
             <span v-else class="avatar initial">{{ m.name.slice(0, 1).toUpperCase() }}</span>
             <span class="name">{{ m.name }}</span>
-            <span v-if="m.role === 'host'" class="badge">房主</span>
+            <span v-if="m.role === 'host'" class="badge">{{ $t('房主') }}</span>
           </li>
         </ul>
       </section>

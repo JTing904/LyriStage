@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { netease } from '../services';
 import { usePlayer } from '../composables/usePlayer';
 import { artistNames, year } from '../utils/format';
+import { t } from '../i18n';
 import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
 import TileGrid from '../components/TileGrid.vue';
@@ -136,7 +137,7 @@ const playlistTiles = list =>
     to: `/playlist/${pl.id}`,
     cover: pl.coverImgUrl,
     title: pl.name,
-    sub: [pl.creator?.nickname, pl.trackCount ? `${pl.trackCount} 首` : '']
+    sub: [pl.creator?.nickname, pl.trackCount ? t('{n} 首', { n: pl.trackCount }) : '']
       .filter(Boolean)
       .join(' · '),
   }));
@@ -166,15 +167,15 @@ const empty = computed(() =>
       <Icon name="search" :size="18" />
       <input
         v-model="input"
-        placeholder="搜索歌曲、歌手、专辑、歌单"
-        aria-label="搜索"
+        :placeholder="$t('搜索歌曲、歌手、专辑、歌单')"
+        :aria-label="$t('搜索')"
         enterkeyhint="search"
         :autofocus="!q"
       />
     </form>
 
     <template v-if="q">
-      <nav class="tabs" aria-label="搜索分类">
+      <nav class="tabs" :aria-label="$t('搜索分类')">
         <button
           v-for="t in TABS"
           :key="t.id"
@@ -182,19 +183,19 @@ const empty = computed(() =>
           :aria-pressed="tab === t.id"
           @click="selectTab(t.id)"
         >
-          {{ t.label }}
+          {{ $t(t.label) }}
         </button>
       </nav>
 
-      <p v-if="loading" class="page-state">搜索中…</p>
-      <p v-else-if="error" class="page-state">搜索失败：{{ error }}</p>
-      <p v-else-if="empty" class="page-state">没有找到「{{ q }}」相关的结果</p>
+      <p v-if="loading" class="page-state">{{ $t('搜索中…') }}</p>
+      <p v-else-if="error" class="page-state">{{ $t('搜索失败：{error}', { error }) }}</p>
+      <p v-else-if="empty" class="page-state">{{ $t('没有找到「{q}」相关的结果', { q }) }}</p>
 
       <!-- 综合 -->
       <template v-else-if="tab === 'all'">
         <div class="top">
           <section v-if="best" class="best-wrap">
-            <h2 class="section-title">最佳结果</h2>
+            <h2 class="section-title">{{ $t('最佳结果') }}</h2>
             <RouterLink
               v-if="best.type === 'artist'"
               :to="`/artist/${best.item.id}`"
@@ -202,16 +203,16 @@ const empty = computed(() =>
             >
               <Cover :url="best.item.picUrl || best.item.img1v1Url" :size="120" round class="best-cover" />
               <strong class="display">{{ best.item.name }}</strong>
-              <span class="tag">歌手</span>
+              <span class="tag">{{ $t('歌手') }}</span>
             </RouterLink>
             <button v-else class="best" @click="playBest">
               <Cover :url="best.item.al?.picUrl" :size="120" radius="10px" class="best-cover" />
               <strong class="display">{{ best.item.name }}</strong>
-              <span class="tag">单曲 · {{ artistNames(best.item) }}</span>
+              <span class="tag">{{ $t('单曲') }} · {{ artistNames(best.item) }}</span>
             </button>
           </section>
           <section v-if="overview.song.length" class="songs">
-            <h2 class="section-title">单曲</h2>
+            <h2 class="section-title">{{ $t('单曲') }}</h2>
             <TrackList
               :tracks="overview.song.slice(0, 5)"
               :context="context"
@@ -223,15 +224,15 @@ const empty = computed(() =>
         </div>
 
         <section v-if="overview.artist.length">
-          <h2 class="section-title">歌手</h2>
+          <h2 class="section-title">{{ $t('歌手') }}</h2>
           <TileGrid :items="artistTiles(overview.artist)" />
         </section>
         <section v-if="overview.album.length">
-          <h2 class="section-title">专辑</h2>
+          <h2 class="section-title">{{ $t('专辑') }}</h2>
           <TileGrid :items="albumTiles(overview.album)" />
         </section>
         <section v-if="overview.playlist.length">
-          <h2 class="section-title">歌单</h2>
+          <h2 class="section-title">{{ $t('歌单') }}</h2>
           <TileGrid :items="playlistTiles(overview.playlist)" />
         </section>
       </template>
@@ -243,12 +244,12 @@ const empty = computed(() =>
         <TileGrid v-else-if="tab === 'album'" :items="albumTiles(items)" />
         <TileGrid v-else :items="playlistTiles(items)" />
         <button v-if="hasMore" class="more" :disabled="loadingMore" @click="loadMore">
-          {{ loadingMore ? '加载中…' : '加载更多' }}
+          {{ loadingMore ? $t('加载中…') : $t('加载更多') }}
         </button>
       </template>
     </template>
 
-    <p v-else class="page-state">输入歌名、歌手或歌单名字开始搜索</p>
+    <p v-else class="page-state">{{ $t('输入歌名、歌手或歌单名字开始搜索') }}</p>
   </div>
 </template>
 

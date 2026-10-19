@@ -11,7 +11,7 @@ const TABS = [
 </script>
 
 <template>
-  <nav class="tabs" aria-label="主导航">
+  <nav class="tabs" :aria-label="$t('主导航')">
     <RouterLink
       v-for="tab in TABS"
       :key="tab.to"
@@ -21,7 +21,7 @@ const TABS = [
       exact-active-class="active"
     >
       <Icon :name="tab.icon" />
-      <span>{{ tab.label }}</span>
+      <span>{{ $t(tab.label) }}</span>
     </RouterLink>
   </nav>
 </template>

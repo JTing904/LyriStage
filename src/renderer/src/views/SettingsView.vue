@@ -10,6 +10,7 @@ import Cover from '../components/Cover.vue';
 import AvatarFigure from '../components/AvatarFigure.vue';
 import { isElectron, setDesktopLyrics, setDesktopLyricsLocked } from '../platform';
 import { desktopLyrics } from '../desktop';
+import { t, locale, LOCALES } from '../i18n';
 
 const auth = useAuthStore();
 const theme = useThemeStore();
@@ -27,7 +28,7 @@ async function loadInvites() {
   try {
     invites.value = await listInvites();
   } catch (err) {
-    inviteError.value = err.message || String(err);
+    inviteError.value = t(err.message || String(err));
   }
 }
 watch(
@@ -44,7 +45,7 @@ async function generate() {
     await copy(newCode.value);
     await loadInvites();
   } catch (err) {
-    inviteError.value = err.message || String(err);
+    inviteError.value = t(err.message || String(err));
   } finally {
     inviteBusy.value = false;
   }
@@ -64,12 +65,15 @@ async function copy(code) {
 
 const inviteStatus = i =>
   i.usedCount >= i.maxUses
-    ? '已使用'
+    ? t('已使用')
     : i.maxUses > 1
-      ? `已用 ${i.usedCount} / ${i.maxUses}`
-      : '未使用';
+      ? t('已用 {used} / {max}', { used: i.usedCount, max: i.maxUses })
+      : t('未使用');
 const shortDate = iso =>
   new Date(iso).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+
+/** 换介面语言（中文 / English） */
+const setLocale = value => (locale.value = value);
 
 const busy = ref(false);
 async function logout() {
@@ -84,10 +88,10 @@ async function logout() {
 
 <template>
   <section class="settings">
-    <h1 class="display">设置</h1>
+    <h1 class="display">{{ $t('设置') }}</h1>
 
     <div class="group">
-      <h2>账号</h2>
+      <h2>{{ $t('账号') }}</h2>
       <div class="row account">
         <Cover v-if="auth.avatarUrl" :url="auth.avatarUrl" :size="48" round class="avatar" />
         <span v-else class="avatar initial">{{ auth.displayName.slice(0, 1).toUpperCase() }}</span>
@@ -95,30 +99,30 @@ async function logout() {
           <strong>{{ auth.displayName }}</strong>
           <span>{{ auth.providerLabel }}<template v-if="auth.user?.email"> · {{ auth.user.email }}</template></span>
         </span>
-        <button class="ghost" :disabled="busy" @click="logout">退出登录</button>
+        <button class="ghost" :disabled="busy" @click="logout">{{ $t('退出登录') }}</button>
       </div>
     </div>
 
     <div v-if="auth.admin" class="group">
-      <h2>邀请朋友</h2>
+      <h2>{{ $t('邀请朋友') }}</h2>
       <div class="row invite-row">
         <div class="invite-top">
-          <p class="hint">每个邀请码只能用一次。生成后会自动复制，直接贴给朋友就好。</p>
+          <p class="hint">{{ $t('每个邀请码只能用一次。生成后会自动复制，直接贴给朋友就好。') }}</p>
           <button class="primary" :disabled="inviteBusy" @click="generate">
-            {{ inviteBusy ? '生成中…' : '一键生成邀请码' }}
+            {{ inviteBusy ? $t('生成中…') : $t('一键生成邀请码') }}
           </button>
         </div>
         <div v-if="newCode" class="new-code">
           <code>{{ newCode }}</code>
           <button class="ghost small" @click="copy(newCode)">
-            {{ copied === newCode ? '已复制 ✓' : '复制' }}
+            {{ copied === newCode ? $t('已复制 ✓') : $t('复制') }}
           </button>
         </div>
         <p v-if="inviteError" class="invite-error" role="alert">{{ inviteError }}</p>
         <ul v-if="invites.length" class="invite-list">
           <li v-for="i in invites" :key="i.code" :class="{ used: i.usedCount >= i.maxUses }">
             <code>{{ i.code }}</code>
-            <span v-if="i.grantsAdmin" class="badge" title="用这个码注册的人也会是管理员，不要给朋友">管理员码</span>
+            <span v-if="i.grantsAdmin" class="badge" :title="$t('用这个码注册的人也会是管理员，不要给朋友')">{{ $t('管理员码') }}</span>
             <span class="status">{{ inviteStatus(i) }}</span>
             <span class="date">{{ shortDate(i.createdAt) }}</span>
             <button
@@ -126,7 +130,7 @@ async function logout() {
               class="link-btn"
               @click="copy(i.code)"
             >
-              {{ copied === i.code ? '已复制 ✓' : '复制' }}
+              {{ copied === i.code ? $t('已复制 ✓') : $t('复制') }}
             </button>
           </li>
         </ul>
@@ -134,12 +138,12 @@ async function logout() {
     </div>
 
     <div class="group">
-      <h2>我的公仔</h2>
+      <h2>{{ $t('我的公仔') }}</h2>
       <div class="row avatar-row">
         <AvatarFigure class="preview" :url="avatar.url" />
         <div class="avatar-side">
-          <p class="hint">首页和登录页都会出现。选"按时间自动换"的话，早上、中午、下午、晚上各穿一套。</p>
-          <div class="chips" role="radiogroup" aria-label="公仔造型">
+          <p class="hint">{{ $t('首页和登录页都会出现。选"按时间自动换"的话，早上、中午、下午、晚上各穿一套。') }}</p>
+          <div class="chips" role="radiogroup" :aria-label="$t('公仔造型')">
             <button
               v-for="o in AVATAR_CHOICES"
               :key="o.id"
@@ -148,7 +152,7 @@ async function logout() {
               :class="{ on: avatar.choice === o.id }"
               @click="avatar.choice = o.id"
             >
-              {{ o.label }}
+              {{ $t(o.label) }}
             </button>
           </div>
         </div>
@@ -156,11 +160,11 @@ async function logout() {
     </div>
 
     <div v-if="isElectron" class="group">
-      <h2>桌面歌词</h2>
+      <h2>{{ $t('桌面歌词') }}</h2>
       <div class="row switch-row">
         <span class="label">
-          显示桌面歌词
-          <small>App 收起来（最小化或关到托盘）时，在桌面上显示正在唱的歌词</small>
+          {{ $t('显示桌面歌词') }}
+          <small>{{ $t('App 收起来（最小化或关到托盘）时，在桌面上显示正在唱的歌词') }}</small>
         </span>
         <input
           type="checkbox"
@@ -172,8 +176,8 @@ async function logout() {
       </div>
       <div class="row switch-row">
         <span class="label">
-          锁定位置
-          <small>锁定后鼠标会穿过歌词，点得到后面的东西；在托盘图标按右键也能解锁</small>
+          {{ $t('锁定位置') }}
+          <small>{{ $t('锁定后鼠标会穿过歌词，点得到后面的东西；在托盘图标按右键也能解锁') }}</small>
         </span>
         <input
           type="checkbox"
@@ -187,10 +191,10 @@ async function logout() {
     </div>
 
     <div class="group">
-      <h2>外观</h2>
+      <h2>{{ $t('外观') }}</h2>
       <div class="row">
-        <span class="label">主题</span>
-        <div class="segmented" role="radiogroup" aria-label="主题">
+        <span class="label">{{ $t('主题') }}</span>
+        <div class="segmented" role="radiogroup" :aria-label="$t('主题')">
           <button
             v-for="o in THEME_OPTIONS"
             :key="o.value"
@@ -198,6 +202,21 @@ async function logout() {
             :aria-checked="theme.mode === o.value"
             :class="{ on: theme.mode === o.value }"
             @click="theme.mode = o.value"
+          >
+            {{ $t(o.label) }}
+          </button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">{{ $t('语言') }}</span>
+        <div class="segmented" role="radiogroup" :aria-label="$t('语言')">
+          <button
+            v-for="o in LOCALES"
+            :key="o.value"
+            role="radio"
+            :aria-checked="locale === o.value"
+            :class="{ on: locale === o.value }"
+            @click="setLocale(o.value)"
           >
             {{ o.label }}
           </button>
@@ -302,7 +321,7 @@ button {
   color: var(--text);
   font-weight: 700;
 }
-.switch-row + .switch-row {
+.row + .row {
   margin-top: 8px;
 }
 .label small {

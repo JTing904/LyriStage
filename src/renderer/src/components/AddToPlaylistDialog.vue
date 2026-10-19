@@ -4,6 +4,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 import { useLibraryStore } from '../stores/library';
 import Cover from './Cover.vue';
 import Icon from './Icon.vue';
+import { t } from '../i18n';
 
 const library = useLibraryStore();
 const tracks = computed(() => library.pendingTracks);
@@ -40,7 +41,7 @@ async function addChosen() {
     await library.addToPlaylists([...chosen.value], tracks.value);
     library.closeAddDialog();
   } catch (err) {
-    library.say(`加入失败：${err.message || err}`);
+    library.say(t('加入失败：{error}', { error: err.message || err }));
   } finally {
     busy.value = false;
   }
@@ -63,7 +64,7 @@ async function create() {
     newName.value = '';
     creating.value = false;
   } catch (err) {
-    library.say(`新建失败：${err.message || err}`);
+    library.say(t('新建失败：{error}', { error: err.message || err }));
   } finally {
     busy.value = false;
   }
@@ -71,7 +72,9 @@ async function create() {
 
 const title = computed(() => {
   const list = tracks.value ?? [];
-  return list.length === 1 ? `把「${list[0].name}」加到歌单` : `把 ${list.length} 首歌加到歌单`;
+  return list.length === 1
+    ? t('把「{name}」加到歌单', { name: list[0].name })
+    : t('把 {n} 首歌加到歌单', { n: list.length });
 });
 </script>
 
@@ -80,18 +83,18 @@ const title = computed(() => {
     <div v-if="tracks" class="box">
       <header>
         <h2>{{ title }}</h2>
-        <button class="close" aria-label="关闭" @click="library.closeAddDialog()">
+        <button class="close" :aria-label="$t('关闭')" @click="library.closeAddDialog()">
           <Icon name="x" :size="20" />
         </button>
       </header>
 
       <form v-if="creating" class="create" @submit.prevent="create">
-        <input ref="nameInput" v-model="newName" placeholder="歌单名字" maxlength="60" required />
-        <button class="primary" :disabled="busy || !newName.trim()">新建</button>
+        <input ref="nameInput" v-model="newName" :placeholder="$t('歌单名字')" maxlength="60" required />
+        <button class="primary" :disabled="busy || !newName.trim()">{{ $t('新建') }}</button>
       </form>
       <button v-else class="row new" @click="startCreate">
         <span class="plus"><Icon name="plus" /></span>
-        <strong>新建歌单</strong>
+        <strong>{{ $t('新建歌单') }}</strong>
       </button>
 
       <ul class="list">
@@ -109,17 +112,17 @@ const title = computed(() => {
             <Cover :url="p.cover_url" :size="44" radius="8px" class="cover" />
             <span class="meta">
               <strong>{{ p.name }}</strong>
-              <span>{{ p.trackCount }} 首</span>
+              <span>{{ $t('{n} 首', { n: p.trackCount }) }}</span>
             </span>
           </button>
         </li>
       </ul>
-      <p v-if="!library.playlists.length && !creating" class="empty">还没有歌单，先新建一个吧。</p>
+      <p v-if="!library.playlists.length && !creating" class="empty">{{ $t('还没有歌单，先新建一个吧。') }}</p>
 
       <footer v-if="library.playlists.length">
-        <span>{{ chosen.size ? `已选 ${chosen.size} 个歌单` : '可以选好几个' }}</span>
+        <span>{{ chosen.size ? $t('已选 {n} 个歌单', { n: chosen.size }) : $t('可以选好几个') }}</span>
         <button class="primary" :disabled="busy || !chosen.size" @click="addChosen">
-          {{ busy ? '加入中…' : '加入' }}
+          {{ busy ? $t('加入中…') : $t('加入') }}
         </button>
       </footer>
     </div>

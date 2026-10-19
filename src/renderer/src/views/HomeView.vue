@@ -7,6 +7,7 @@ import { usePlayer } from '../composables/usePlayer';
 import { useAuthStore } from '../stores/auth';
 import { useRecentStore } from '../stores/recent';
 import { useAvatarStore } from '../stores/avatar';
+import { t, locale } from '../i18n';
 import AvatarFigure from '../components/AvatarFigure.vue';
 import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
@@ -20,13 +21,21 @@ const recent = useRecentStore();
 const now = new Date();
 const greeting = computed(() => {
   const h = now.getHours();
-  if (h < 5) return '夜深了';
-  if (h < 12) return '早上好';
-  if (h < 18) return '下午好';
-  return '晚上好';
+  if (h < 5) return t('夜深了');
+  if (h < 12) return t('早上好');
+  if (h < 18) return t('下午好');
+  return t('晚上好');
 });
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const MONTHS = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+const EN_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// 每日推荐卡片上的「十月 · 星期一」
+const dateLine = computed(() =>
+  locale.value === 'en'
+    ? `${EN_MONTHS[now.getMonth()]} · ${EN_WEEKDAYS[now.getDay()]}`
+    : `${MONTHS[now.getMonth()]}月 · 星期${WEEKDAYS[now.getDay()]}`
+);
 
 const keywords = ref('');
 function search() {
@@ -75,39 +84,39 @@ const clock = ms => {
   <div class="home">
     <form class="search" role="search" @submit.prevent="search">
       <Icon name="search" :size="18" />
-      <input v-model="keywords" placeholder="搜索歌曲、歌手、歌单" aria-label="搜索" />
+      <input v-model="keywords" :placeholder="$t('搜索歌曲、歌手、歌单')" :aria-label="$t('搜索')" />
     </form>
 
     <header class="hello">
       <div class="hello-text">
         <h1 class="display">
-          {{ greeting }}<template v-if="auth.displayName">，{{ auth.displayName }}</template>
+          {{ greeting }}<template v-if="auth.displayName">{{ $t('，{name}', { name: auth.displayName }) }}</template>
         </h1>
-        <p>今天也有歌想听吗？</p>
+        <p>{{ $t('今天也有歌想听吗？') }}</p>
       </div>
       <!-- 我的公仔（衣服在设置里换，默认蓝格子） -->
       <AvatarFigure class="hello-figure" :url="avatar.url" />
       <!-- 手机版没有侧边栏，从这里进设置 -->
-      <RouterLink to="/settings" class="mobile-settings" aria-label="设置">
+      <RouterLink to="/settings" class="mobile-settings" :aria-label="$t('设置')">
         <Icon name="settings" />
       </RouterLink>
     </header>
 
-    <section class="cards" aria-label="为你准备">
+    <section class="cards" :aria-label="$t('为你准备')">
       <RouterLink to="/daily" class="card daily">
-        <span class="label">每日推荐</span>
+        <span class="label">{{ $t('每日推荐') }}</span>
         <span class="day display">{{ now.getDate() }}</span>
-        <span class="sub">{{ MONTHS[now.getMonth()] }}月 · 星期{{ WEEKDAYS[now.getDay()] }}</span>
+        <span class="sub">{{ dateLine }}</span>
         <span class="hint">
-          {{ auth.loggedIn ? '按你最近的听歌记录挑选' : '登录后会按你的口味推荐' }}
+          {{ auth.loggedIn ? $t('按你最近的听歌记录挑选') : $t('登录后会按你的口味推荐') }}
         </span>
         <span class="fab" aria-hidden="true"><Icon name="play" /></span>
       </RouterLink>
 
       <div class="card fm">
-        <span class="label">私人 FM</span>
+        <span class="label">{{ $t('私人 FM') }}</span>
         <p class="fm-line display">
-          {{ fmPlaying ? state.track.name : '随便听听，遇见没听过的歌' }}
+          {{ fmPlaying ? state.track.name : $t('随便听听，遇见没听过的歌') }}
         </p>
         <div class="fm-row">
           <template v-if="fmPlaying">
@@ -119,7 +128,7 @@ const clock = ms => {
           </template>
           <button
             class="fm-play"
-            :aria-label="fmPlaying && state.playing ? '暂停私人 FM' : '播放私人 FM'"
+            :aria-label="fmPlaying && state.playing ? $t('暂停私人 FM') : $t('播放私人 FM')"
             @click="playFm"
           >
             <Icon :name="fmPlaying && state.playing ? 'pause' : 'play'" :size="20" />
@@ -128,8 +137,8 @@ const clock = ms => {
       </div>
 
       <div class="card continue">
-        <span class="label">继续播放</span>
-        <p v-if="continueList.length === 0" class="empty">播过的歌会出现在这里</p>
+        <span class="label">{{ $t('继续播放') }}</span>
+        <p v-if="continueList.length === 0" class="empty">{{ $t('播过的歌会出现在这里') }}</p>
         <button
           v-for="track in continueList"
           :key="track.id"
@@ -146,12 +155,12 @@ const clock = ms => {
     </section>
 
     <p v-if="failed" class="retry">
-      有些内容没有载入成功。
-      <button :disabled="loading" @click="load">{{ loading ? '载入中…' : '重试' }}</button>
+      {{ $t('有些内容没有载入成功。') }}
+      <button :disabled="loading" @click="load">{{ loading ? $t('载入中…') : $t('重试') }}</button>
     </p>
 
     <section v-if="playlists.length || loading" aria-labelledby="h-lists">
-      <h2 id="h-lists" class="display">推荐歌单</h2>
+      <h2 id="h-lists" class="display">{{ $t('推荐歌单') }}</h2>
       <div class="grid">
         <RouterLink
           v-for="p in playlists"
@@ -167,7 +176,7 @@ const clock = ms => {
 
     <div class="split">
       <section v-if="newSongs.length" aria-labelledby="h-new" class="new">
-        <h2 id="h-new" class="display">新歌速递</h2>
+        <h2 id="h-new" class="display">{{ $t('新歌速递') }}</h2>
         <div class="songs">
           <button
             v-for="(song, i) in newSongs"
@@ -187,7 +196,7 @@ const clock = ms => {
       </section>
 
       <section v-if="charts.length" aria-labelledby="h-charts" class="charts">
-        <h2 id="h-charts" class="display">排行榜</h2>
+        <h2 id="h-charts" class="display">{{ $t('排行榜') }}</h2>
         <div class="chart-grid">
           <RouterLink
             v-for="c in charts"

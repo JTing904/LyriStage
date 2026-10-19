@@ -19,7 +19,7 @@ const NAV = [
 </script>
 
 <template>
-  <nav class="sidebar" aria-label="主导航">
+  <nav class="sidebar" :aria-label="$t('主导航')">
     <RouterLink to="/" class="logo display">Lyri<span>Stage</span></RouterLink>
 
     <div class="nav">
@@ -31,20 +31,20 @@ const NAV = [
         active-class=""
         exact-active-class="active"
       >
-        <Icon :name="item.icon" />{{ item.label }}
+        <Icon :name="item.icon" />{{ $t(item.label) }}
         <!-- 在房间里：显示几个人在一起听 -->
-        <span v-if="item.to === '/room' && room.inRoom" class="live">{{ room.members.length }} 人</span>
+        <span v-if="item.to === '/room' && room.inRoom" class="live">{{ $t('{n} 人', { n: room.members.length }) }}</span>
       </RouterLink>
     </div>
 
     <div v-if="auth.allowed" class="mine">
       <div class="mine-head">
-        <span>我的歌单</span>
-        <RouterLink to="/library" class="mine-all" title="全部">全部</RouterLink>
+        <span>{{ $t('我的歌单') }}</span>
+        <RouterLink to="/library" class="mine-all" :title="$t('全部')">{{ $t('全部') }}</RouterLink>
       </div>
       <RouterLink to="/liked" class="mine-item" active-class="active">
         <span class="mine-icon liked"><Icon name="heart-fill" :size="16" /></span>
-        我喜欢的音乐
+        {{ $t('我喜欢的音乐') }}
       </RouterLink>
       <RouterLink
         v-for="p in library.playlists"
@@ -77,10 +77,10 @@ const NAV = [
     </RouterLink>
     <div v-else-if="auth.ready" class="account guest">
       <span class="who">
-        <strong>还没登录</strong>
-        <span>登录后才能听歌、收藏</span>
+        <strong>{{ $t('还没登录') }}</strong>
+        <span>{{ $t('登录后才能听歌、收藏') }}</span>
       </span>
-      <RouterLink to="/login" class="login">登录</RouterLink>
+      <RouterLink to="/login" class="login">{{ $t('登录') }}</RouterLink>
     </div>
   </nav>
 </template>

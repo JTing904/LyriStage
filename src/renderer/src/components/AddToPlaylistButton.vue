@@ -14,8 +14,8 @@ const library = useLibraryStore();
   <button
     class="add"
     :disabled="!track"
-    aria-label="加到歌单"
-    title="加到歌单"
+    :aria-label="$t('加到歌单')"
+    :title="$t('加到歌单')"
     @click.stop="library.openAddDialog([track])"
   >
     <Icon name="plus" :size="size" />

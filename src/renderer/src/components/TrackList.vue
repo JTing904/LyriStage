@@ -81,28 +81,28 @@ function play(index) {
   <div class="track-list" :class="{ 'no-album': !showAlbum, selecting }">
     <div v-if="selectable && tracks.length > 1" class="toolbar" :class="{ active: selecting }">
       <template v-if="selecting">
-        <span class="picked">已选 {{ selected.size }} 首</span>
-        <button class="tool" @click="toggleAll">{{ allSelected ? '取消全选' : '全选' }}</button>
+        <span class="picked">{{ $t('已选 {n} 首', { n: selected.size }) }}</span>
+        <button class="tool" @click="toggleAll">{{ allSelected ? $t('取消全选') : $t('全选') }}</button>
         <span class="grow" />
         <button class="tool primary" :disabled="!selected.size" @click="addSelected">
-          <Icon name="plus" :size="16" />加到歌单
+          <Icon name="plus" :size="16" />{{ $t('加到歌单') }}
         </button>
         <button v-if="removable" class="tool" :disabled="!selected.size" @click="removeSelected">
-          <Icon name="trash" :size="15" />移除
+          <Icon name="trash" :size="15" />{{ $t('移除') }}
         </button>
-        <button class="tool" @click="stopSelecting">完成</button>
+        <button class="tool" @click="stopSelecting">{{ $t('完成') }}</button>
       </template>
       <template v-else>
         <span class="grow" />
-        <button class="tool" @click="selecting = true">多选</button>
+        <button class="tool" @click="selecting = true">{{ $t('多选') }}</button>
       </template>
     </div>
     <div v-if="showHeader" class="track head" aria-hidden="true">
       <span class="no">#</span>
-      <span>标题</span>
-      <span v-if="showAlbum" class="album">专辑</span>
+      <span>{{ $t('标题') }}</span>
+      <span v-if="showAlbum" class="album">{{ $t('专辑') }}</span>
       <span />
-      <span class="time">时长</span>
+      <span class="time">{{ $t('时长') }}</span>
     </div>
     <div
       v-for="(t, i) in tracks"
@@ -123,7 +123,7 @@ function play(index) {
         <span class="meta">
           <button
             class="name"
-            :aria-label="selecting ? `选择 ${t.name}` : `播放 ${t.name}`"
+            :aria-label="selecting ? $t('选择 {name}', { name: t.name }) : $t('播放 {name}', { name: t.name })"
             :aria-pressed="selecting ? selected.has(i) : undefined"
             @click.stop="onRowClick(i)"
           >
@@ -146,8 +146,8 @@ function play(index) {
         <LikeButton :track="t" :size="18" />
         <button
           class="act"
-          title="加到歌单"
-          aria-label="加到歌单"
+          :title="$t('加到歌单')"
+          :aria-label="$t('加到歌单')"
           @click.stop="library.openAddDialog([t])"
         >
           <Icon name="plus" :size="18" />
@@ -155,8 +155,8 @@ function play(index) {
         <button
           v-if="removable"
           class="act"
-          title="从歌单移除"
-          aria-label="从歌单移除"
+          :title="$t('从歌单移除')"
+          :aria-label="$t('从歌单移除')"
           @click.stop="emit('remove', [t])"
         >
           <Icon name="trash" :size="17" />

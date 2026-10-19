@@ -9,6 +9,7 @@ import { computed, ref, watch } from 'vue';
 import { getSupabase, toSnapshot } from '@core/data';
 import { player, sharedSources } from '../services';
 import { useAuthStore } from './auth';
+import { t } from '../i18n';
 
 /** 房间码：6 个字，去掉了容易看错的 0 O 1 I L */
 const ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
@@ -46,7 +47,7 @@ export const useRoomStore = defineStore('room', () => {
   function me() {
     return {
       id: auth.user?.id,
-      name: auth.displayName || '朋友',
+      name: auth.displayName || t('朋友'),
       avatar: auth.avatarUrl,
       role: role.value,
     };
@@ -107,7 +108,7 @@ export const useRoomStore = defineStore('room', () => {
 
   async function connect(roomCode, asRole) {
     const supabase = getSupabase();
-    if (!supabase || !auth.allowed) throw new Error('要先登录 LyriStage 才能一起听');
+    if (!supabase || !auth.allowed) throw new Error(t('要先登录 LyriStage 才能一起听'));
     await leave();
     code.value = roomCode;
     role.value = asRole;
@@ -130,7 +131,7 @@ export const useRoomStore = defineStore('room', () => {
       .on('presence', { event: 'sync' }, onPresence)
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
         if (role.value === 'guest' && leftPresences.some(p => p.role === 'host')) {
-          notice.value = '房主离开了房间';
+          notice.value = t('房主离开了房间');
         }
       });
 
@@ -140,7 +141,7 @@ export const useRoomStore = defineStore('room', () => {
           await channel.track(me());
           resolve();
         } else if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT') {
-          reject(err ?? new Error('连不上房间'));
+          reject(err ?? new Error(t('连不上房间')));
         }
       });
     });
@@ -166,7 +167,7 @@ export const useRoomStore = defineStore('room', () => {
   async function joinRoom(input) {
     const roomCode = normalizeCode(input);
     if (roomCode.length !== 6) {
-      error.value = '房间码是 6 个字母和数字';
+      error.value = t('房间码是 6 个字母和数字');
       return;
     }
     try {
@@ -174,7 +175,7 @@ export const useRoomStore = defineStore('room', () => {
       // 几秒内都没看到房主：房间可能不存在
       setTimeout(() => {
         if (role.value === 'guest' && inRoom.value && !host.value) {
-          notice.value = '这个房间现在没有房主，可能还没开或已经关了';
+          notice.value = t('这个房间现在没有房主，可能还没开或已经关了');
         }
       }, 4000);
     } catch (err) {
@@ -185,8 +186,8 @@ export const useRoomStore = defineStore('room', () => {
   function fail(err) {
     const message = err?.message || String(err);
     error.value = /unauthorized|permission|denied/i.test(message)
-      ? '没有权限加入（要是 LyriStage 成员）'
-      : `连不上房间：${message}`;
+      ? t('没有权限加入（要是 LyriStage 成员）')
+      : t('连不上房间：{error}', { error: message });
     leave();
   }
 

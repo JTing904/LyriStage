@@ -126,7 +126,7 @@ function toggleMute() {
     <div v-if="compact" class="compact-meta">
       <img v-if="cover" class="cover" :src="cover" alt="" />
       <div class="meta">
-        <strong>{{ track?.name ?? '没有在播放' }}</strong>
+        <strong>{{ track?.name ?? $t('没有在播放') }}</strong>
         <span>{{ artists }}</span>
       </div>
       <LikeButton v-if="track" :track="track" />
@@ -140,7 +140,7 @@ function toggleMute() {
         :class="{ active: dragging }"
         role="slider"
         tabindex="0"
-        aria-label="播放进度"
+        :aria-label="$t('播放进度')"
         :aria-valuemin="0"
         :aria-valuemax="Math.round(duration)"
         :aria-valuenow="Math.round(state.time)"
@@ -177,8 +177,8 @@ function toggleMute() {
         <button
           class="icon toggle mode"
           :class="{ on: mode !== 'order' }"
-          :title="`${MODE_LABEL[mode]}（点一下切换）`"
-          :aria-label="`播放模式：${MODE_LABEL[mode]}`"
+          :title="$t('{mode}（点一下切换）', { mode: $t(MODE_LABEL[mode]) })"
+          :aria-label="$t('播放模式：{mode}', { mode: $t(MODE_LABEL[mode]) })"
           @click="nextMode"
         >
           <svg v-if="mode === 'shuffle'" viewBox="0 0 24 24">
@@ -199,14 +199,14 @@ function toggleMute() {
       </div>
 
       <div class="transport">
-        <button class="icon" title="上一首" @click="player.prev()">
+        <button class="icon" :title="$t('上一首')" @click="player.prev()">
           <svg viewBox="0 0 24 24">
             <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
           </svg>
         </button>
         <button
           class="icon play"
-          :title="state.playing ? '暂停' : '播放'"
+          :title="state.playing ? $t('暂停') : $t('播放')"
           @click="player.toggle()"
         >
           <svg v-if="state.playing" viewBox="0 0 24 24">
@@ -214,7 +214,7 @@ function toggleMute() {
           </svg>
           <svg v-else viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
         </button>
-        <button class="icon" title="下一首" @click="player.next()">
+        <button class="icon" :title="$t('下一首')" @click="player.next()">
           <svg viewBox="0 0 24 24">
             <path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z" />
           </svg>
@@ -227,7 +227,7 @@ function toggleMute() {
       <div v-if="!compact" class="center">
         <img v-if="cover" class="cover" :src="cover" alt="" />
         <div class="meta">
-          <strong>{{ track?.name ?? '没有在播放' }}</strong>
+          <strong>{{ track?.name ?? $t('没有在播放') }}</strong>
           <span>{{ subtitle }}</span>
         </div>
         <LikeButton v-if="track" :track="track" />
@@ -238,17 +238,17 @@ function toggleMute() {
         <button
           v-if="!compact"
           class="stage-btn"
-          title="打开歌词舞台"
+          :title="$t('打开歌词舞台')"
           :disabled="!track"
           @click="emit('open-stage')"
         >
-          歌词
+          {{ $t('歌词') }}
         </button>
         <button
           v-if="isElectron && !compact"
           class="icon toggle"
           :class="{ on: desktopLyrics.enabled }"
-          :title="desktopLyrics.enabled ? '关掉桌面歌词' : '打开桌面歌词'"
+          :title="desktopLyrics.enabled ? $t('关掉桌面歌词') : $t('打开桌面歌词')"
           :aria-pressed="desktopLyrics.enabled"
           @click="setDesktopLyrics(!desktopLyrics.enabled)"
         >
@@ -258,8 +258,8 @@ function toggleMute() {
           v-if="!compact"
           class="icon toggle mode"
           :class="{ on: mode !== 'order' }"
-          :title="`${MODE_LABEL[mode]}（点一下切换）`"
-          :aria-label="`播放模式：${MODE_LABEL[mode]}`"
+          :title="$t('{mode}（点一下切换）', { mode: $t(MODE_LABEL[mode]) })"
+          :aria-label="$t('播放模式：{mode}', { mode: $t(MODE_LABEL[mode]) })"
           @click="nextMode"
         >
           <svg v-if="mode === 'shuffle'" viewBox="0 0 24 24">
@@ -280,7 +280,7 @@ function toggleMute() {
         <div class="volume">
           <button
             class="icon toggle on"
-            :title="state.volume === 0 ? '取消静音' : '静音'"
+            :title="state.volume === 0 ? $t('取消静音') : $t('静音')"
             @click="toggleMute"
           >
             <svg v-if="volumeIcon === 'mute'" viewBox="0 0 24 24">
@@ -306,7 +306,7 @@ function toggleMute() {
             max="1"
             step="0.01"
             :value="state.volume"
-            aria-label="音量"
+            :aria-label="$t('音量')"
             :style="{ '--v': `${state.volume * 100}%` }"
             @input="player.setVolume(Number($event.target.value))"
           />

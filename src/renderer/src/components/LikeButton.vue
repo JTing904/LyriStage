@@ -17,9 +17,9 @@ const liked = computed(() => props.track && library.isLiked(props.track.id));
     class="like"
     :class="{ liked }"
     :disabled="!track"
-    :aria-label="liked ? '取消喜欢' : '喜欢'"
+    :aria-label="liked ? $t('取消喜欢') : $t('喜欢')"
     :aria-pressed="liked"
-    :title="liked ? '取消喜欢' : '喜欢'"
+    :title="liked ? $t('取消喜欢') : $t('喜欢')"
     @click.stop="library.toggleLike(track)"
   >
     <Icon :name="liked ? 'heart-fill' : 'heart'" :size="size" />

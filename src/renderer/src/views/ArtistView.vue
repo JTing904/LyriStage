@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router';
 import { netease } from '../services';
 import { usePlayCollection } from '../composables/usePlayCollection';
 import { year } from '../utils/format';
+import { t } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
 import TrackList from '../components/TrackList.vue';
 import TileGrid from '../components/TileGrid.vue';
@@ -52,8 +53,8 @@ const meta = computed(() => {
   if (!a) return '';
   return [
     a.alias?.length ? a.alias.join(' / ') : '',
-    a.musicSize ? `${a.musicSize} 首歌` : '',
-    a.albumSize ? `${a.albumSize} 张专辑` : '',
+    a.musicSize ? t('{n} 首歌', { n: a.musicSize }) : '',
+    a.albumSize ? t('{n} 张专辑', { n: a.albumSize }) : '',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -71,11 +72,11 @@ const albumTiles = computed(() =>
 
 <template>
   <div class="page">
-    <p v-if="loading" class="page-state">加载中…</p>
-    <p v-else-if="error" class="page-state">歌手加载失败：{{ error }}</p>
+    <p v-if="loading" class="page-state">{{ $t('加载中…') }}</p>
+    <p v-else-if="error" class="page-state">{{ $t('歌手加载失败：{error}', { error }) }}</p>
     <template v-else-if="artist">
       <CollectionHeader
-        kind="歌手"
+        :kind="$t('歌手')"
         round
         :cover="artist.picUrl || artist.img1v1Url"
         :title="artist.name"
@@ -87,19 +88,19 @@ const albumTiles = computed(() =>
       />
 
       <section v-if="hotSongs.length">
-        <h2 class="section-title">热门歌曲</h2>
+        <h2 class="section-title">{{ $t('热门歌曲') }}</h2>
         <TrackList :tracks="shownSongs" :context="context" :show-header="false" />
         <button
           v-if="hotSongs.length > 10"
           class="expand"
           @click="showAll = !showAll"
         >
-          {{ showAll ? '收起' : `显示全部 ${hotSongs.length} 首` }}
+          {{ showAll ? $t('收起') : $t('显示全部 {n} 首', { n: hotSongs.length }) }}
         </button>
       </section>
 
       <section v-if="albumTiles.length">
-        <h2 class="section-title">专辑</h2>
+        <h2 class="section-title">{{ $t('专辑') }}</h2>
         <TileGrid :items="albumTiles" />
       </section>
     </template>

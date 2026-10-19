@@ -58,7 +58,7 @@ const seal = computed(() =>
         </template>
       </p>
     </div>
-    <div class="seal" aria-label="歌名">
+    <div class="seal" :aria-label="$t('歌名')">
       <span>{{ seal }}</span>
     </div>
     <p class="artist">{{ (track?.ar ?? []).map(a => a.name).join(' · ') }}</p>

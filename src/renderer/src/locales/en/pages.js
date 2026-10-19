@@ -1,0 +1,151 @@
+// 英文对照（登录、设置、一起听、歌词舞台）
+export default {
+  // ---- 登录页 ----
+  '以歌词为主角的音乐播放器。九种歌词舞台，电脑和手机都能听。':
+    'A music player where lyrics take center stage. Nine lyric stages, on desktop and mobile.',
+  还不能登录: "Can't log in yet",
+  '这个版本没有设置 LyriStage 账号服务（.env 的 VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY）。':
+    "This build isn't set up with the LyriStage account service (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY in .env).",
+  '正在读取登录状态…': 'Checking login status…',
+  输入邀请码: 'Enter invite code',
+  'LyriStage 目前只开放给受邀的朋友。你已经用': 'LyriStage is currently invite-only. You’re logged in as',
+  '登录，输入邀请码就能开始使用。': '— enter an invite code to get started.',
+  邀请码: 'Invite code',
+  '例如 7KQ3MZ9TXA': 'e.g. 7KQ3MZ9TXA',
+  '正在验证…': 'Verifying…',
+  开始使用: 'Get started',
+  '不是这个账号？': 'Not you? ',
+  换个账号: 'Switch account',
+  '登录 LyriStage': 'Log in to LyriStage',
+  '注册 LyriStage': 'Sign up for LyriStage',
+  '不需要网易云账号。你的喜欢、歌单和听歌记录保存在 LyriStage 自己的账号里，电脑和手机同步。':
+    'No NetEase account needed. Your likes, playlists and listening history are saved to your LyriStage account and synced across desktop and mobile.',
+  'LyriStage 目前只开放给受邀的朋友，注册需要邀请码。':
+    'LyriStage is currently invite-only. You need an invite code to sign up.',
+  '使用 GitHub 登录': 'Continue with GitHub',
+  '第三方登录失败：{error}': 'Login failed: {error}',
+  或用邮箱: 'or use email',
+  邮箱: 'Email',
+  密码: 'Password',
+  '至少 8 位': 'At least 8 characters',
+  隐藏密码: 'Hide password',
+  显示密码: 'Show password',
+  向邀请你的朋友要: 'Ask the friend who invited you',
+  '请稍候…': 'Please wait…',
+  登录: 'Log in',
+  注册并开始使用: 'Sign up and get started',
+  '先不登录，随便看看': 'Just browse for now',
+  '还没有账号？': "Don't have an account? ",
+  用邀请码注册: 'Sign up with an invite code',
+  '已经有账号？': 'Already have an account? ',
+  去登录: 'Log in',
+
+  // 登录错误
+  邮箱或密码不对: 'Incorrect email or password',
+  '这个邮箱已经注册过了，请直接登录（之前用 GitHub 登录过的话，请按"使用 GitHub 登录"）':
+    'This email is already registered. Please log in instead (if you used GitHub before, choose "Continue with GitHub").',
+  密码太短了: 'Password is too short',
+  邮箱格式不对: 'Invalid email address',
+  '尝试太多次了，请稍后再试': 'Too many attempts. Please try again later.',
+  '连不上服务器，请检查网络': "Can't reach the server. Please check your connection.",
+  // 服务器（Supabase 函数）丢出来的中文错误
+  请先登录: 'Please log in first',
+  '邀请码无效、已过期或已经用完': 'This invite code is invalid, expired or already used',
+  只有管理员可以生成邀请码: 'Only admins can create invite codes',
+  只有管理员可以查看邀请码: 'Only admins can view invite codes',
+
+  // ---- 设置 ----
+  设置: 'Settings',
+  账号: 'Account',
+  退出登录: 'Log out',
+  邀请朋友: 'Invite friends',
+  '每个邀请码只能用一次。生成后会自动复制，直接贴给朋友就好。':
+    'Each invite code works once. It’s copied automatically, so just paste it to your friend.',
+  '生成中…': 'Generating…',
+  一键生成邀请码: 'Generate invite code',
+  '已复制 ✓': 'Copied ✓',
+  复制: 'Copy',
+  已使用: 'Used',
+  '已用 {used} / {max}': '{used} / {max} used',
+  未使用: 'Unused',
+  '用这个码注册的人也会是管理员，不要给朋友':
+    'Anyone who signs up with this code becomes an admin. Don’t give it to friends.',
+  管理员码: 'Admin code',
+  我的公仔: 'My figure',
+  '首页和登录页都会出现。选"按时间自动换"的话，早上、中午、下午、晚上各穿一套。':
+    'Shown on the home and login pages. With "Change by time of day", it wears a different outfit in the morning, at noon, in the afternoon and at night.',
+  公仔造型: 'Figure outfit',
+  按时间自动换: 'Change by time of day',
+  桌面歌词: 'Desktop lyrics',
+  显示桌面歌词: 'Show desktop lyrics',
+  'App 收起来（最小化或关到托盘）时，在桌面上显示正在唱的歌词':
+    'When the app is minimized or in the tray, show the current lyrics on your desktop',
+  锁定位置: 'Lock position',
+  '锁定后鼠标会穿过歌词，点得到后面的东西；在托盘图标按右键也能解锁':
+    'When locked, clicks pass through the lyrics to whatever is behind them. Right-click the tray icon to unlock.',
+  外观: 'Appearance',
+  主题: 'Theme',
+  语言: 'Language',
+
+  // ---- 一起听 ----
+  一起听: 'Listen Together',
+  '开一个房间，把房间码发给朋友。你播什么、暂停、切歌，大家都会同步。':
+    'Open a room and send the code to friends. Whatever you play, pause or skip stays in sync for everyone.',
+  开一个房间: 'Open a room',
+  '你当房主，大家跟着你的歌听。': "You're the host. Everyone listens along to your music.",
+  '正在开房间…': 'Opening room…',
+  开房间: 'Open room',
+  加入朋友的房间: "Join a friend's room",
+  '输入朋友给你的 6 位房间码。': 'Enter the 6-character room code your friend gave you.',
+  '例如 7KQ3MZ': 'e.g. 7KQ3MZ',
+  '加入中…': 'Joining…',
+  加入: 'Join',
+  '你是房主 · 房间码': "You're the host · Room code",
+  房间码: 'Room code',
+  复制房间码: 'Copy room code',
+  复制网页链接: 'Copy web link',
+  关闭房间: 'Close room',
+  离开房间: 'Leave room',
+  正在听: 'Now playing',
+  '你播什么大家就听什么，去别的页面点歌也会同步。':
+    'Everyone hears what you play. Songs you pick on other pages sync too.',
+  '跟着 {name} 一起听': 'Listening along with {name}',
+  房主: 'Host',
+  '还没播歌。去首页或搜索点一首，大家就会一起听。':
+    'Nothing playing yet. Pick a song from Home or Search and everyone will listen together.',
+  '等房主播歌…': 'Waiting for the host to play something…',
+  '房间里 {n} 个人': '{n} in the room',
+
+  // ---- 歌词舞台 ----
+  还没有在播放的歌: 'Nothing playing',
+  '歌词加载中…': 'Loading lyrics…',
+  '纯音乐，请欣赏': 'Instrumental — enjoy',
+  这首歌暂时没有歌词: 'No lyrics for this song yet',
+  '歌词加载失败：{error}': "Couldn't load lyrics: {error}",
+  '关闭（Esc）': 'Close (Esc)',
+  '风格：{name}': 'Style: {name}',
+  歌词风格: 'Lyric style',
+  '显示翻译 / 罗马音': 'Show translation / romanization',
+  歌名: 'Song title',
+
+  // 歌词风格名称、说明（lyric-stage/styles.js）
+  单行大字: 'Big Line',
+  '一次一句，超大做旧字体，一段一段浮现': 'One line at a time in huge distressed type, fading in phrase by phrase',
+  '3D 透视': '3D Perspective',
+  '清晰封面做背景，整列歌词立体倾斜，花瓣飘落':
+    'Sharp cover art behind tilted 3D lyrics, with falling petals',
+  滚动歌词: 'Scrolling',
+  '像 Apple Music，逐字点亮，背景是流动的封面色': 'Like Apple Music: word-by-word highlight over flowing cover colors',
+  色块: 'Color Block',
+  '像 Spotify，整片封面主色，大号粗体': "Like Spotify: the cover's main color with big bold text",
+  卡拉OK: 'Karaoke',
+  'KTV 双行交替，逐字填色': 'KTV-style alternating lines, filled in word by word',
+  竖排诗词: 'Vertical Poetry',
+  '宣纸书法，从右往左竖排，红色印章': 'Calligraphy on rice paper, vertical right to left, with a red seal',
+  '动态 MV': 'Music Video',
+  '每段不同大小、角度和颜色，弹出来': 'Each phrase pops in with its own size, angle and color',
+  打字机: 'Typewriter',
+  '复古终端，跟着演唱一个字一个字打出来': 'Retro terminal that types each word as it’s sung',
+  黑胶唱片: 'Vinyl',
+  '转动的黑胶和唱臂，旁边五行歌词': 'A spinning record and tonearm, with five lines of lyrics alongside',
+};

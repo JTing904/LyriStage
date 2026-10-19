@@ -9,6 +9,7 @@ const bridge = window.lyristage;
 const payload = shallowRef(null);
 let receivedAt = 0;
 const locked = ref(false);
+const en = ref(false);
 /** 现在的播放时间（毫秒），每一帧更新 */
 const now = ref(0);
 
@@ -19,6 +20,7 @@ onMounted(() => {
   });
   bridge?.onLyricsWindowState(state => {
     locked.value = state.locked;
+    en.value = state.locale === 'en';
   });
   tick();
 });
@@ -47,8 +49,13 @@ const title = computed(() => {
 <template>
   <div class="desktop-lyrics" :class="{ locked }">
     <div class="bar">
-      <button title="锁定（鼠标会穿透，从托盘解锁）" @click="bridge?.lyricsWindow('lock')">🔒 锁定</button>
-      <button title="关掉桌面歌词" @click="bridge?.lyricsWindow('close')">✕</button>
+      <button
+        :title="en ? 'Lock (clicks pass through; unlock from the tray)' : '锁定（鼠标会穿透，从托盘解锁）'"
+        @click="bridge?.lyricsWindow('lock')"
+      >
+        🔒 {{ en ? 'Lock' : '锁定' }}
+      </button>
+      <button :title="en ? 'Close desktop lyrics' : '关掉桌面歌词'" @click="bridge?.lyricsWindow('close')">✕</button>
     </div>
 
     <div class="text">

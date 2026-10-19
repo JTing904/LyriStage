@@ -15,6 +15,7 @@ import {
   signUp,
 } from '@core/data';
 import { isElectron, isNativeApp, onAuthCallback, openAuthPage } from '../platform';
+import { t } from '../i18n';
 
 const PROVIDER_LABEL = { github: 'GitHub', google: 'Google', email: '邮箱' };
 
@@ -117,7 +118,7 @@ export const useAuthStore = defineStore('auth', () => {
   });
   const avatarUrl = computed(() => user.value?.user_metadata?.avatar_url ?? null);
   const providerLabel = computed(
-    () => PROVIDER_LABEL[user.value?.app_metadata?.provider] ?? '已登录'
+    () => t(PROVIDER_LABEL[user.value?.app_metadata?.provider] ?? '已登录')
   );
 
   /**
@@ -143,7 +144,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function registerWithEmail(email, password, invite) {
     const { session } = await signUp(email, password);
     if (!session) {
-      throw new Error('注册成功，但需要先去邮箱点确认链接再登录');
+      throw new Error(t('注册成功，但需要先去邮箱点确认链接再登录'));
     }
     user.value = session.user;
     await redeem(invite);

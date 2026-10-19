@@ -10,14 +10,14 @@ const emit = defineEmits(['select', 'update:showTranslation']);
 </script>
 
 <template>
-  <div class="picker" role="dialog" aria-label="歌词风格">
+  <div class="picker" role="dialog" :aria-label="$t('歌词风格')">
     <div class="grid">
       <button
         v-for="s in LYRIC_STYLES"
         :key="s.id"
         class="option"
         :class="{ active: s.id === current }"
-        :title="s.description"
+        :title="$t(s.description)"
         :aria-pressed="s.id === current"
         @click="emit('select', s.id)"
       >
@@ -49,12 +49,12 @@ const emit = defineEmits(['select', 'update:showTranslation']);
           >
           <template v-else-if="s.id === 'vinyl'"><i class="disc" /></template>
         </span>
-        <span class="name">{{ s.name }}</span>
+        <span class="name">{{ $t(s.name) }}</span>
       </button>
     </div>
 
     <label class="switch-row">
-      <span>显示翻译 / 罗马音</span>
+      <span>{{ $t('显示翻译 / 罗马音') }}</span>
       <input
         type="checkbox"
         role="switch"

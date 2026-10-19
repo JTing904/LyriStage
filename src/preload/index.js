@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('lyristage', {
   sendNowPlaying: info => ipcRenderer.send('lyristage:now-playing', info),
   /** 现在唱到的这一句（传给桌面歌词窗口） */
   sendLyric: payload => ipcRenderer.send('lyristage:lyric', payload),
+  setLocale: locale => ipcRenderer.send('lyristage:set-locale', locale),
   setDesktopLyrics: enabled => ipcRenderer.send('lyristage:desktop-lyrics', Boolean(enabled)),
   setDesktopLyricsLocked: locked =>
     ipcRenderer.send('lyristage:desktop-lyrics-lock', Boolean(locked)),

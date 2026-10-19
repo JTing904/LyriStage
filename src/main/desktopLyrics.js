@@ -13,10 +13,11 @@ export function createDesktopLyricsController({ onStateChange }) {
   let lastPayload = null;
   /** 主窗口现在看得到吗（最小化、关到托盘时是 false） */
   let appVisible = true;
+  let locale = 'zh-CN';
 
   const state = () => {
     const { enabled, locked } = getSettings().desktopLyrics;
-    return { enabled, locked };
+    return { enabled, locked, locale };
   };
   const save = patch =>
     updateSettings({ desktopLyrics: { ...getSettings().desktopLyrics, ...patch } });
@@ -111,6 +112,11 @@ export function createDesktopLyricsController({ onStateChange }) {
       save({ enabled });
       sync();
       changed();
+    },
+    /** App 的语言（桌面歌词窗口上的按钮跟着换） */
+    setLocale(value) {
+      locale = value;
+      if (win && !win.isDestroyed()) win.webContents.send('lyristage:lyrics-window-state', state());
     },
     /** 主窗口显示 / 收起来了 */
     setAppVisible(visible) {
