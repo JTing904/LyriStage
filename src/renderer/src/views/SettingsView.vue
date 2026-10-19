@@ -2,8 +2,9 @@
 // 设置：账号（退出登录）、邀请朋友（管理员才有）、我的公仔（换衣服）、外观（深色 / 浅色 / 跟随系统）、
 // 桌面歌词（电脑版才有）
 import { ref, watch } from 'vue';
-import { createInvite, listInvites } from '@core/data';
+import { clearHistory, createInvite, listInvites } from '@core/data';
 import { useAuthStore } from '../stores/auth';
+import { useLibraryStore } from '../stores/library';
 import { useThemeStore, THEME_OPTIONS } from '../stores/theme';
 import { useAvatarStore, OUTFITS } from '../stores/avatar';
 import Cover from '../components/Cover.vue';
@@ -13,6 +14,7 @@ import { desktopLyrics } from '../desktop';
 import { t, locale, LOCALES } from '../i18n';
 
 const auth = useAuthStore();
+const library = useLibraryStore();
 const theme = useThemeStore();
 const avatar = useAvatarStore();
 const AVATAR_CHOICES = [...OUTFITS, { id: 'auto', label: '按时间自动换' }];
@@ -75,6 +77,22 @@ const shortDate = iso =>
 /** 换介面语言（中文 / English） */
 const setLocale = value => (locale.value = value);
 
+// 清除听歌记录（隐私权政策里说可以在 App 里删）
+const clearBox = ref(null);
+const clearing = ref(false);
+async function clearAllHistory() {
+  clearing.value = true;
+  try {
+    await clearHistory();
+    clearBox.value.close();
+    library.say(t('听歌记录已经清除'));
+  } catch (err) {
+    library.say(t('清除失败：{error}', { error: err.message || String(err) }));
+  } finally {
+    clearing.value = false;
+  }
+}
+
 const busy = ref(false);
 async function logout() {
   busy.value = true;
@@ -101,7 +119,26 @@ async function logout() {
         </span>
         <button class="ghost" :disabled="busy" @click="logout">{{ $t('退出登录') }}</button>
       </div>
+      <div class="row privacy-row">
+        <span class="label">
+          {{ $t('听歌记录') }}
+          <small>{{ $t('用来做听歌排行和每日推荐。清除后不能复原。') }}</small>
+        </span>
+        <button class="ghost danger" @click="clearBox.showModal()">{{ $t('清除') }}</button>
+      </div>
+      <p class="policy"><a href="./privacy.html" target="_blank" rel="noopener">{{ $t('隐私权政策') }}</a></p>
     </div>
+
+    <dialog ref="clearBox" class="confirm" @click.self="clearBox.close()">
+      <div class="confirm-box">
+        <h3>{{ $t('清除所有听歌记录？') }}</h3>
+        <p>{{ $t('听歌排行会归零，每日推荐要重新累积你的口味。喜欢的歌和歌单不受影响。') }}</p>
+        <div class="confirm-buttons">
+          <button class="ghost" @click="clearBox.close()">{{ $t('取消') }}</button>
+          <button class="primary" :disabled="clearing" @click="clearAllHistory">{{ $t('清除') }}</button>
+        </div>
+      </div>
+    </dialog>
 
     <div v-if="auth.admin" class="group">
       <h2>{{ $t('邀请朋友') }}</h2>
@@ -511,6 +548,55 @@ code {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--accent);
   font-weight: 700;
+}
+.privacy-row {
+  margin-top: 8px;
+}
+.ghost.danger:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.policy {
+  margin: 10px 4px 0;
+  font-size: 13px;
+}
+.policy a {
+  color: var(--text-dim);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.confirm {
+  width: min(420px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.35);
+}
+.confirm::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+.confirm-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px;
+}
+.confirm-box h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.confirm-box p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.confirm-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 @media (max-width: 520px) {
   .invite-top {

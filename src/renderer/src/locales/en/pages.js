@@ -149,4 +149,14 @@ export default {
   '复古终端，跟着演唱一个字一个字打出来': 'Retro terminal that types each word as it\'s sung',
   黑胶唱片: 'Vinyl',
   '转动的黑胶和唱臂，旁边五行歌词': 'A spinning record and tonearm, with five lines of lyrics alongside',
+  // ---- 设置：隐私 ----
+  听歌记录: 'Listening history',
+  '用来做听歌排行和每日推荐。清除后不能复原。': "Used for your play ranking and daily mix. Clearing it can't be undone.",
+  清除: 'Clear',
+  隐私权政策: 'Privacy policy',
+  '清除所有听歌记录？': 'Clear all listening history?',
+  '听歌排行会归零，每日推荐要重新累积你的口味。喜欢的歌和歌单不受影响。':
+    'Your play ranking resets and your daily mix starts learning your taste again. Liked songs and playlists are not affected.',
+  听歌记录已经清除: 'Listening history cleared',
+  '清除失败：{error}': "Couldn't clear: {error}",
 };

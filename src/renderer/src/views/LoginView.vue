@@ -238,6 +238,8 @@ function submitInvite() {
 
           <p class="switch">
             <RouterLink to="/" class="browse">{{ $t('先不登录，随便看看') }}</RouterLink>
+            ·
+            <a href="./privacy.html" target="_blank" rel="noopener" class="browse">{{ $t('隐私权政策') }}</a>
           </p>
           <p class="switch">
             <template v-if="mode === 'login'">
