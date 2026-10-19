@@ -9,3 +9,6 @@
 *.webp binary
 *.jpeg binary
 *.woff2 binary
+*.ico binary
+*.icns binary
+*.apk binary
