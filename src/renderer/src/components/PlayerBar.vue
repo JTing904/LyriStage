@@ -4,6 +4,7 @@
 //   左边播放控制和时间，中间封面和歌名，右边音量 / 循环 / 随机
 // - 精简（compact）：放在底部中间，封面和歌名在上，进度条两边是时间，下面一排按钮；歌词舞台用
 import { computed, ref } from 'vue';
+import LikeButton from './LikeButton.vue';
 
 const props = defineProps({
   state: { type: Object, required: true },
@@ -108,6 +109,7 @@ function toggleMute() {
         <strong>{{ track?.name ?? '没有在播放' }}</strong>
         <span>{{ artists }}</span>
       </div>
+      <LikeButton v-if="track" :track="track" />
     </div>
     <div class="progress">
       <span v-if="compact" class="time">{{ currentClock }}</span>
@@ -198,6 +200,7 @@ function toggleMute() {
           <strong>{{ track?.name ?? '没有在播放' }}</strong>
           <span>{{ subtitle }}</span>
         </div>
+        <LikeButton v-if="track" :track="track" />
       </div>
 
       <div class="side side-right">

@@ -3,8 +3,10 @@
 import Icon from './Icon.vue';
 import Cover from './Cover.vue';
 import { useAuthStore } from '../stores/auth';
+import { useLibraryStore } from '../stores/library';
 
 const auth = useAuthStore();
+const library = useLibraryStore();
 
 const NAV = [
   { to: '/', icon: 'home', label: '首页' },
@@ -27,6 +29,27 @@ const NAV = [
         exact-active-class="active"
       >
         <Icon :name="item.icon" />{{ item.label }}
+      </RouterLink>
+    </div>
+
+    <div class="mine">
+      <div class="mine-head">
+        <span>我的歌单</span>
+        <RouterLink to="/library" class="mine-all" title="全部">全部</RouterLink>
+      </div>
+      <RouterLink to="/liked" class="mine-item" active-class="active">
+        <span class="mine-icon liked"><Icon name="heart-fill" :size="16" /></span>
+        我喜欢的音乐
+      </RouterLink>
+      <RouterLink
+        v-for="p in library.playlists"
+        :key="p.id"
+        :to="`/my/${p.id}`"
+        class="mine-item"
+        active-class="active"
+      >
+        <span class="mine-icon">{{ p.name.slice(0, 1) }}</span>
+        <span class="mine-name">{{ p.name }}</span>
       </RouterLink>
     </div>
 
@@ -97,6 +120,68 @@ const NAV = [
   color: var(--text);
   background: var(--surface-hover);
   font-weight: 700;
+}
+.mine {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+}
+.mine-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+.mine-all {
+  letter-spacing: 0;
+}
+.mine-all:hover {
+  color: var(--text);
+}
+.mine-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+.mine-item:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.mine-item.active {
+  background: var(--surface-hover);
+  color: var(--text);
+  font-weight: 700;
+}
+.mine-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--surface-hover);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.mine-icon.liked {
+  background: linear-gradient(135deg, #ff3b5c, #7b2ff7);
+  color: #fff;
+}
+.mine-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .spacer {
   flex: 1;

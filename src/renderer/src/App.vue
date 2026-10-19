@@ -11,6 +11,8 @@ import { isElectron } from './platform';
 import { useThemeStore } from './stores/theme';
 import { useAuthStore } from './stores/auth';
 import { useRecentStore } from './stores/recent';
+import { useLibraryStore } from './stores/library';
+import AddToPlaylistDialog from './components/AddToPlaylistDialog.vue';
 import AppSidebar from './components/AppSidebar.vue';
 import BottomTabs from './components/BottomTabs.vue';
 import MiniPlayer from './components/MiniPlayer.vue';
@@ -21,6 +23,7 @@ const { state, player } = usePlayer();
 useThemeStore();
 const auth = useAuthStore();
 useRecentStore();
+const library = useLibraryStore();
 
 const stageOpen = ref(false);
 const route = useRoute();
@@ -74,6 +77,11 @@ watch(
       <BottomTabs />
     </div>
 
+    <AddToPlaylistDialog />
+    <Transition name="toast">
+      <div v-if="library.notice" class="toast" role="status">{{ library.notice }}</div>
+    </Transition>
+
     <LyricStage
       v-if="stageOpen"
       :state="state"
@@ -126,6 +134,32 @@ watch(
 .electron .area-main,
 .electron .area-side {
   padding-top: var(--titlebar-height);
+}
+
+/* 加到歌单、出错等的提示 */
+.toast {
+  position: fixed;
+  z-index: 200;
+  left: 50%;
+  bottom: 110px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 14px;
+  font-weight: 700;
+  transform: translateX(-50%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+.toast-enter-active,
+.toast-leave-active {
+  transition: opacity 0.25s, transform 0.25s;
+}
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 10px);
 }
 
 /* 手机 / 窄窗口 */
