@@ -2,7 +2,7 @@
 // 再用第二个用户验证 RLS（看不到、改不了别人的数据）。
 // 运行：node scripts/smoke/run.js
 import assert from 'assert';
-import { signUp, signOut, getCurrentUser } from '@/lyristage/auth';
+import { signUp, signOut, getCurrentUser } from '@core/data/auth';
 import {
   likeTrack,
   unlikeTrack,
@@ -14,7 +14,7 @@ import {
   listPlaylists,
   moveTrackInPlaylist,
   deletePlaylist,
-} from '@/lyristage/library';
+} from '@core/data/library';
 import {
   recordPlay,
   playRanking,
@@ -22,8 +22,14 @@ import {
   listDislikedTrackIds,
   listRecentHistory,
   clearHistory,
-} from '@/lyristage/history';
-import { requireSupabase } from '@/lyristage/supabase';
+} from '@core/data/history';
+import { configureSupabase, requireSupabase } from '@core/data/supabase';
+
+// run.js 已经把 .env 读进 process.env
+configureSupabase({
+  url: process.env.VITE_SUPABASE_URL,
+  anonKey: process.env.VITE_SUPABASE_ANON_KEY,
+});
 
 const track = (id, name, artistId) => ({
   id,

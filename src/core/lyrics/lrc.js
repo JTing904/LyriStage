@@ -1,114 +1,40 @@
-export function lyricParser(lrc) {
-  return {
-    lyric: parseLyric(lrc?.lrc?.lyric || ''),
-    tlyric: parseLyric(lrc?.tlyric?.lyric || ''),
-    romalyric: parseLyric(lrc?.romalrc?.lyric || ''),
-    lyricuser: lrc.lyricUser,
-    transuser: lrc.transUser,
-  };
+// @ts-check
+// LRC 歌词解析：[mm:ss.xx]歌词
+// 和 v1 的 parseLyric 相比：
+// - 毫秒按实际位数换算（v1 把 [00:01.5] 当成 1.05 秒）
+// - 保留空行：空行代表间奏，用来判断上一行在哪里结束
+// - 时间统一用毫秒整数
+
+/**
+ * @typedef {{ time: number, text: string }} LrcLine time 单位毫秒；text 为空字符串表示间奏
+ */
+
+const LINE = /^((?:\[\d+:\d+(?:[.:]\d+)?\])+)(.*)$/;
+const TIMESTAMP = /\[(\d+):(\d+)(?:[.:](\d+))?\]/g;
+
+/** "5" → 500，"50" → 500，"500" → 500，"5000" → 500 */
+function fractionToMs(fraction = '') {
+  if (!fraction) return 0;
+  return Math.round(Number(`0.${fraction}`) * 1000);
 }
 
-// regexr.com/6e52n
-const extractLrcRegex =
-  /^(?<lyricTimestamps>(?:\[.+?\])+)(?!\[)(?<content>.+)$/gm;
-const extractTimestampRegex =
-  /\[(?<min>\d+):(?<sec>\d+)(?:\.|:)*(?<ms>\d+)*\]/g;
-
 /**
- * @typedef {{time: number, rawTime: string, content: string}} ParsedLyric
+ * @param {string} text
+ * @returns {LrcLine[]} 按时间排序；一行有多个时间戳时会展开成多行
  */
-
-/**
- * Parse the lyric string.
- *
- * @param {string} lrc The `lrc` input.
- * @returns {ParsedLyric[]} The parsed lyric.
- * @example parseLyric("[00:00.00] Hello, World!\n[00:00.10] Test\n");
- */
-export function parseLyric(lrc) {
-  /**
-   * A sorted list of parsed lyric and its timestamp.
-   *
-   * @type {ParsedLyric[]}
-   * @see binarySearch
-   */
-  const parsedLyrics = [];
-
-  /**
-   * Find the appropriate index to push our parsed lyric.
-   * @param {ParsedLyric} lyric
-   */
-  const binarySearch = lyric => {
-    let time = lyric.time;
-
-    let low = 0;
-    let high = parsedLyrics.length - 1;
-
-    while (low <= high) {
-      const mid = Math.floor((low + high) / 2);
-      const midTime = parsedLyrics[mid].time;
-      if (midTime === time) {
-        return mid;
-      } else if (midTime < time) {
-        low = mid + 1;
-      } else {
-        high = mid - 1;
-      }
-    }
-
-    return low;
-  };
-
-  for (const line of lrc.trim().matchAll(extractLrcRegex)) {
-    const { lyricTimestamps, content } = line.groups;
-
-    for (const timestamp of lyricTimestamps.matchAll(extractTimestampRegex)) {
-      const { min, sec, ms } = timestamp.groups;
-      const validMs = ms?.slice(0, 2) ?? '00';
-      const rawTime = `[${min}:${sec}.${validMs}]`;
-      const time = Number(min) * 60 + Number(sec) + Number(validMs) * 0.01;
-
-      /** @type {ParsedLyric} */
-      const parsedLyric = { rawTime, time, content: trimContent(content) };
-      parsedLyrics.splice(binarySearch(parsedLyric), 0, parsedLyric);
+export function parseLrc(text) {
+  /** @type {LrcLine[]} */
+  const lines = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const match = raw.trim().match(LINE);
+    if (!match) continue; // [ti:] [by:] 这类信息标签、JSON 信息行
+    const [, stamps, content] = match;
+    for (const [, min, sec, fraction] of stamps.matchAll(TIMESTAMP)) {
+      const time =
+        Number(min) * 60_000 + Number(sec) * 1000 + fractionToMs(fraction);
+      lines.push({ time, text: content.trim() });
     }
   }
-
-  return parsedLyrics;
-}
-
-/**
- * @param {string} content
- * @returns {string}
- */
-function trimContent(content) {
-  let t = content.trim();
-  return t.length < 1 ? content : t;
-}
-
-/**
- * @param {string} lyric
- */
-export async function copyLyric(lyric) {
-  const textToCopy = lyric;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    try {
-      await navigator.clipboard.writeText(textToCopy);
-    } catch (err) {
-      alert('复制失败，请手动复制！');
-    }
-  } else {
-    const tempInput = document.createElement('textarea');
-    tempInput.value = textToCopy;
-    tempInput.style.position = 'absolute';
-    tempInput.style.left = '-9999px';
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    try {
-      document.execCommand('copy');
-    } catch (err) {
-      alert('复制失败，请手动复制！');
-    }
-    document.body.removeChild(tempInput);
-  }
+  // sort 是稳定排序：同一时间的多行保持原来的先后顺序
+  return lines.sort((a, b) => a.time - b.time);
 }

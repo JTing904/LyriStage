@@ -27,10 +27,16 @@
   box-sizing: border-box;
 }
 
+/* 整个 App 固定在窗口大小，页面本身不滚动；需要滚动的区域（歌单、歌词）自己滚 */
 html,
-body {
+body,
+#app {
   margin: 0;
   height: 100%;
+}
+
+body {
+  overflow: hidden;
 }
 
 body {

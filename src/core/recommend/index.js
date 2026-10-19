@@ -1,16 +1,23 @@
 // 每日推荐 + 私人 FM：从数据库和网易云收集数据，交给 engine.js 计算
-import { requireSupabase, unwrap } from '../supabase';
-import { getCurrentUser } from '../auth';
-import { listLikedTracks } from '../library';
-import { listDislikedTrackIds, listRecentHistory } from '../history';
-import { localDay, toSnapshot, fromRow } from '../track';
+//
+// netease 参数：core/netease 的 createNetease(http) 返回值，
+// 用到 artistTopSongs / similarPlaylists / playlistTracks / genericRecommendations
+import { requireSupabase, unwrap } from '../data/supabase';
+import { getCurrentUser } from '../data/auth';
+import { listLikedTracks } from '../data/library';
+import { listDislikedTrackIds, listRecentHistory } from '../data/history';
+import { localDay, toSnapshot, fromRow } from '../data/track';
 import {
   computeArtistAffinity,
   createRng,
   pickSeeds,
   rankCandidates,
 } from './engine';
-import * as defaultNetease from './netease';
+
+/**
+ * @typedef {Pick<ReturnType<typeof import('../netease').createNetease>,
+ *   'artistTopSongs' | 'similarPlaylists' | 'playlistTracks' | 'genericRecommendations'>} NeteaseForRecommend
+ */
 
 const DAY_MS = 86400 * 1000;
 
@@ -26,9 +33,11 @@ async function loadUserSignals() {
 
 /**
  * 用种子去网易云收集候选歌曲。单个接口失败不影响其他来源。
+ * @param {{ artistIds: number[], trackIds: number[] }} seeds
+ * @param {NeteaseForRecommend} netease
  * @returns {Promise<Array<{ track: object, origin: string }>>}
  */
-export async function gatherCandidates(seeds, netease = defaultNetease) {
+export async function gatherCandidates(seeds, netease) {
   const tagged = origin => tracks => tracks.map(track => ({ track, origin }));
 
   const jobs = [
@@ -74,13 +83,14 @@ function recentlyPlayedIds(history, days) {
  * @param {number} [options.count]
  * @param {number} [options.excludeRecentDays] 排除最近几天听过的
  * @param {Iterable<string>} [options.extraExcludeIds]
+ * @param {NeteaseForRecommend} options.netease
  */
 export async function buildRecommendations({
   seed,
   count = 30,
   excludeRecentDays = 7,
   extraExcludeIds = [],
-  netease = defaultNetease,
+  netease,
 }) {
   const { history, liked, disliked } = await loadUserSignals();
   const affinity = computeArtistAffinity(history, liked);
@@ -112,9 +122,9 @@ export async function buildRecommendations({
 
 /**
  * 今天的每日推荐。当天第一次调用时计算并存进数据库，之后直接读缓存。
- * @param {{ force?: boolean }} options force=true 时重新计算
+ * @param {{ netease: NeteaseForRecommend, force?: boolean }} options force=true 时重新计算
  */
-export async function getDailyRecommendations({ force = false } = {}) {
+export async function getDailyRecommendations({ netease, force = false }) {
   const user = await getCurrentUser();
   if (!user) throw new Error('需要登录 LyriStage 账号');
   const day = localDay();
@@ -131,7 +141,10 @@ export async function getDailyRecommendations({ force = false } = {}) {
     if (cached) return cached.tracks.map(track => fromRow({ track }));
   }
 
-  const tracks = await buildRecommendations({ seed: `${user.id}:${day}` });
+  const tracks = await buildRecommendations({
+    seed: `${user.id}:${day}`,
+    netease,
+  });
   const snapshots = tracks.map(toSnapshot);
   unwrap(
     await db
@@ -148,7 +161,8 @@ export async function getDailyRecommendations({ force = false } = {}) {
  * 本次会话里跳过和喜欢会即时影响后面的选歌（通过排除 + 重新计算偏好）。
  */
 export class PersonalFM {
-  constructor({ netease = defaultNetease, batchSize = 20 } = {}) {
+  /** @param {{ netease: NeteaseForRecommend, batchSize?: number }} options */
+  constructor({ netease, batchSize = 20 }) {
     this.netease = netease;
     this.batchSize = batchSize;
     this.queue = [];

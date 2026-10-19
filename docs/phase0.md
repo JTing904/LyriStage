@@ -53,6 +53,12 @@ yrc 格式：`[行开始ms,行时长ms](字开始ms,字时长ms,0)字(…)字…
   手机版暂时只能播网易云直接给链接的歌。
 - 重新部署：`cd server && npx vercel@62.2.0 deploy --prod --yes`
 
+## 已知问题（观察中）
+
+- API 启动时偶尔报 `ZstdDecompress unexpected end of file`（`register_neapikey`）：
+  注册额外加密金钥失败，`generateConfig()` 自己有容错，之后搜索、播放、歌词都正常。
+- 本地 API 刚启动的前几个请求可能失败（`status: undefined`），core/http 已经加了自动重试。
+
 ## 当时还需要你操作的（已完成）
 
 1. **Supabase**：建项目（Singapore）→ SQL Editor 执行 `supabase/migrations/20261019000000_init.sql`

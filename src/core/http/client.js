@@ -24,11 +24,27 @@ export class ApiError extends Error {
  */
 
 /**
+ * 值得重试的错误：网络断开、超时、服务器 5xx。
+ * 网易云 API 刚启动时（冷启动）前几个请求常常 502 / 连接失败，过一会儿就好。
+ * 4xx（参数错、需要登录、版权限制）重试也没用。
+ * @param {unknown} err
+ */
+export function isRetryable(err) {
+  if (!(err instanceof ApiError)) return false;
+  if (err.status === undefined) return true; // 网络错误 / 超时
+  return err.status >= 500;
+}
+
+const sleep = (/** @type {number} */ ms) =>
+  new Promise(resolve => setTimeout(resolve, ms));
+
+/**
  * @param {object} options
  * @param {string} options.baseURL 例如 'http://127.0.0.1:10754' 或网页版的 '/api'
  * @param {typeof fetch} [options.fetch] 测试时可以换成假的 fetch
  * @param {number} [options.timeout] 毫秒
  * @param {Params} [options.defaultParams] 每个请求都带上的参数
+ * @param {number[]} [options.retryDelays] 每次重试前等多久（毫秒），长度就是最多重试几次
  * @returns {Http}
  */
 export function createHttp({
@@ -36,10 +52,22 @@ export function createHttp({
   fetch: fetchImpl = globalThis.fetch.bind(globalThis),
   timeout = 15000,
   defaultParams = {},
+  retryDelays = [300, 900],
 }) {
   const base = baseURL.replace(/\/+$/, '');
 
   async function get(path, params = {}) {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await getOnce(path, params);
+      } catch (err) {
+        if (attempt >= retryDelays.length || !isRetryable(err)) throw err;
+        await sleep(retryDelays[attempt]);
+      }
+    }
+  }
+
+  async function getOnce(path, params) {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries({
       ...defaultParams,
