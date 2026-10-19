@@ -78,6 +78,21 @@ create table public.daily_recommendations (
   primary key (user_id, day)
 );
 
+-- 表权限 -------------------------------------------------------------------------
+-- 建项目时关闭了 "Automatically expose new tables"，新表默认谁都访问不了，
+-- 这里只开放给已登录用户（authenticated）；未登录的 anon 角色完全看不到这些表。
+-- 能访问到哪些行，再由下面的 RLS 规则决定。
+grant select, insert, update, delete on
+  public.liked_tracks,
+  public.playlists,
+  public.playlist_tracks,
+  public.disliked_tracks,
+  public.daily_recommendations
+to authenticated;
+
+-- 听歌记录只能新增、读取、删除，不能修改
+grant select, insert, delete on public.play_history to authenticated;
+
 -- RLS -------------------------------------------------------------------------
 alter table public.liked_tracks          enable row level security;
 alter table public.playlists             enable row level security;
@@ -160,3 +175,10 @@ as $$
   order by count(*) desc, max(h.played_at) desc
   limit max_rows;
 $$;
+
+-- 函数默认所有人（public）都能执行，改成只有已登录用户能调用
+revoke execute on function public.play_ranking(timestamptz, integer) from public, anon;
+grant execute on function public.play_ranking(timestamptz, integer) to authenticated;
+
+-- 触发器函数只给触发器用，不需要被直接调用
+revoke execute on function public.touch_playlist() from public, anon, authenticated;

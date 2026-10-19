@@ -31,6 +31,8 @@ npx yarn@1 electron:build-win
 LyriStage 不需要网易云账号：网易云只提供歌曲、音频和歌词，"我喜欢 / 歌单 / 听歌记录 / 每日推荐 / 私人 FM" 存在自己的 Supabase 数据库里。
 
 1. 在 [supabase.com](https://supabase.com) 新建项目（Region 选 Singapore）
+   - 数据库密码（Database Password）保存在本机 `.env` 的 `SUPABASE_DB_PASSWORD`，
+     `.env` 不会提交到 git；换电脑时要自己带过去，忘了可以在 Project Settings → Database 重置
 2. 打开 SQL Editor，执行 [supabase/migrations/20261019000000_init.sql](supabase/migrations/20261019000000_init.sql)
 3. Authentication → Sign In / Providers → Email，学习阶段可以关闭 "Confirm email"
 4. 把 Project Settings → API 里的 URL 和 anon key 填进 `.env` 的 `VUE_APP_SUPABASE_URL` / `VUE_APP_SUPABASE_ANON_KEY`
