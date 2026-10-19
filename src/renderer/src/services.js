@@ -13,7 +13,7 @@ import {
   recordPlay,
 } from '@core/data';
 import { PersonalFM } from '@core/recommend';
-import { apiBase, isElectron } from './platform';
+import { apiBase, isElectron, isNativeApp } from './platform';
 import { connectMediaSession } from './mediaSession';
 
 configureSupabase({
@@ -72,11 +72,19 @@ export async function getLyrics(track) {
   return buildLyrics(raw, { durationMs: track.dt });
 }
 
-/** 播放链接：先找网易云，拿不到再解灰 */
+/**
+ * 播放链接：先找网易云，拿不到再解灰
+ * - 电脑版：本机的 API 解灰
+ * - 手机 App：手机自己去找（Vercel 上的 API 解灰连不上音源）
+ */
 async function resolveSource(track) {
-  return (
-    (await netease.songUrl(track.id)) ?? (await netease.unblockUrl(track.id))
-  );
+  const official = await netease.songUrl(track.id);
+  if (official) return official;
+  if (isNativeApp) {
+    const { unblockOnDevice } = await import('./unblockOnDevice');
+    return unblockOnDevice(track.id);
+  }
+  return netease.unblockUrl(track.id);
 }
 
 const audio = createHtmlAudio();

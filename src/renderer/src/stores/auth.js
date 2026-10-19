@@ -44,6 +44,8 @@ export const useAuthStore = defineStore('auth', () => {
   const ready = ref(false);
   /** 第三方登录回来时出的错，登录页显示 */
   const oauthError = ref('');
+  /** 没登录的人按了要登录才能用的功能：这里是那个功能的名字（App 外框会弹出提示），空 = 不弹 */
+  const loginPrompt = ref('');
   const enabled = isSupabaseConfigured();
 
   async function checkMember() {
@@ -118,6 +120,17 @@ export const useAuthStore = defineStore('auth', () => {
     () => PROVIDER_LABEL[user.value?.app_metadata?.provider] ?? '已登录'
   );
 
+  /**
+   * 没登录也能逛 App，但真正用（听歌、收藏、歌单…）要登录而且是成员。
+   * 可以用就返回 true；不行就弹出「登录后才能…」提示，返回 false
+   * @param {string} action 例如「听歌」
+   */
+  function requireMember(action = '使用这个功能') {
+    if (allowed.value) return true;
+    loginPrompt.value = action;
+    return false;
+  }
+
   // ---- 操作（登录页、设置页用）----
 
   async function loginWithEmail(email, password) {
@@ -158,6 +171,8 @@ export const useAuthStore = defineStore('auth', () => {
     ready,
     enabled,
     oauthError,
+    loginPrompt,
+    requireMember,
     loggedIn,
     allowed,
     displayName,

@@ -50,6 +50,24 @@ function sendPreflight(req, res) {
 }
 
 /**
+ * 不用登录也能用的接口：浏览（首页推荐、排行榜、搜索、歌单、专辑、歌手）。
+ * 其他（播放链接、解灰、歌词、私人 FM、推荐算法用的接口…）只给成员。
+ */
+const PUBLIC_PATHS = new Set([
+  '/personalized',
+  '/personalized/newsong',
+  '/toplist',
+  '/cloudsearch',
+  '/search',
+  '/playlist/detail',
+  '/playlist/track/all',
+  '/album',
+  '/artists',
+  '/artist/album',
+  '/song/detail',
+]);
+
+/**
  * 只让 LyriStage 成员（兑换过邀请码的账号）使用 API：
  * 拿请求里的登录 token 去调 Supabase 的 is_member()，token 无效或不是成员都会被拒绝。
  * 结果缓存一会儿，不用每个请求都去问 Supabase。
@@ -179,13 +197,13 @@ function createHandler(options = {}) {
 
   const handler = async (req, res) => {
     if (req.method === 'OPTIONS') return sendPreflight(req, res);
-    if (isMember && !(await isMember(req))) {
+    const url = new URL(req.url, 'http://localhost');
+    if (isMember && !PUBLIC_PATHS.has(url.pathname) && !(await isMember(req))) {
       return sendJson(res, 401, {
         code: 401,
         msg: '请先登录 LyriStage（需要邀请码）',
       });
     }
-    const url = new URL(req.url, 'http://localhost');
     if (url.pathname === '/song/url/match') {
       return unblock(res, url, unmSources);
     }

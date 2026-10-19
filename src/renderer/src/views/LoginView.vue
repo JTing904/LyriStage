@@ -220,6 +220,9 @@ function submitInvite() {
           </button>
 
           <p class="switch">
+            <RouterLink to="/" class="browse">先不登录，随便看看</RouterLink>
+          </p>
+          <p class="switch">
             <template v-if="mode === 'login'">
               还没有账号？<button type="button" class="link" @click="mode = 'register'">用邀请码注册</button>
             </template>
@@ -448,6 +451,14 @@ button:disabled {
 }
 .link:hover {
   text-decoration: underline;
+}
+.browse {
+  color: var(--text-dim);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.browse:hover {
+  color: var(--text);
 }
 
 /* 电脑版：顶部 40px 是拖动窗口的地方 */

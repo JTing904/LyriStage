@@ -18,7 +18,8 @@
     "smoke": "node scripts/smoke/run.js",
     "test:integration": "vitest run --config vitest.integration.config.mjs",
     "app:build": "vite build --config vite.web.config.mjs --mode app && cap sync android",
-    "app:apk": "npm run app:build && cd android && gradlew.bat assembleDebug"
+    "app:apk": "npm run app:build && cd android && gradlew.bat assembleDebug",
+    "web:deploy": "vite build --config vite.web.config.mjs --mode web && cd deploy/lyristage && npx vercel@62.2.0 deploy --prod --yes"
   },
   "dependencies": {
     "@neteasecloudmusicapienhanced/api": "4.41.1",

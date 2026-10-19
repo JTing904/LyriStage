@@ -32,7 +32,7 @@ const NAV = [
       </RouterLink>
     </div>
 
-    <div class="mine">
+    <div v-if="auth.allowed" class="mine">
       <div class="mine-head">
         <span>我的歌单</span>
         <RouterLink to="/library" class="mine-all" title="全部">全部</RouterLink>
@@ -73,7 +73,7 @@ const NAV = [
     <div v-else-if="auth.ready" class="account guest">
       <span class="who">
         <strong>还没登录</strong>
-        <span>登录后可以收藏、建歌单</span>
+        <span>登录后才能听歌、收藏</span>
       </span>
       <RouterLink to="/login" class="login">登录</RouterLink>
     </div>

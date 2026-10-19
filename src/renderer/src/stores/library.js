@@ -60,6 +60,7 @@ export const useLibraryStore = defineStore('library', () => {
   const isLiked = id => likedSet.value.has(Number(id));
 
   async function toggleLike(track) {
+    if (!auth.requireMember('收藏喜欢的歌')) return;
     const id = Number(track.id);
     const liked = isLiked(id);
     const before = likedIds.value;
@@ -124,7 +125,9 @@ export const useLibraryStore = defineStore('library', () => {
   // ---- 「加到歌单」对话框（App 外框里只有一个，哪里都能叫出来）----
   /** 要加的歌；null = 对话框关着 */
   const pendingTracks = ref(null);
-  const openAddDialog = tracks => (pendingTracks.value = tracks);
+  const openAddDialog = tracks => {
+    if (auth.requireMember('建立自己的歌单')) pendingTracks.value = tracks;
+  };
   const closeAddDialog = () => (pendingTracks.value = null);
 
   return {

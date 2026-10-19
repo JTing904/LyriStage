@@ -40,7 +40,10 @@ const charts = ref([]);
 const loading = ref(true);
 const failed = ref(false);
 
-onMounted(async () => {
+/** 推荐歌单、新歌、排行榜；哪一块失败就显示「重试」（Vercel 太久没用时第一次会比较慢） */
+async function load() {
+  loading.value = true;
+  failed.value = false;
   const [p, s, c] = await Promise.allSettled([
     netease.recommendedPlaylists(12),
     netease.newSongs(10),
@@ -49,9 +52,10 @@ onMounted(async () => {
   if (p.status === 'fulfilled') playlists.value = p.value.slice(0, 12);
   if (s.status === 'fulfilled') newSongs.value = s.value.slice(0, 8);
   if (c.status === 'fulfilled') charts.value = c.value.slice(0, 4);
-  failed.value = [p, s, c].every(r => r.status === 'rejected');
+  failed.value = [p, s, c].some(r => r.status === 'rejected');
   loading.value = false;
-});
+}
+onMounted(load);
 
 const fmPlaying = computed(() => state.mode === 'fm' && state.track);
 async function playFm() {
@@ -141,7 +145,10 @@ const clock = ms => {
       </div>
     </section>
 
-    <p v-if="failed" class="error">内容加载失败，请检查网络后重新打开。</p>
+    <p v-if="failed" class="retry">
+      有些内容没有载入成功。
+      <button :disabled="loading" @click="load">{{ loading ? '载入中…' : '重试' }}</button>
+    </p>
 
     <section v-if="playlists.length || loading" aria-labelledby="h-lists">
       <h2 id="h-lists" class="display">推荐歌单</h2>
@@ -541,8 +548,28 @@ h2 {
   width: 64px;
 }
 
-.error {
+.retry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 0;
-  color: var(--danger);
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 14px;
+}
+.retry button {
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.retry button:disabled {
+  opacity: 0.6;
 }
 </style>

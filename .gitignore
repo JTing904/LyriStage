@@ -45,3 +45,7 @@ vercel.json
 # v2 构建输出
 out/
 dist-web/
+
+# 网页版部署的构建结果
+/deploy
+/dist-web

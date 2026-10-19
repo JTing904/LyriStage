@@ -7,24 +7,25 @@ export const router = createRouter({
   routes: [
     { path: '/', name: 'home', component: () => import('./views/HomeView.vue') },
     { path: '/search', name: 'search', component: () => import('./views/SearchView.vue') },
-    { path: '/library', name: 'library', component: () => import('./views/LibraryView.vue') },
-    { path: '/liked', name: 'liked', component: () => import('./views/LikedView.vue') },
-    { path: '/daily', name: 'daily', component: () => import('./views/DailyView.vue') },
+    { path: '/library', name: 'library', component: () => import('./views/LibraryView.vue'), meta: { member: true } },
+    { path: '/liked', name: 'liked', component: () => import('./views/LikedView.vue'), meta: { member: true } },
+    { path: '/daily', name: 'daily', component: () => import('./views/DailyView.vue'), meta: { member: true } },
     { path: '/playlist/:id', name: 'playlist', component: () => import('./views/PlaylistView.vue') },
     { path: '/album/:id', name: 'album', component: () => import('./views/AlbumView.vue') },
     { path: '/artist/:id', name: 'artist', component: () => import('./views/ArtistView.vue') },
-    { path: '/my/:id', name: 'my-playlist', component: () => import('./views/MyPlaylistView.vue') },
+    { path: '/my/:id', name: 'my-playlist', component: () => import('./views/MyPlaylistView.vue'), meta: { member: true } },
     {
       path: '/login',
       name: 'login',
       component: () => import('./views/LoginView.vue'),
-      // public：不用登录也能看；bare：不显示侧边栏和播放条
-      meta: { public: true, bare: true },
+      // bare：不显示侧边栏和播放条
+      meta: { bare: true },
     },
     {
       path: '/settings',
       name: 'settings',
       component: () => import('./views/SettingsView.vue'),
+      meta: { member: true },
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
@@ -36,16 +37,11 @@ export function redirectTarget(route) {
   return typeof target === 'string' && target.startsWith('/') ? target : '/';
 }
 
-// 邀请制：没登录、或登录了但还没兑换邀请码，只能看到登录页
+// 没登录也能逛（首页、搜索、歌单、专辑、歌手），听歌和个人的页面（meta.member）要登录而且是成员
 router.beforeEach(async to => {
   const auth = useAuthStore();
   await auth.whenReady();
-  if (to.meta.public) {
-    return to.name === 'login' && auth.allowed ? redirectTarget(to) : true;
-  }
-  if (auth.allowed) return true;
-  return {
-    name: 'login',
-    query: to.fullPath === '/' ? {} : { redirect: to.fullPath },
-  };
+  if (to.name === 'login') return auth.allowed ? redirectTarget(to) : true;
+  if (!to.meta.member || auth.allowed) return true;
+  return { name: 'login', query: { redirect: to.fullPath } };
 });

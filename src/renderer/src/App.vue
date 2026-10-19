@@ -13,6 +13,7 @@ import { useAuthStore } from './stores/auth';
 import { useRecentStore } from './stores/recent';
 import { useLibraryStore } from './stores/library';
 import AddToPlaylistDialog from './components/AddToPlaylistDialog.vue';
+import LoginPrompt from './components/LoginPrompt.vue';
 import AppSidebar from './components/AppSidebar.vue';
 import BottomTabs from './components/BottomTabs.vue';
 import MiniPlayer from './components/MiniPlayer.vue';
@@ -29,18 +30,21 @@ const stageOpen = ref(false);
 const route = useRoute();
 const router = useRouter();
 
-// 退出登录（或成员身份没了）：停止播放，回到登录页
+// 退出登录（或成员身份没了）：停止播放；在个人页面（音乐库、设置…）的话回首页
 watch(
   () => auth.allowed,
   allowed => {
     if (allowed || !auth.ready) return;
     player.pause();
     stageOpen.value = false;
-    if (!route.meta.public) {
-      router.replace({ name: 'login', query: { redirect: route.fullPath } });
-    }
+    if (route.meta.member) router.replace('/');
   }
 );
+
+/** 歌词舞台：要登录才能听歌，也就要登录才能打开 */
+function openStage() {
+  if (auth.requireMember('听歌、看歌词')) stageOpen.value = true;
+}
 
 // 换页面时内容区回到顶部
 const content = ref(null);
@@ -57,9 +61,6 @@ watch(
     <RouterView />
   </div>
 
-  <!-- 还在读登录状态（路由守卫还没放行）：先空着，不要闪一下首页 -->
-  <div v-else-if="!auth.allowed" class="bare" />
-
   <div v-else class="shell" :class="{ electron: isElectron }">
     <div v-if="isElectron" class="drag-strip" aria-hidden="true" />
     <AppSidebar class="area-side" />
@@ -70,14 +71,15 @@ watch(
       class="area-bar"
       :state="state"
       :player="player"
-      @open-stage="stageOpen = true"
+      @open-stage="openStage"
     />
     <div class="area-mobile">
-      <MiniPlayer :state="state" :player="player" @open-stage="stageOpen = true" />
+      <MiniPlayer :state="state" :player="player" @open-stage="openStage" />
       <BottomTabs />
     </div>
 
     <AddToPlaylistDialog />
+    <LoginPrompt />
     <Transition name="toast">
       <div v-if="library.notice" class="toast" role="status">{{ library.notice }}</div>
     </Transition>
