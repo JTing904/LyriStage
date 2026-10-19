@@ -33,6 +33,48 @@ function toHsl([r, g, b]) {
   return { s, l };
 }
 
+/**
+ * 保留色相，把亮度调到 lightness、饱和度至少 minSaturation
+ * 例如 Spotify 式的背景：中等亮度、饱和，白字和黑字都看得清
+ * @param {RGB} color
+ * @param {number} lightness 0~1
+ * @param {number} [minSaturation] 0~1
+ * @returns {RGB}
+ */
+export function withLightness(color, lightness, minSaturation = 0) {
+  const [r, g, b] = color.map(c => c / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+  }
+  h = (h * 60 + 360) % 360;
+  // 原本几乎是灰色的就保持灰色（灰色的色相没有意义，硬加饱和度会变成红色）
+  const original = toHsl(color).s;
+  const s = original < 0.08 ? original : Math.max(minSaturation, original);
+  // HSL → RGB
+  const c = (1 - Math.abs(2 * lightness - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = lightness - c / 2;
+  const [r1, g1, b1] =
+    h < 60
+      ? [c, x, 0]
+      : h < 120
+      ? [x, c, 0]
+      : h < 180
+      ? [0, c, x]
+      : h < 240
+      ? [0, x, c]
+      : h < 300
+      ? [x, 0, c]
+      : [c, 0, x];
+  return /** @type {RGB} */ ([r1, g1, b1].map(v => Math.round((v + m) * 255)));
+}
+
 /** 把颜色压暗到亮度不超过 maxL（配白字时对比度够） */
 function darken(color, maxL = 0.22) {
   const { l } = toHsl(color);

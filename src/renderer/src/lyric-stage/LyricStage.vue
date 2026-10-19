@@ -3,9 +3,10 @@
 // 歌词怎么画交给 styles/ 里的风格组件
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { provideStage } from './useStage';
-import { LYRIC_STYLES, findStyle } from './styles';
+import { findStyle } from './styles';
 import { isElectron } from '../platform';
 import PlayerBar from '../components/PlayerBar.vue';
+import StylePicker from './StylePicker.vue';
 
 const props = defineProps({
   state: { type: Object, required: true },
@@ -26,6 +27,11 @@ const status = computed(() => {
   if (lines.value.length === 0) return 'no-lyrics';
   return 'ready';
 });
+
+/** 浅色背景的风格（例如竖排诗词）：按钮和播放条换成深色 */
+const lightStyle = computed(
+  () => status.value === 'ready' && Boolean(style.value.light)
+);
 
 // 控制条：鼠标或手指一段时间不动就隐藏，沉浸看歌词
 const controlsVisible = ref(true);
@@ -61,7 +67,11 @@ onBeforeUnmount(() => {
 <template>
   <div
     class="stage"
-    :class="{ 'controls-hidden': !controlsVisible, electron: isElectron }"
+    :class="{
+      'controls-hidden': !controlsVisible,
+      electron: isElectron,
+      light: lightStyle,
+    }"
     @pointermove="wake"
     @pointerdown="wake"
   >
@@ -92,36 +102,31 @@ onBeforeUnmount(() => {
         >✕</button
       >
       <span class="spacer" />
-      <button class="pill" @click="pickerOpen = !pickerOpen">
+      <button
+        class="pill"
+        :aria-expanded="pickerOpen"
+        @click="pickerOpen = !pickerOpen"
+      >
         风格：{{ style.name }}
       </button>
     </header>
 
-    <aside v-if="pickerOpen" class="picker" @pointerdown.stop>
-      <p class="picker-title">歌词风格</p>
-      <button
-        v-for="s in LYRIC_STYLES"
-        :key="s.id"
-        class="style-option"
-        :class="{ active: s.id === style.id }"
-        @click="settings.style = s.id"
-      >
-        <strong>{{ s.name }}</strong>
-        <span>{{ s.description }}</span>
-      </button>
-      <div class="picker-row">
-        <label>
-          <input v-model="settings.showTranslation" type="checkbox" />
-          显示翻译 / 罗马音
-        </label>
-      </div>
-    </aside>
+    <StylePicker
+      v-if="pickerOpen"
+      class="picker"
+      :current="style.id"
+      :show-translation="settings.showTranslation"
+      @select="settings.style = $event"
+      @update:show-translation="settings.showTranslation = $event"
+      @pointerdown.stop
+    />
 
-    <!-- 底部：播放条（YouTube Music 风格） -->
+    <!-- 底部：播放条（YouTube Music 风格，精简、透明） -->
     <PlayerBar
       class="controls"
       transparent
       compact
+      :light="lightStyle"
       :state="state"
       :player="player"
     />
@@ -163,9 +168,6 @@ onBeforeUnmount(() => {
 
 .topbar,
 .controls {
-  position: absolute;
-  left: 0;
-  right: 0;
   z-index: 10;
   transition: opacity 0.4s;
 }
@@ -175,7 +177,10 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 .topbar {
+  position: absolute;
   top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -204,21 +209,35 @@ button {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+}
+.pill {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px);
+  font-size: 13px;
 }
 .icon-button:hover,
 .pill:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
-.pill {
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  font-size: 13px;
+  background: rgba(255, 255, 255, 0.24);
 }
 button:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
+}
+/* 浅色风格：顶部按钮换成深色 */
+.light .topbar {
+  color: #1d1a16;
+}
+.light .icon-button,
+.light .pill {
+  background: rgba(0, 0, 0, 0.08);
+}
+.light .icon-button:hover,
+.light .pill:hover {
+  background: rgba(0, 0, 0, 0.16);
 }
 
 .picker {
@@ -226,47 +245,6 @@ button:focus-visible {
   z-index: 11;
   top: calc(var(--titlebar-height) + 8px);
   right: 12px;
-  width: min(320px, calc(100% - 24px));
-  max-height: calc(100% - 140px);
-  overflow-y: auto;
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(20, 22, 24, 0.92);
-  backdrop-filter: blur(12px);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.picker-title {
-  margin: 0 0 4px;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
-}
-.style-option {
-  display: grid;
-  gap: 2px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: transparent;
-  text-align: left;
-}
-.style-option span {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
-}
-.style-option:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-.style-option.active {
-  background: rgba(255, 255, 255, 0.16);
-}
-.picker-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 4px 0;
-  font-size: 13px;
 }
 
 /* PlayerBar 自己有 position: relative（给进度条定位用），

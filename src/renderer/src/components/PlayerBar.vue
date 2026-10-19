@@ -12,6 +12,8 @@ const props = defineProps({
   transparent: { type: Boolean, default: false },
   /** 精简：只占底部中间一块（封面和歌名在上，进度条在中间，按钮在下） */
   compact: { type: Boolean, default: false },
+  /** 浅色背景上用：文字和图标换成深色 */
+  light: { type: Boolean, default: false },
 });
 
 const track = computed(() => props.state.track);
@@ -98,7 +100,7 @@ function toggleMute() {
 </script>
 
 <template>
-  <div class="player-bar" :class="{ transparent, compact }">
+  <div class="player-bar" :class="{ transparent, compact, light }">
     <div v-if="compact" class="compact-meta">
       <img v-if="cover" class="cover" :src="cover" alt="" />
       <div class="meta">
@@ -281,6 +283,22 @@ function toggleMute() {
 }
 .player-bar.transparent button.icon svg {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+/* 浅色背景：深色字和图标，不要阴影 */
+.player-bar.light {
+  --bar-fg: #1d1a16;
+  --bar-dim: rgba(29, 26, 22, 0.6);
+  --bar-accent: #b3261e;
+  text-shadow: none;
+}
+.player-bar.light button.icon svg {
+  filter: none;
+}
+.player-bar.light .track-line {
+  background: rgba(0, 0, 0, 0.18);
+}
+.player-bar.light button.icon:hover {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 /* ---------- 进度条 ---------- */
