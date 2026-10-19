@@ -392,6 +392,8 @@ h2 {
   margin: 0;
   font-size: 30px;
   line-height: 1.25;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

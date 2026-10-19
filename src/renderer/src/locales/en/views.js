@@ -29,7 +29,7 @@ export default {
   按你最近的听歌记录挑选: 'Picked from what you\'ve been playing',
   登录后会按你的口味推荐: 'Log in for picks based on your taste',
   '私人 FM': 'Personal FM',
-  '随便听听，遇见没听过的歌': 'Press play and discover something new',
+  '随便听听，遇见没听过的歌': 'Press play, find something new',
   '暂停私人 FM': 'Pause Personal FM',
   '播放私人 FM': 'Play Personal FM',
   继续播放: 'Jump back in',
