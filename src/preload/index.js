@@ -4,10 +4,16 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 const THEMES = ['system', 'dark', 'light'];
 
+// 主进程通过启动参数给的本机 API 通行证（只有主窗口有；桌面歌词窗口不需要）
+const apiToken = process.argv
+  .find(arg => arg.startsWith('--lyristage-api-token='))
+  ?.slice('--lyristage-api-token='.length);
+
 contextBridge.exposeInMainWorld('lyristage', {
   isElectron: true,
   platform: process.platform,
   apiBase: 'http://127.0.0.1:10754',
+  apiHeaders: apiToken ? { 'X-LyriStage-Token': apiToken } : {},
   setTheme: mode => {
     if (THEMES.includes(mode)) ipcRenderer.send('lyristage:set-theme', mode);
   },

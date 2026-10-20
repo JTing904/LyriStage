@@ -22,6 +22,9 @@ export const apiBase = isElectron
   ? bridge.apiBase
   : import.meta.env.VITE_API_BASE || '/api';
 
+/** 电脑版请求本机 API 要带的通行证 header（其他平台是空的） */
+export const localApiHeaders = bridge?.apiHeaders ?? {};
+
 /**
  * 电脑版：让窗口（系统按钮颜色、窗口底色）跟着 App 的主题切换；网页版不需要
  * @param {'system' | 'dark' | 'light'} mode

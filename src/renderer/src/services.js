@@ -13,7 +13,7 @@ import {
   recordPlay,
 } from '@core/data';
 import { PersonalFM } from '@core/recommend';
-import { apiBase, isElectron, isNativeApp } from './platform';
+import { apiBase, isElectron, isNativeApp, localApiHeaders } from './platform';
 import { connectMediaSession } from './mediaSession';
 
 configureSupabase({
@@ -21,7 +21,7 @@ configureSupabase({
   anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
 });
 
-/** 网页版的 API 在 Vercel 上，只让成员用，要带登录 token；电脑版连本机的 API，不用带 */
+/** 网页版的 API 在 Vercel 上，只让成员用，要带登录 token；电脑版连本机的 API，带启动时的通行证 */
 async function authHeaders() {
   const token = await getAccessToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -29,7 +29,7 @@ async function authHeaders() {
 
 export const http = createHttp({
   baseURL: apiBase,
-  getHeaders: isElectron ? undefined : authHeaders,
+  getHeaders: isElectron ? () => localApiHeaders : authHeaders,
 });
 export const netease = createNetease(http);
 

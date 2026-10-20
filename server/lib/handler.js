@@ -2,9 +2,36 @@
 //
 // - 其他路径交给 @neteasecloudmusicapienhanced/api，默认带上大陆 realIP
 // - /song/url/match（解灰）自己实现，见下面 unblock()
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+
+// 网易云 API 允许调用的人用这些参数改请求的去向（domain、proxy）或夹带 cookie、header。
+// LyriStage 自己用不到，转发前一律删掉，免得别人借我们的服务器 / 电脑去打别的地方
+const BLOCKED_PARAMS = ['proxy', 'domain', 'headers', 'cookie', 'ua'];
+
+/** 删掉危险参数和 Cookie 请求头（网址里的、Vercel 预先解析好的 req.query 都要删） */
+function stripBlockedParams(req, url) {
+  let changed = false;
+  for (const key of BLOCKED_PARAMS) {
+    if (url.searchParams.has(key)) {
+      url.searchParams.delete(key);
+      changed = true;
+    }
+    if (req.query && typeof req.query === 'object') delete req.query[key];
+  }
+  delete req.headers.cookie;
+  if (changed) req.url = url.pathname + url.search;
+}
+
+/** 比较通行证（固定时间比较，避免用回应时间猜出内容） */
+function sameToken(given, expected) {
+  if (typeof given !== 'string') return false;
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
 // 海外请求网易云会被限制版权，默认带上大陆 IP（请求里已有 realIP 就用请求的）
 const DEFAULT_REAL_IP = '211.161.244.70';
@@ -44,7 +71,10 @@ function sendPreflight(req, res) {
   res.statusCode = 204;
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Authorization, Content-Type, X-LyriStage-Token'
+  );
   res.setHeader('Access-Control-Max-Age', '86400');
   res.end();
 }
@@ -157,7 +187,10 @@ async function unblock(res, url, sources) {
  * @param {string} [options.realIP]
  * @param {string[]} [options.unmSources]
  * @param {{ supabaseUrl: string, anonKey: string }} [options.requireMember]
- *   设了就只让 LyriStage 成员使用（Vercel 上用；电脑版本地 API 不需要）
+ *   设了就只让 LyriStage 成员使用（Vercel 上用）
+ * @param {string} [options.localToken]
+ *   电脑版本机 API 用：每次启动随机产生的通行证，只有 App 自己的页面知道。
+ *   请求没带对的 X-LyriStage-Token 就拒绝，浏览器里其他网站就调不了这个 API
  */
 function createHandler(options = {}) {
   const realIP = options.realIP || DEFAULT_REAL_IP;
@@ -195,8 +228,22 @@ function createHandler(options = {}) {
     return appPromise;
   }
 
+  const { localToken } = options;
+
   const handler = async (req, res) => {
     if (req.method === 'OPTIONS') return sendPreflight(req, res);
+    // LyriStage 只用 GET；不收 POST，免得参数从请求内容里夹带进来
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      return sendJson(res, 405, { code: 405, msg: 'Method Not Allowed' });
+    }
+    if (localToken) {
+      // Host 必须是本机：挡住 DNS rebinding（别的网域临时指到 127.0.0.1）
+      const host = String(req.headers.host || '').replace(/:\d+$/, '');
+      const fromThisApp = sameToken(req.headers['x-lyristage-token'], localToken);
+      if (!['127.0.0.1', 'localhost'].includes(host) || !fromThisApp) {
+        return sendJson(res, 403, { code: 403, msg: 'Forbidden' });
+      }
+    }
     const url = new URL(req.url, 'http://localhost');
     if (isMember && !PUBLIC_PATHS.has(url.pathname) && !(await isMember(req))) {
       return sendJson(res, 401, {
@@ -204,6 +251,7 @@ function createHandler(options = {}) {
         msg: '请先登录 LyriStage（需要邀请码）',
       });
     }
+    stripBlockedParams(req, url);
     if (url.pathname === '/song/url/match') {
       return unblock(res, url, unmSources);
     }

@@ -5,8 +5,9 @@ import { createHandler } from '../../server/lib/handler';
 
 export const API_PORT = 10754;
 
-export function startApiServer() {
-  const handler = createHandler();
+/** @param {string} token 每次启动随机产生的通行证（只交给主窗口的页面） */
+export function startApiServer(token) {
+  const handler = createHandler({ localToken: token });
   const server = http.createServer((req, res) => {
     handler(req, res).catch(err => {
       console.error('[LyriStage API]', req.url, err);

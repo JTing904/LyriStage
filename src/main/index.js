@@ -1,6 +1,7 @@
 // Electron 主进程
 import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron';
 import { join, resolve } from 'node:path';
+import { randomBytes } from 'node:crypto';
 import { startApiServer, API_PORT } from './apiServer';
 import { loadWindowState, trackWindowState } from './windowState';
 import { createTray } from './tray';
@@ -8,6 +9,9 @@ import { createDesktopLyricsController } from './desktopLyrics';
 import { getSettings, updateSettings } from './settings';
 import appIcon from '../../resources/icon.png?asset';
 import trayIcon from '../../resources/tray.png?asset';
+
+// 本机网易云 API 的通行证：每次启动都不一样，浏览器里的其他网站拿不到，就调不了这个 API
+const apiToken = randomBytes(24).toString('hex');
 
 const isMac = process.platform === 'darwin';
 
@@ -166,6 +170,8 @@ if (!app.requestSingleInstanceLock()) {
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true,
+        // 本机 API 的通行证：preload 从启动参数读出来，请求时放在 X-LyriStage-Token
+        additionalArguments: [`--lyristage-api-token=${apiToken}`],
       },
     });
     if (state.maximized) mainWindow.maximize();
@@ -229,7 +235,7 @@ if (!app.requestSingleInstanceLock()) {
   }
 
   app.whenReady().then(() => {
-    startApiServer().catch(err => {
+    startApiServer(apiToken).catch(err => {
       console.error(`[LyriStage] 网易云 API 启动失败（端口 ${API_PORT}）`, err);
     });
     createWindow();
