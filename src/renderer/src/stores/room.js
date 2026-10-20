@@ -330,9 +330,9 @@ export const useRoomStore = defineStore('room', () => {
         : /row-level security|policy/i.test(err.message)
           ? t('发不出去：发得太快了，或房间已经关了')
           : t('发送失败：{error}', { error: err.message });
+      // 原始错误记在主控台，方便查问题
       console.warn('[LyriStage] 聊天发送失败', err);
-      // 附上原始错误，方便查问题
-      useNoticeStore().show(`${message}（${err.code ?? ''} ${err.message}）`, { duration: 8000 });
+      useNoticeStore().show(message);
       return false;
     }
     return true;
