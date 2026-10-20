@@ -114,7 +114,7 @@ async function copy(text) {
             <Cover v-if="m.avatar" :url="m.avatar" :size="40" round class="avatar" />
             <span v-else class="avatar initial">{{ m.name.slice(0, 1).toUpperCase() }}</span>
             <span class="name">{{ m.name }}</span>
-            <span v-if="m.role === 'host'" class="badge">{{ $t('房主') }}</span>
+            <span v-if="m.id === room.hostId" class="badge">{{ $t('房主') }}</span>
           </li>
         </ul>
       </section>

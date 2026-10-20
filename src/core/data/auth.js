@@ -101,7 +101,10 @@ export async function getMembership() {
  * @param {string} code
  */
 export async function redeemInvite(code) {
-  return unwrap(await requireSupabase().rpc('redeem_invite', { invite: code }));
+  const ok = unwrap(await requireSupabase().rpc('redeem_invite', { invite: code }));
+  // 新版数据库：邀请码不对时返回 false（才记得下失败次数），不是报错
+  if (ok === false) throw new Error('邀请码无效、已过期或已经用完');
+  return ok;
 }
 
 /**

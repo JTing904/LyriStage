@@ -52,6 +52,7 @@ export default {
   // 服务器（Supabase 函数）丢出来的中文错误
   请先登录: 'Please log in first',
   '邀请码无效、已过期或已经用完': 'This invite code is invalid, expired or already used',
+  '试太多次了，请一小时后再试': 'Too many tries. Please try again in an hour.',
   只有管理员可以生成邀请码: 'Only admins can create invite codes',
   只有管理员可以查看邀请码: 'Only admins can view invite codes',
 

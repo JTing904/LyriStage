@@ -3,6 +3,8 @@
 // - 房主：播放状态有变化就广播（歌、播放 / 暂停、进度），另外每 3 秒广播一次让大家校正
 // - 成员：收到就照着播；差超过 1.2 秒才跳进度，避免一直卡
 // - presence：谁在房间里；房主离开时成员会收到通知
+// - 谁是房主记在数据库的 rooms 表（开房间时写入）；Realtime 的权限只让房主广播，
+//   成员改了 App 也没办法控制别人的播放
 // 每个人自己拿音频（手机 App 也会自己解灰），不占房主的流量
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
@@ -18,6 +20,28 @@ const newCode = () =>
 export const normalizeCode = code => String(code ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 const HEARTBEAT_MS = 3000;
+
+// 别人的头像只从这几个地方载入：头像网址是用户自己填的资料，
+// 随便一个网址会让房间里其他人的 App 去连那个网站（对方就知道你的 IP）
+const SUPABASE_HOST = (() => {
+  try {
+    return new URL(import.meta.env.VITE_SUPABASE_URL).host;
+  } catch {
+    return '';
+  }
+})();
+export function safeAvatar(url) {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'https:') return '';
+    if (u.host === SUPABASE_HOST && u.pathname.startsWith('/storage/v1/object/public/avatars/')) return url;
+    if (u.host === 'avatars.githubusercontent.com') return url;
+    if (/^lh\d\.googleusercontent\.com$/.test(u.host)) return url;
+  } catch {
+    // 不是网址
+  }
+  return '';
+}
 /** 差多少秒以上才跳进度 */
 const DRIFT_SECONDS = 1.2;
 /** 估计的网络延迟（秒），收到时补上 */
@@ -34,11 +58,13 @@ export const useRoomStore = defineStore('room', () => {
   const error = ref('');
   /** 房间里的人：[{ id, name, avatar, role }] */
   const members = ref([]);
+  /** 房主的账号 id（从数据库的 rooms 表查，不信任每个人自己报的身份） */
+  const hostId = ref(null);
   /** 成员收到的提示（例如房主离开了） */
   const notice = ref('');
 
   const inRoom = computed(() => status.value === 'joined');
-  const host = computed(() => members.value.find(m => m.role === 'host') ?? null);
+  const host = computed(() => members.value.find(m => m.id === hostId.value) ?? null);
 
   let channel = null;
   let heartbeat = 0;
@@ -105,7 +131,9 @@ export const useRoomStore = defineStore('room', () => {
     const list = Object.values(channel.presenceState()).flat();
     // 同一个人开了两个装置只算一次
     const seen = new Set();
-    members.value = list.filter(m => m.id && !seen.has(m.id) && seen.add(m.id));
+    members.value = list
+      .filter(m => m.id && !seen.has(m.id) && seen.add(m.id))
+      .map(m => ({ ...m, avatar: safeAvatar(m.avatar) }));
   }
 
   async function connect(roomCode, asRole) {
@@ -128,11 +156,11 @@ export const useRoomStore = defineStore('room', () => {
 
     channel
       .on('broadcast', { event: 'sync' }, ({ payload }) => applySync(payload))
-      // 新成员进来要求同步：房主马上广播一次
-      .on('broadcast', { event: 'hello' }, () => broadcast())
       .on('presence', { event: 'sync' }, onPresence)
+      // 有人进来：房主马上广播一次，新成员不用等心跳（成员不能广播，所以不是成员来要）
+      .on('presence', { event: 'join' }, () => broadcast())
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-        if (role.value === 'guest' && leftPresences.some(p => p.role === 'host')) {
+        if (role.value === 'guest' && leftPresences.some(p => p.id === hostId.value)) {
           notice.value = t('房主离开了房间');
         }
       });
@@ -153,14 +181,24 @@ export const useRoomStore = defineStore('room', () => {
       offPlayer = [player.on('change', broadcast), player.on('track', broadcast)];
       heartbeat = setInterval(broadcast, HEARTBEAT_MS);
       broadcast();
-    } else {
-      channel.send({ type: 'broadcast', event: 'hello', payload: {} });
     }
   }
 
   async function createRoom() {
     try {
-      await connect(newCode(), 'host');
+      // 先在数据库登记"这个房间的房主是我"，Realtime 才会让我在房间里广播
+      const supabase = getSupabase();
+      if (!supabase || !auth.allowed) throw new Error(t('要先登录 LyriStage 才能一起听'));
+      let roomCode = '';
+      for (let attempt = 0; attempt < 5 && !roomCode; attempt++) {
+        const candidate = newCode();
+        const { error: err } = await supabase.from('rooms').insert({ code: candidate });
+        if (!err) roomCode = candidate;
+        else if (err.code !== '23505') throw err; // 23505 = 房间码刚好有人在用，换一个
+      }
+      if (!roomCode) throw new Error(t('连不上房间'));
+      await connect(roomCode, 'host');
+      hostId.value = auth.user.id;
     } catch (err) {
       fail(err);
     }
@@ -173,7 +211,17 @@ export const useRoomStore = defineStore('room', () => {
       return;
     }
     try {
+      const { data: row } = await getSupabase()
+        .from('rooms')
+        .select('host_id')
+        .eq('code', roomCode)
+        .maybeSingle();
       await connect(roomCode, 'guest');
+      hostId.value = row?.host_id ?? null;
+      if (!row) {
+        notice.value = t('这个房间现在没有房主，可能还没开或已经关了');
+        return;
+      }
       // 几秒内都没看到房主：房间可能不存在
       setTimeout(() => {
         if (role.value === 'guest' && inRoom.value && !host.value) {
@@ -195,6 +243,11 @@ export const useRoomStore = defineStore('room', () => {
 
   async function leave() {
     clearInterval(heartbeat);
+    // 房主关房间：数据库里的房间也删掉
+    if (role.value === 'host' && code.value) {
+      const { error: err } = await getSupabase()?.from('rooms').delete().eq('code', code.value) ?? {};
+      if (err) console.warn('[LyriStage] 删除房间失败', err);
+    }
     offPlayer.forEach(off => typeof off === 'function' && off());
     offPlayer = [];
     if (channel) {
@@ -206,6 +259,7 @@ export const useRoomStore = defineStore('room', () => {
     status.value = 'idle';
     role.value = '';
     members.value = [];
+    hostId.value = null;
   }
 
   // 退出登录就离开房间
@@ -221,6 +275,7 @@ export const useRoomStore = defineStore('room', () => {
     error,
     notice,
     members,
+    hostId,
     host,
     inRoom,
     createRoom,

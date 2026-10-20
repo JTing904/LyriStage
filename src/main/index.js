@@ -10,6 +10,27 @@ import { getSettings, updateSettings } from './settings';
 import appIcon from '../../resources/icon.png?asset';
 import trayIcon from '../../resources/tray.png?asset';
 
+// 用系统浏览器打开的网址：只放行 https 和 App 里真的会开的网站
+// （登录授权页、GitHub、IG、官网…），其他网址一律不开
+const EXTERNAL_HOSTS = [
+  'github.com',
+  'supabase.co',
+  'instagram.com',
+  'jting904.github.io',
+  'lyristage.vercel.app',
+  'music.163.com',
+];
+function openExternalSafely(url) {
+  try {
+    const { protocol, hostname } = new URL(url);
+    const allowed = EXTERNAL_HOSTS.some(h => hostname === h || hostname.endsWith(`.${h}`));
+    if (protocol === 'https:' && allowed) shell.openExternal(url);
+    else console.warn('[LyriStage] 不在白名单，不打开：', url);
+  } catch {
+    // 不是网址
+  }
+}
+
 // 本机网易云 API 的通行证：每次启动都不一样，浏览器里的其他网站拿不到，就调不了这个 API
 const apiToken = randomBytes(24).toString('hex');
 
@@ -139,7 +160,8 @@ if (!app.requestSingleInstanceLock()) {
       : { background: '#f4f4f6', symbol: '#18181b' };
 
   // 页面里切换"深色 / 浅色 / 跟随系统"时，窗口也跟着切（会触发 nativeTheme 的 updated 事件）
-  ipcMain.on('lyristage:set-theme', (_event, mode) => {
+  ipcMain.on('lyristage:set-theme', (event, mode) => {
+    if (!fromMain(event)) return;
     if (['system', 'dark', 'light'].includes(mode)) nativeTheme.themeSource = mode;
   });
 
@@ -223,8 +245,17 @@ if (!app.requestSingleInstanceLock()) {
 
     // 页面里的外部链接用系统浏览器打开，不在 App 里开新窗口
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-      if (/^https?:\/\//.test(url)) shell.openExternal(url);
+      openExternalSafely(url);
       return { action: 'deny' };
+    });
+    // 主视窗只显示 App 自己的页面：被链接带去别的网站时，改用系统浏览器开
+    const appOrigin = process.env.ELECTRON_RENDERER_URL
+      ? new URL(process.env.ELECTRON_RENDERER_URL).origin
+      : 'file://';
+    mainWindow.webContents.on('will-navigate', (event, url) => {
+      if (url.startsWith(appOrigin)) return;
+      event.preventDefault();
+      openExternalSafely(url);
     });
 
     if (process.env.ELECTRON_RENDERER_URL) {

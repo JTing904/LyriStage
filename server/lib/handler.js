@@ -25,6 +25,37 @@ function stripBlockedParams(req, url) {
   if (changed) req.url = url.pathname + url.search;
 }
 
+// 限流（Vercel 上用）：同一个 IP 每分钟最多这么多次。
+// 正常使用（包括一次发几十个请求的每日推荐）远远用不到；Vercel 可能同时开好几台机器，
+// 每台各算各的，所以只挡得住明显乱刷，不是精准的限流
+const RATE_LIMIT = 300;
+const RATE_WINDOW_MS = 60 * 1000;
+
+function createRateLimiter(limit = RATE_LIMIT, windowMs = RATE_WINDOW_MS) {
+  const hits = new Map();
+  /** @returns {number} 0 = 放行；否则是要等几秒 */
+  return key => {
+    const now = Date.now();
+    let entry = hits.get(key);
+    if (!entry || entry.resetAt <= now) {
+      if (hits.size > 10000) hits.clear();
+      entry = { count: 0, resetAt: now + windowMs };
+      hits.set(key, entry);
+    }
+    entry.count += 1;
+    return entry.count > limit ? Math.ceil((entry.resetAt - now) / 1000) : 0;
+  };
+}
+
+/** 请求的来源 IP（Vercel 会设 x-real-ip / x-forwarded-for） */
+const clientIp = req =>
+  String(
+    req.headers['x-real-ip'] ||
+      String(req.headers['x-forwarded-for'] || '').split(',')[0] ||
+      req.socket?.remoteAddress ||
+      ''
+  ).trim();
+
 /** 比较通行证（固定时间比较，避免用回应时间猜出内容） */
 function sameToken(given, expected) {
   if (typeof given !== 'string') return false;
@@ -229,6 +260,8 @@ function createHandler(options = {}) {
   }
 
   const { localToken } = options;
+  // 只有 Vercel（要检查成员的那个）需要限流；电脑版本机 API 只有自己在用
+  const rateLimit = options.requireMember ? createRateLimiter() : null;
 
   const handler = async (req, res) => {
     if (req.method === 'OPTIONS') return sendPreflight(req, res);
@@ -242,6 +275,13 @@ function createHandler(options = {}) {
       const fromThisApp = sameToken(req.headers['x-lyristage-token'], localToken);
       if (!['127.0.0.1', 'localhost'].includes(host) || !fromThisApp) {
         return sendJson(res, 403, { code: 403, msg: 'Forbidden' });
+      }
+    }
+    if (rateLimit) {
+      const wait = rateLimit(clientIp(req));
+      if (wait) {
+        res.setHeader('Retry-After', String(wait));
+        return sendJson(res, 429, { code: 429, msg: '请求太多了，请稍后再试' });
       }
     }
     const url = new URL(req.url, 'http://localhost');

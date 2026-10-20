@@ -27,12 +27,13 @@
 
 ## 安全
 
-- [ ] **一起听**：成员收到 `sync` 就照播，不检查是不是房主发的（`src/renderer/src/stores/room.js`）
-- [ ] **邀请码**：用 `random()` 产生，改用 `gen_random_bytes`；兑换邀请码没有次数限制
-- [ ] **Vercel API 没有限流**
-- [ ] **外部链接**：任何 http 链接都直接用系统浏览器打开，加白名单（`src/main/index.js`）；`set-theme` 没检查发送者
-- [ ] **Android `allowBackup="true"`**：备份会带走登录 token
-- [ ] **头像网址可以填任意网址**：一起听时会让别人的浏览器去请求那个网址（泄露 IP）
+- [x] **一起听**：成员收到 `sync` 就照播，不检查是不是房主发的（`src/renderer/src/stores/room.js`）
+- [x] **邀请码**：用 `random()` 产生，改用 `gen_random_bytes`；兑换邀请码没有次数限制
+- [x] **Vercel API 没有限流**（按 IP 每分钟 300 次；多台机器各算各的，要精准得接 Redis）
+- [x] **外部链接**：任何 http 链接都直接用系统浏览器打开，加白名单（`src/main/index.js`）；`set-theme` 没检查发送者
+- [x] **Android `allowBackup="true"`**：备份会带走登录 token
+- [x] **头像网址可以填任意网址**：一起听时会让别人的浏览器去请求那个网址（泄露 IP）
+  - 一起听、邀请码要在 Supabase 执行 `supabase/migrations/20261021000000_security.sql`；执行后旧版 App 不能当一起听的房主
 
 ## 性能、小问题
 
