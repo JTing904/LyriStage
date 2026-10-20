@@ -128,6 +128,24 @@ describe('player 拿不到音源', () => {
     expect(player.getState().playing).toBe(false);
   });
 
+  it('网络出错（拿音源时抛错）不跳歌，停在这首；按播放会再试一次', async () => {
+    let online = false;
+    const { audio, player, unplayable } = setup(async t => {
+      if (!online) throw new Error('network down');
+      return { url: urlOf(t.id) };
+    });
+    const errors = [];
+    player.on('error', e => errors.push(e.track.id));
+    await player.playList(tracks, 0);
+    expect(player.getState()).toMatchObject({ track: { id: 1 }, playing: false, loading: false });
+    expect(unplayable).toEqual([]);
+    expect(errors).toEqual([1]);
+    online = true;
+    await player.play();
+    expect(player.getState()).toMatchObject({ track: { id: 1 }, playing: true });
+    expect(audio.src).toBe(urlOf(1));
+  });
+
   it('找音源时已经切到别的歌：旧结果被丢弃', async () => {
     let releaseFirst;
     const { audio, player } = setup(t =>

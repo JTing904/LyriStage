@@ -34,6 +34,39 @@ export const http = createHttp({
 export const netease = createNetease(http);
 
 /**
+ * 自己的歌单、喜欢的歌存的是快照，没有"下架"这种会变的资料：显示后再查最新的版权状态
+ * （列表才能把下架的歌变灰）。回传 歌曲 id → privilege；查不到（例如断网）就是空的
+ * @param {Record<string, any>[]} tracks
+ * @returns {Promise<Map<number, Record<string, any>>>}
+ */
+export async function fetchPrivileges(tracks) {
+  const ids = [...new Set(tracks.map(t => Number(t.id)).filter(Number.isInteger))];
+  const privileges = new Map();
+  try {
+    for (let i = 0; i < ids.length; i += 500) {
+      for (const song of await netease.songDetails(ids.slice(i, i + 500))) {
+        if (song.privilege) privileges.set(song.id, song.privilege);
+      }
+    }
+  } catch {
+    // 断网等：先不标，不影响显示
+  }
+  return privileges;
+}
+
+/**
+ * 把 fetchPrivileges 查到的结果挂到目前的列表上（只加资料，不改列表本身：
+ * 等结果的时候用户可能已经移除了几首）
+ * @param {Record<string, any>[]} tracks
+ * @param {Map<number, Record<string, any>>} privileges
+ */
+export const applyPrivileges = (tracks, privileges) =>
+  tracks.map(t => {
+    const privilege = privileges.get(Number(t.id));
+    return privilege ? { ...t, privilege } : t;
+  });
+
+/**
  * 私人 FM 的歌从哪里来：
  * - 登录了 LyriStage：用自己的推荐算法（按听歌记录、喜欢）
  * - 没登录：用网易云的匿名私人 FM（一次给几首，先存着一首一首给）
@@ -140,7 +173,13 @@ function savePlayer(force = false) {
   }
 }
 player.on('time', () => savePlayer());
-player.on('change', () => savePlayer(true));
+// 状态一变就要存（换歌、暂停…），但拖音量条时一秒变几十次，
+// 每次都把整个播放列表（最多上千首）写进 localStorage 会卡，所以停下来 0.8 秒后才存
+let saveTimer = 0;
+player.on('change', () => {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => savePlayer(true), 800);
+});
 window.addEventListener('beforeunload', () => savePlayer(true));
 // 手机切到后台、锁屏时网页常被系统直接关掉，不会触发 beforeunload，切走时就先存
 document.addEventListener('visibilitychange', () => {

@@ -104,13 +104,21 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
     events.emit('track', track);
 
     let source = null;
+    let requestFailed = false;
     try {
       source = await resolveSource(track);
     } catch (err) {
-      events.emit('error', { track, error: err });
+      requestFailed = true;
+      if (token === loadToken) events.emit('error', { track, error: err });
     }
     if (token !== loadToken) return; // 已经切到别的歌了
 
+    if (requestFailed) {
+      // 网络断了、服务器出错：不是这首歌没有音源，不要跳歌，停在这首（按播放会再试一次）
+      state.loading = false;
+      changed();
+      return;
+    }
     if (!source) {
       state.loading = false;
       changed();
@@ -151,16 +159,18 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
     state.loading = true;
     changed();
     let source = null;
+    let requestFailed = false;
     try {
       source = await resolveSource(track);
     } catch (err) {
-      events.emit('error', { track, error: err });
+      requestFailed = true;
+      if (token === loadToken) events.emit('error', { track, error: err });
     }
     if (token !== loadToken) return;
     if (!source) {
       Object.assign(state, { source: null, playing: false, loading: false });
       changed();
-      events.emit('unplayable', { track });
+      if (!requestFailed) events.emit('unplayable', { track });
       return;
     }
     await useSource(source, { autoplay, startAt });

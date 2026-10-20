@@ -3,6 +3,7 @@
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getPlaylist } from '@core/data';
+import { applyPrivileges, fetchPrivileges } from '../services';
 import { useLibraryStore } from '../stores/library';
 import { usePlayCollection } from '../composables/usePlayCollection';
 import { totalLength } from '../utils/format';
@@ -20,13 +21,21 @@ const playlist = ref(null);
 const loading = ref(true);
 const error = ref('');
 
+let loadCount = 0;
 async function load(id) {
+  const thisLoad = ++loadCount;
   loading.value = true;
   error.value = '';
   try {
     const data = await getPlaylist(id);
     if (id !== route.params.id) return;
     playlist.value = data;
+    // 先显示，再补上哪些歌已经下架
+    fetchPrivileges(data.tracks ?? []).then(privileges => {
+      // 这段时间里换了歌单、重新载入过就不要了
+      if (thisLoad !== loadCount || !playlist.value || !privileges.size) return;
+      playlist.value.tracks = applyPrivileges(playlist.value.tracks, privileges);
+    });
   } catch (err) {
     error.value = err.message || String(err);
   } finally {

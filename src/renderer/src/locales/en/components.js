@@ -146,4 +146,11 @@ export default {
   黑色西装: 'Black suit',
   灰色开衫: 'Grey cardigan',
   米色毛衣: 'Beige sweater',
+  // ---- 播不了的提示（App.vue）、下架的歌（TrackList.vue） ----
+  '《{name}》在网易云已下架': '“{name}” was removed from NetEase Cloud Music',
+  搜索其他版本: 'Find other versions',
+  '《{name}》暂时没有音源': 'No audio for “{name}” right now',
+  '网络连不上，检查网络后再按播放': "Can't connect. Check your network, then press play",
+  '《{name}》播放失败': "Couldn't play “{name}”",
+  已下架: 'Unavailable',
 };

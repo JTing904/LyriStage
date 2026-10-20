@@ -1,4 +1,6 @@
 // @ts-check
+import { ApiError } from '../http/client';
+
 // 网易云接口（不登录网易云就能用的部分）。
 // 返回的歌曲对象保持网易云原本的格式（id、name、ar 歌手、al 专辑、dt 时长毫秒），
 // 和 data/track.js 的快照格式一致。
@@ -19,6 +21,29 @@ export function normalizeSong(song) {
     al: song.al ?? song.album ?? null,
     dt: song.dt ?? song.duration ?? 0,
   };
+}
+
+/**
+ * 歌在网易云已经下架（没有版权）：privilege.st 小于 0，谁去拿都没有音频。
+ * VIP 歌曲不算（st 是 0，只是要会员）
+ * @param {Record<string, any> | null | undefined} track
+ */
+export function isUnavailable(track) {
+  return (track?.privilege?.st ?? 0) < 0;
+}
+
+/**
+ * /song/detail、/playlist/track/all 把版权状态放在另一个 privileges 数组，
+ * 挂回每首歌的 privilege（其他接口本来就在歌里）
+ * @param {Record<string, any>[]} songs
+ * @param {Record<string, any>[] | undefined} privileges
+ */
+function withPrivileges(songs, privileges) {
+  if (!privileges?.length) return songs;
+  const byId = new Map(privileges.map(p => [p.id, p]));
+  return songs.map(song =>
+    song.privilege || !byId.has(song.id) ? song : { ...song, privilege: byId.get(song.id) }
+  );
 }
 
 /** 搜索类型（网易云 cloudsearch 的 type 参数） */
@@ -63,7 +88,7 @@ export function createNetease(http) {
    */
   async function playlistTracks(id, limit = 1000, offset = 0) {
     const data = await http.get('/playlist/track/all', { id, limit, offset });
-    return data.songs ?? [];
+    return withPrivileges(data.songs ?? [], data.privileges);
   }
 
   return {
@@ -96,7 +121,9 @@ export function createNetease(http) {
           br: data.data.br,
           source: data.data.source,
         };
-      } catch {
+      } catch (err) {
+        // 网络断了要让播放器知道（不要当成"这首没有音源"而跳歌）
+        if (err instanceof ApiError && err.status === undefined) throw err;
         return null;
       }
     },
@@ -117,7 +144,7 @@ export function createNetease(http) {
     async songDetails(ids) {
       if (ids.length === 0) return [];
       const data = await http.get('/song/detail', { ids: ids.join(',') });
-      return data.songs ?? [];
+      return withPrivileges(data.songs ?? [], data.privileges);
     },
 
     /** 歌单信息（歌曲用 playlistTracks 另外拿，歌单很大时 detail 里的歌不全） */

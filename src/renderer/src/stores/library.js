@@ -14,6 +14,7 @@ import {
   updatePlaylist,
 } from '@core/data';
 import { useAuthStore } from './auth';
+import { useNoticeStore } from './notice';
 import { t } from '../i18n';
 
 export const useLibraryStore = defineStore('library', () => {
@@ -26,15 +27,8 @@ export const useLibraryStore = defineStore('library', () => {
   const playlists = ref([]);
   /** 喜欢 / 歌单有变动时加一，页面用来知道要重新载入 */
   const version = ref(0);
-  /** 出错时的提示（App 外框会显示一下） */
-  const notice = ref('');
-
-  function say(message) {
-    notice.value = message;
-    setTimeout(() => {
-      if (notice.value === message) notice.value = '';
-    }, 2600);
-  }
+  /** 提示一句话（画面下方显示一下） */
+  const say = message => useNoticeStore().show(message);
 
   async function load() {
     try {
@@ -142,7 +136,6 @@ export const useLibraryStore = defineStore('library', () => {
     likedIds,
     playlists,
     version,
-    notice,
     say,
     load,
     isLiked,

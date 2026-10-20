@@ -9,21 +9,21 @@
 - [x] 查成员身份失败（断网）时被当成非成员、踢去输邀请码
 - [x] 电脑版本机 API（127.0.0.1:10754）任何网站都能调用；可以用 `domain`、`proxy` 参数改请求去向
   - Vercel 那边的参数过滤要**重新部署**才生效
+- [x] **下架歌曲**：网易云 `privilege.st < 0`（例如 xxxmiracle / Aioz《夏日晚风》，st = -200，"其它版本可播"）
+  - 列表里变灰、标"已下架"
+  - 点到时提示"这首歌在网易云已下架"，加"搜索其他版本"按钮
+- [x] **出错没有任何提示**：播放器的 `error`、`unplayable` 事件没人接，歌被默默跳过（`src/core/player/player.js`、`App.vue`）
+- [x] **网络一断就连跳 3 首**：拿播放链接时网络出错，被当成"没有音源"（`player.js` 的 `load()`）
+- [x] **逐字歌词括号里的字被吃掉**："(Oh)" 这类会不见（`src/core/lyrics/yrc.js:12` 的正则）
+- [x] **拖音量条很卡**：每次变化都把整个队列（最多 1000 首）写进 localStorage（`src/renderer/src/services.js`）
+- [x] **Android 返回键**：在歌词舞台、对话框里按返回会直接离开页面，应该先关掉它们
 
 ## 下一批要修（影响使用）
 
-- [ ] **下架歌曲**：网易云 `privilege.st < 0`（例如 xxxmiracle / Aioz《夏日晚风》，st = -200，"其它版本可播"）
-  - 列表里变灰、标"已下架"
-  - 点到时提示"这首歌在网易云已下架"，加"搜索其他版本"按钮
-- [ ] **出错没有任何提示**：播放器的 `error`、`unplayable` 事件没人接，歌被默默跳过（`src/core/player/player.js`、`App.vue`）
-- [ ] **网络一断就连跳 3 首**：拿播放链接时网络出错，被当成"没有音源"（`player.js` 的 `load()`）
-- [ ] **逐字歌词括号里的字被吃掉**："(Oh)" 这类会不见（`src/core/lyrics/yrc.js:12` 的正则）
-- [ ] **拖音量条很卡**：每次变化都把整个队列（最多 1000 首）写进 localStorage（`src/renderer/src/services.js`）
 - [ ] **LRC 的 `[offset:]` 没有作用**（`src/core/lyrics/lrc.js`）
 - [ ] **私人 FM 模式没有保存**：重开 App 会恢复成之前的歌单
 - [ ] **随机播放切换时位置跑掉**：正在播"下一首播放"插进来的歌时（`src/core/player/queue.js` 的 `setShuffle`）
 - [ ] **载入中拖进度条会被忽略**（`src/core/player/audio.js` 的 `load()` 清掉了 `pendingSeek`）
-- [ ] **Android 返回键**：在歌词舞台、对话框里按返回会直接离开页面，应该先关掉它们
 
 ## 安全
 

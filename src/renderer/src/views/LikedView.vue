@@ -2,6 +2,7 @@
 // 我喜欢的音乐（取消红心的歌马上从列表消失）
 import { computed, onMounted, ref } from 'vue';
 import { listLikedTracks } from '@core/data';
+import { applyPrivileges, fetchPrivileges } from '../services';
 import { useLibraryStore } from '../stores/library';
 import { usePlayCollection } from '../composables/usePlayCollection';
 import { totalLength } from '../utils/format';
@@ -17,7 +18,12 @@ const loading = ref(true);
 const error = ref('');
 onMounted(async () => {
   try {
-    all.value = await listLikedTracks();
+    const list = await listLikedTracks();
+    all.value = list;
+    // 先显示，再补上哪些歌已经下架
+    fetchPrivileges(list).then(privileges => {
+      if (privileges.size) all.value = applyPrivileges(all.value, privileges);
+    });
   } catch (err) {
     error.value = err.message || String(err);
   } finally {

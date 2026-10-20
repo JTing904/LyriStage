@@ -3,7 +3,9 @@
 // 点一首就从这首开始播放整个列表；正在播放的那首标红。
 // 每首右边：红心、加到歌单（自己的歌单里还有「移除」）。
 // 「多选」：勾选好几首，一次加到歌单 / 从歌单移除
+// 在网易云已经下架的歌变灰、标「已下架」（还是可以点，播不了会提示去搜其他版本）
 import { computed, ref, watch } from 'vue';
+import { isUnavailable } from '@core/netease';
 import { usePlayer } from '../composables/usePlayer';
 import { useLibraryStore } from '../stores/library';
 import LikeButton from './LikeButton.vue';
@@ -108,7 +110,7 @@ function play(index) {
       v-for="(t, i) in tracks"
       :key="`${t.id}-${i}`"
       class="track"
-      :class="{ current: isCurrent(t), picked: selected.has(i) }"
+      :class="{ current: isCurrent(t), picked: selected.has(i), unavailable: isUnavailable(t) }"
       @click="onRowClick(i)"
     >
       <span class="no">
@@ -130,6 +132,7 @@ function play(index) {
             {{ t.name }}
           </button>
           <span class="artists">
+            <span v-if="isUnavailable(t)" class="tag">{{ $t('已下架') }}</span>
             <template v-for="(a, j) in t.ar ?? []" :key="a.id || j">
               <template v-if="j"> / </template>
               <RouterLink v-if="a.id" :to="`/artist/${a.id}`" @click.stop>{{ a.name }}</RouterLink>
@@ -367,6 +370,25 @@ function play(index) {
   color: var(--text-dim);
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* 网易云已经下架的歌 */
+.unavailable .cover,
+.unavailable .name,
+.unavailable .artists,
+.unavailable .album,
+.unavailable .time {
+  opacity: 0.45;
+}
+.tag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 16px;
+  vertical-align: 1px;
 }
 
 /* 手机：只留封面、歌名、时长 */

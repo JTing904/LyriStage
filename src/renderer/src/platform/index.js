@@ -66,6 +66,23 @@ export function onAuthCallback(callback) {
 }
 
 /**
+ * Android 返回键（其他平台没有这个键，不会触发）。
+ * handler 回传 true = 已经处理了（例如关掉了歌词舞台）；
+ * 回传 false 就照一般的返回：页面能后退就后退，不能就把 App 收到背景（音乐继续播）
+ * @param {() => boolean} handler
+ */
+export function onBackButton(handler) {
+  if (!isNativeApp) return;
+  import('@capacitor/app').then(({ App }) => {
+    App.addListener('backButton', ({ canGoBack }) => {
+      if (handler()) return;
+      if (canGoBack) window.history.back();
+      else App.minimizeApp();
+    });
+  });
+}
+
+/**
  * 用系统浏览器打开登录授权页（不在 App 里面登录，比较安全，也能用浏览器记住的 GitHub 登录）
  * @param {string} url
  */

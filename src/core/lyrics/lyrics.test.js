@@ -66,6 +66,13 @@ describe('parseYrc', () => {
     expect(lines).toHaveLength(1);
     expect(lines[0].words.map(w => w.text)).toEqual(['Hello ', 'world']);
   });
+
+  it('字里有括号不会被截掉', () => {
+    const [line] = parseYrc(
+      '[0,1500](0,500,0)Baby (500,500,0)(Oh) (1000,500,0)yeah(ah)'
+    );
+    expect(line.words.map(w => w.text)).toEqual(['Baby ', '(Oh) ', 'yeah(ah)']);
+  });
 });
 
 describe('作词作曲和版权声明', () => {

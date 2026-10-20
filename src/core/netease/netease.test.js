@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createNetease, toHttps } from './index';
+import { createNetease, isUnavailable, toHttps } from './index';
 import { ApiError } from '../http/client';
 
 /** 假的 http：按路径返回预设数据，记录请求参数 */
@@ -130,4 +130,21 @@ it('personalFm 统一成新格式', async () => {
   );
   const [song] = await netease.personalFm();
   expect(song).toMatchObject({ id: 7, ar: [{ id: 1 }], al: { id: 2 }, dt: 1000 });
+});
+
+it('songDetails / playlistTracks 把 privileges 挂回每首歌，isUnavailable 看 st', async () => {
+  const http = {
+    get: async path =>
+      path === '/song/detail'
+        ? { songs: [{ id: 1 }, { id: 2 }], privileges: [{ id: 1, st: -200 }, { id: 2, st: 0 }] }
+        : { songs: [{ id: 3 }], privileges: [{ id: 3, st: 0 }] },
+  };
+  const netease = createNetease(http);
+  const [removed, ok] = await netease.songDetails([1, 2]);
+  expect(removed.privilege.st).toBe(-200);
+  expect(isUnavailable(removed)).toBe(true);
+  expect(isUnavailable(ok)).toBe(false);
+  expect(isUnavailable({ id: 9 })).toBe(false); // 没有版权资料的当成可以播
+  const [track] = await netease.playlistTracks(7);
+  expect(track.privilege.st).toBe(0);
 });

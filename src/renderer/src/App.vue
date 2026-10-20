@@ -3,15 +3,18 @@
 // - 电脑（宽 ≥ 900px）：左边侧边栏 + 中间内容 + 底部完整播放条
 // - 手机（窄）：内容 + 迷你播放条 + 底部 Tab
 // 歌词舞台是盖在最上面的全屏层
-import { ref, watch } from 'vue';
+import { onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { ApiError } from '@core/http/client';
+import { isUnavailable } from '@core/netease';
 import { getLyrics } from './services';
 import { usePlayer } from './composables/usePlayer';
-import { isElectron } from './platform';
+import { isElectron, onBackButton } from './platform';
+import { t } from './i18n';
 import { useThemeStore } from './stores/theme';
 import { useAuthStore } from './stores/auth';
 import { useRecentStore } from './stores/recent';
-import { useLibraryStore } from './stores/library';
+import { useNoticeStore } from './stores/notice';
 import AddToPlaylistDialog from './components/AddToPlaylistDialog.vue';
 import LoginPrompt from './components/LoginPrompt.vue';
 import AppSidebar from './components/AppSidebar.vue';
@@ -24,7 +27,7 @@ const { state, player } = usePlayer();
 useThemeStore();
 const auth = useAuthStore();
 useRecentStore();
-const library = useLibraryStore();
+const notice = useNoticeStore();
 
 const stageOpen = ref(false);
 const route = useRoute();
@@ -45,6 +48,47 @@ watch(
 function openStage() {
   if (auth.requireMember('听歌、看歌词')) stageOpen.value = true;
 }
+
+// 播不了的时候告诉用户原因（以前是默默跳过，看起来像坏了）
+const offPlayer = [
+  player.on('unplayable', ({ track }) => {
+    const name = track?.name ?? '';
+    if (isUnavailable(track)) {
+      notice.show(t('《{name}》在网易云已下架', { name }), {
+        action: {
+          label: t('搜索其他版本'),
+          run: () => router.push({ path: '/search', query: { q: name } }),
+        },
+      });
+    } else {
+      notice.show(t('《{name}》暂时没有音源', { name }));
+    }
+  }),
+  player.on('error', ({ track, error }) => {
+    // 浏览器要用户先点一下页面才允许出声，不算错误
+    if (error?.name === 'NotAllowedError') return;
+    if (error instanceof ApiError && error.status === undefined) {
+      notice.show(t('网络连不上，检查网络后再按播放'));
+    } else if (track) {
+      notice.show(t('《{name}》播放失败', { name: track.name }));
+    }
+  }),
+];
+onUnmounted(() => offPlayer.forEach(off => off()));
+
+// Android 返回键：先关对话框、歌词舞台，没有才是一般的返回
+onBackButton(() => {
+  const dialog = document.querySelector('dialog[open]');
+  if (dialog) {
+    dialog.close();
+    return true;
+  }
+  if (stageOpen.value) {
+    stageOpen.value = false;
+    return true;
+  }
+  return false;
+});
 
 // 换页面时内容区回到顶部
 const content = ref(null);
@@ -81,7 +125,16 @@ watch(
     <AddToPlaylistDialog />
     <LoginPrompt />
     <Transition name="toast">
-      <div v-if="library.notice" class="toast" role="status">{{ library.notice }}</div>
+      <div v-if="notice.current" class="toast" role="status">
+        <span>{{ notice.current.message }}</span>
+        <button
+          v-if="notice.current.action"
+          class="toast-action"
+          @click="notice.current.action.run(), notice.dismiss()"
+        >
+          {{ notice.current.action.label }}
+        </button>
+      </div>
     </Transition>
 
     <LyricStage
@@ -144,6 +197,9 @@ watch(
   z-index: 200;
   left: 50%;
   bottom: 110px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
   max-width: calc(100vw - 32px);
   padding: 10px 18px;
   border-radius: 999px;
@@ -153,6 +209,18 @@ watch(
   font-weight: 700;
   transform: translateX(-50%);
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+.toast-action {
+  flex: none;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 .toast-enter-active,
 .toast-leave-active {
