@@ -31,6 +31,8 @@ const src = computed(() => {
     :class="{ empty: !src }"
   >
     <img v-if="src" :src="src" alt="" loading="lazy" @error="failed = true" />
+    <!-- 没有图、或图载不出来时显示的东西（例如头像用名字的第一个字） -->
+    <slot v-else />
   </span>
 </template>
 

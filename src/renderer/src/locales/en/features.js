@@ -74,6 +74,7 @@ export default {
   我: 'Me',
   '发不出去：发得太快了，或房间已经关了': "Couldn't send: you're sending too fast, or the room has closed",
   '发送失败：{error}': "Couldn't send: {error}",
+  '聊天还没开通：要先在 Supabase 执行聊天的 SQL': 'Chat is not set up yet: run the chat SQL in Supabase first',
 
   // ---- 自动更新（SettingsView.vue、App.vue） ----
   版本: 'Version',

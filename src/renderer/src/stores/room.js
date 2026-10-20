@@ -325,9 +325,12 @@ export const useRoomStore = defineStore('room', () => {
       .from('room_messages')
       .insert({ room_code: code.value, kind, body });
     if (err) {
-      useNoticeStore().show(
-        /row-level security|policy/i.test(err.message) ? t('发不出去：发得太快了，或房间已经关了') : t('发送失败：{error}', { error: err.message })
-      );
+      const message = /could not find the table|does not exist/i.test(err.message)
+        ? t('聊天还没开通：要先在 Supabase 执行聊天的 SQL')
+        : /row-level security|policy/i.test(err.message)
+          ? t('发不出去：发得太快了，或房间已经关了')
+          : t('发送失败：{error}', { error: err.message });
+      useNoticeStore().show(message);
       return false;
     }
     return true;

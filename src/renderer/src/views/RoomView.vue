@@ -164,8 +164,9 @@ async function copy(text) {
         <h2>{{ $t('房间里 {n} 个人', { n: room.members.length }) }}</h2>
         <ul class="members">
           <li v-for="m in room.members" :key="m.id">
-            <Cover v-if="m.avatar" :url="m.avatar" :size="40" round class="avatar" />
-            <span v-else class="avatar initial">{{ m.name.slice(0, 1).toUpperCase() }}</span>
+            <Cover :url="m.avatar || ''" :size="40" round class="avatar">
+              <span class="initial">{{ (m.name || '?').slice(0, 1).toUpperCase() }}</span>
+            </Cover>
             <span class="name">{{ m.name }}</span>
             <span v-if="m.id === room.hostId" class="badge">{{ $t('房主') }}</span>
           </li>
@@ -219,17 +220,19 @@ async function copy(text) {
   color: var(--on-accent);
 }
 .reaction-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 48px));
   gap: 6px;
-  flex-wrap: wrap;
 }
 .reaction {
-  width: 44px;
-  height: 44px;
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 36px;
+  padding: 0;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: var(--bg);
-  font-size: 22px;
+  font-size: clamp(16px, 2.2vw, 22px);
   cursor: pointer;
   transition: transform 0.12s;
 }
@@ -439,7 +442,7 @@ button {
 .initial {
   display: grid;
   place-items: center;
-  height: 40px;
+  height: 100%;
   border-radius: 50%;
   background: var(--accent);
   color: var(--on-accent);
