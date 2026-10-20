@@ -64,7 +64,7 @@
 - [x] 用歌词找歌（搜索页「歌词」分页）
 - [x] 一起听：房主转让（要执行 `20261023000000_room_handover.sql`）
 - [x] 预先载入下一首（播放链接 + 歌词）
-- [x] 快捷键：App 内空格 / Ctrl+←→，电脑版全局 Ctrl+Alt+空格 / ←→
+- [x] 快捷键：App 内空格 / Ctrl+←→，电脑版全局 Ctrl+Alt+P / ←→
 - [x] 设置页导出我的资料、删除账号（要执行 `20261023010000_delete_account.sql`）
 - [ ] GitHub Actions 自动测试（要先 `gh auth refresh -s workflow`）
 

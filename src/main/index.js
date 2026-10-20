@@ -275,7 +275,7 @@ if (!app.requestSingleInstanceLock()) {
 
     // 全局快捷键：App 在背景也能用（键盘上的播放 / 下一首键 Windows 会通过媒体控制交给 App，不用另外注册）
     const SHORTCUTS = {
-      'CommandOrControl+Alt+Space': 'toggle',
+      'CommandOrControl+Alt+P': 'toggle',
       'CommandOrControl+Alt+Right': 'next',
       'CommandOrControl+Alt+Left': 'prev',
     };

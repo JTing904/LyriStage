@@ -495,7 +495,7 @@ async function logout() {
       <h2>{{ $t('快捷键') }}</h2>
       <div class="row shortcut">
         <span class="label">{{ $t('播放 / 暂停') }}</span>
-        <span class="keys"><kbd>Space</kbd><template v-if="isElectron"> · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd></template></span>
+        <span class="keys"><kbd>Space</kbd><template v-if="isElectron"> · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></template></span>
       </div>
       <div class="row shortcut">
         <span class="label">{{ $t('下一首') }}</span>
