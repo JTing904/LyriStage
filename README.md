@@ -11,7 +11,7 @@ Nine full-screen lyric stages, a daily mix made from what you love, and rooms wh
 
 [Website](https://jting904.github.io/LyriStage/) · [Download](https://github.com/JTing904/LyriStage/releases/latest) · [Web app](https://lyristage.vercel.app) · [中文](README.zh-CN.md)
 
-![Version](https://img.shields.io/badge/version-2.0.0-ff3b5c) ![License](https://img.shields.io/badge/code-MIT-blue) ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
+![Version](https://img.shields.io/badge/version-2.1.0-ff3b5c) ![License](https://img.shields.io/badge/code-MIT-blue) ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
 <a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage trailer: watch it on the website"></a>
 
@@ -20,10 +20,14 @@ Nine full-screen lyric stages, a daily mix made from what you love, and rooms wh
 ## Features
 
 - **Nine lyric stages.** Words light up as they are sung, with translations under each line. Switch styles any time while a song plays.
-- **Daily Mix and Personal FM.** A new playlist every morning, picked by LyriStage's own recommendation engine from your listening. No NetEase account needed.
-- **Listen Together.** Open a room, share the six-letter code, and everyone hears the same song at the same moment. The host's play, pause and skip stay in sync for everyone.
-- **Your own library.** Likes, playlists, listening history, profile name and photo, synced between PC and phone.
-- **Windows.** Tray icon, desktop lyrics while the app is minimized, a 3D figurine on the home page.
+- **Share lyrics.** Pick 1-4 lines and turn them into a story-sized card in the cover's colours.
+- **Search by lyrics.** Remember only one line? Search it.
+- **Daily Mix and Personal FM.** A new playlist every morning, picked by LyriStage's own recommendation engine from your listening. Dislike a song on FM and you'll hear fewer like it. No NetEase account needed.
+- **Listening report.** Your month or year in music: minutes, top songs and artists, when you listen most. Shareable as an image.
+- **Listen Together.** Open a room, share the six-letter code, and everyone hears the same song at the same moment. Chat, send reactions, and hand the room to someone else.
+- **Queue and sleep timer.** Play next, add to queue, drag to reorder; stop after 15/30/60 minutes or at the end of the song.
+- **Your own library.** Likes, playlists, listening history, profile name and photo, synced between PC and phone. Export your data or delete your account from Settings.
+- **Windows.** Tray icon, desktop lyrics while the app is minimized, global shortcuts, automatic updates, a 3D figurine on the home page.
 - **Android.** Background playback, lock-screen and notification controls.
 - **iPhone.** A web app you can add to the Home Screen.
 - **中文 / English**, light and dark themes.
