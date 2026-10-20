@@ -29,6 +29,8 @@ import { Queue } from './queue';
 const MAX_CONSECUTIVE_FAILURES = 3;
 // 播放超过这么多秒时，按"上一首"是回到这首开头
 const RESTART_THRESHOLD = 3;
+// 网易云的播放链接大约 20 分钟后失效；拿到超过这么久就先换新的再播
+const SOURCE_TTL_MS = 10 * 60 * 1000;
 
 /**
  * @param {object} deps
@@ -59,6 +61,8 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
   let fm = null;
   let loadToken = 0; // 切歌很快时，丢弃已经过时的音源结果
   let failures = 0;
+  let sourceAt = 0; // 什么时候拿到 state.source 的（判断链接是不是过期了）
+  let retried = false; // 音频出错后已经换过一次链接（再错就不重试，避免一直重来）
 
   // 听歌统计：只累计真正播放过的时间（拖动进度条跳过去的不算）
   let listened = 0;
@@ -117,7 +121,14 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
       return;
     }
     failures = 0;
+    retried = false;
+    await useSource(source, { autoplay, startAt });
+  }
+
+  /** 把找到的音源交给 audio，从 startAt 开始 */
+  async function useSource(source, { autoplay, startAt }) {
     state.source = source;
+    sourceAt = Date.now();
     audio.load(source.url);
     if (startAt > 0) audio.seek(startAt);
     lastTime = startAt;
@@ -128,9 +139,49 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
     }
   }
 
+  /**
+   * 同一首歌重新拿播放链接，从目前的位置接着播（链接过期、音频出错时用）。
+   * 不算换歌：不汇报听歌记录，已经听的时间继续累计
+   */
+  async function refreshSource({ autoplay }) {
+    const track = state.track;
+    if (!track) return;
+    const startAt = audio.currentTime() || state.time;
+    const token = ++loadToken;
+    state.loading = true;
+    changed();
+    let source = null;
+    try {
+      source = await resolveSource(track);
+    } catch (err) {
+      events.emit('error', { track, error: err });
+    }
+    if (token !== loadToken) return;
+    if (!source) {
+      Object.assign(state, { source: null, playing: false, loading: false });
+      changed();
+      events.emit('unplayable', { track });
+      return;
+    }
+    await useSource(source, { autoplay, startAt });
+  }
+
+  /** 列表播完了（没开循环）：停在最后一首的开头，按播放可以再听一次 */
+  function stopAtEnd() {
+    reportPlayed();
+    audio.pause();
+    audio.seek(0);
+    Object.assign(state, { playing: false, loading: false, time: 0 });
+    changed();
+  }
+
   async function play() {
     if (!state.source) {
       if (state.track) await load(state.track, { startAt: state.time });
+      return;
+    }
+    if (Date.now() - sourceAt > SOURCE_TTL_MS) {
+      await refreshSource({ autoplay: true });
       return;
     }
     try {
@@ -149,8 +200,10 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
   }
 
   async function next() {
-    if (state.mode === 'fm') return load(await nextFmTrack());
-    return load(queue.next());
+    const track = state.mode === 'fm' ? await nextFmTrack() : queue.next();
+    // 已经是最后一首（或 FM 暂时拿不到歌）：不要把播放器清空，留在这首
+    if (!track) return;
+    return load(track);
   }
 
   async function prev() {
@@ -197,6 +250,7 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
   audio.on('playing', () => {
     state.playing = true;
     state.loading = false;
+    retried = false;
     changed();
   });
   audio.on('pause', () => {
@@ -225,27 +279,33 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
   });
   audio.on('ended', async () => {
     state.playing = false;
-    if (state.mode === 'fm') {
-      await load(await nextFmTrack());
+    const track =
+      state.mode === 'fm' ? await nextFmTrack() : queue.next({ auto: true });
+    if (!track) {
+      stopAtEnd();
+    } else if (track === state.track) {
+      // 单曲循环：同一首从头播，也算一次新的播放
+      reportPlayed();
+      audio.seek(0);
+      await play();
     } else {
-      const track = queue.next({ auto: true });
-      if (track && track === state.track) {
-        // 单曲循环：同一首从头播，也算一次新的播放
-        reportPlayed();
-        audio.seek(0);
-        await play();
-      } else {
-        await load(track);
-      }
+      await load(track);
     }
   });
-  audio.on('error', () => {
+  audio.on('error', async () => {
+    // 多半是链接过期了：换一次新链接，从原来的位置接着播
+    if (state.track && state.source && !retried) {
+      retried = true;
+      await refreshSource({ autoplay: state.playing || state.loading });
+      return;
+    }
+    state.playing = false;
+    state.loading = false;
+    changed();
     events.emit('error', {
       track: state.track,
       error: new Error('音频加载失败'),
     });
-    state.loading = false;
-    changed();
   });
 
   return {

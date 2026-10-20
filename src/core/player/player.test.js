@@ -38,6 +38,8 @@ function fakeAudio() {
       }
     },
     end: () => events.emit('ended'),
+    /** 音频加载失败（例如链接过期） */
+    fail: () => events.emit('error'),
   };
   return audio;
 }
@@ -73,15 +75,28 @@ describe('player 基本播放', () => {
     expect(audio.src).toBe(urlOf(2));
   });
 
-  it('歌曲播完自动下一首，最后一首播完停止', async () => {
+  it('歌曲播完自动下一首，最后一首播完停在那首的开头', async () => {
     const { audio, player } = setup();
     await player.playList(tracks, 2);
     audio.end();
     await flush();
     expect(player.getState().track.id).toBe(4);
+    audio.tick(30);
     audio.end();
     await flush();
-    expect(player.getState().track).toBeNull();
+    expect(player.getState()).toMatchObject({ track: { id: 4 }, playing: false, time: 0 });
+    expect(audio.currentTime()).toBe(0);
+    // 按播放可以再听一次，不会没反应
+    await player.play();
+    expect(player.getState().playing).toBe(true);
+  });
+
+  it('最后一首按下一首：留在这首，不会清空播放器', async () => {
+    const { audio, player } = setup();
+    await player.playList(tracks, 3);
+    await player.next();
+    expect(player.getState().track.id).toBe(4);
+    expect(audio.src).toBe(urlOf(4));
   });
 
   it('上一首：播放超过 3 秒回到开头，否则切到上一首', async () => {
@@ -174,6 +189,51 @@ describe('player 听歌统计（写听歌记录用）', () => {
       [1, 20],
       [1, 10],
     ]);
+  });
+});
+
+describe('player 播放链接过期', () => {
+  it('链接拿到超过 10 分钟，按播放时先换新链接，从原来的位置接着播', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      let version = 0;
+      const { audio, player, played } = setup(async t => ({ url: `${urlOf(t.id)}?v=${++version}` }));
+      await player.playList(tracks, 0);
+      audio.tick(40);
+      player.pause();
+      vi.setSystemTime(Date.now() + 11 * 60 * 1000);
+      await player.play();
+      expect(audio.src).toBe(`${urlOf(1)}?v=2`);
+      expect(audio.seek).toHaveBeenLastCalledWith(40);
+      expect(player.getState()).toMatchObject({ track: { id: 1 }, playing: true });
+      expect(played).toEqual([]); // 同一首歌，不算换歌
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('播放中音频出错：换一次链接接着播；换了还错就停下并报错', async () => {
+    let version = 0;
+    const { audio, player } = setup(async t => ({ url: `${urlOf(t.id)}?v=${++version}` }));
+    const errors = [];
+    player.on('error', e => errors.push(e));
+    await player.playList(tracks, 0);
+    audio.tick(25);
+    // 之后的链接都播不出来（不会再有 playing 事件）
+    audio.play.mockImplementation(async () => {});
+    audio.fail();
+    await flush();
+    expect(audio.src).toBe(`${urlOf(1)}?v=2`);
+    expect(audio.seek).toHaveBeenLastCalledWith(25);
+    expect(audio.play).toHaveBeenCalledTimes(2);
+    expect(errors).toEqual([]);
+
+    // 换完还是出错：不再重试
+    audio.fail();
+    await flush();
+    expect(audio.src).toBe(`${urlOf(1)}?v=2`);
+    expect(errors.length).toBe(1);
+    expect(player.getState().playing).toBe(false);
   });
 });
 

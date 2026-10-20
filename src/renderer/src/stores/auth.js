@@ -22,6 +22,24 @@ import { t } from '../i18n';
 
 const PROVIDER_LABEL = { github: 'GitHub', google: 'Google', email: '邮箱' };
 
+// 上次查到的成员身份（按账号存），断网时用
+const MEMBERSHIP_KEY = 'lyristage-membership';
+function cachedMembership(userId) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(MEMBERSHIP_KEY) || 'null');
+    return saved?.userId === userId ? saved : null;
+  } catch {
+    return null;
+  }
+}
+function saveMembership(userId, { member, admin }) {
+  try {
+    localStorage.setItem(MEMBERSHIP_KEY, JSON.stringify({ userId, member, admin }));
+  } catch {
+    // 存不了就算了，下次还是会在线查
+  }
+}
+
 /** 第三方登录授权完回到哪里：电脑版 / 手机 App 回到 App（自定义协议），网页版回到当前网址 */
 const oauthRedirect = () =>
   isElectron || isNativeApp
@@ -58,14 +76,21 @@ export const useAuthStore = defineStore('auth', () => {
       admin.value = false;
       return;
     }
+    const userId = user.value.id;
     try {
       const result = await getMembership();
       member.value = result.member;
       admin.value = result.admin;
+      saveMembership(userId, result);
     } catch (err) {
+      // 断网、服务器连不上：用上次查到的结果，不要把成员当成非成员踢去输邀请码。
+      // （这里只影响界面；数据库和 API 还是会自己检查成员身份）
       console.warn('[LyriStage] 查询成员身份失败', err);
-      member.value = false;
-      admin.value = false;
+      const cached = cachedMembership(userId);
+      member.value = cached ? cached.member : false;
+      admin.value = cached ? cached.admin : false;
+      // 网络恢复后再查一次
+      window.addEventListener('online', () => checkMember(), { once: true });
     }
   }
 

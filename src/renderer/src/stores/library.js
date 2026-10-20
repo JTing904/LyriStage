@@ -43,6 +43,8 @@ export const useLibraryStore = defineStore('library', () => {
       playlists.value = lists;
     } catch (err) {
       console.warn('[LyriStage] 音乐库载入失败', err);
+      // 多半是断网：网络恢复后再载入一次
+      window.addEventListener('online', () => auth.allowed && load(), { once: true });
     }
   }
   watch(
