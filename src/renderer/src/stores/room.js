@@ -286,9 +286,15 @@ export const useRoomStore = defineStore('room', () => {
   const nameOf = userId =>
     userId === auth.user?.id ? auth.displayName || t('我') : names.get(userId) || t('朋友');
 
+  /** 已经飘过的表情（自己发的会先显示一次，Realtime 推回来时不要再飘一次） */
+  const shownReactions = new Set();
+
   function onMessage(row) {
     if (!row || row.room_code !== code.value) return;
     if (row.kind === 'react') {
+      if (shownReactions.has(row.id)) return;
+      if (shownReactions.size > 200) shownReactions.clear();
+      shownReactions.add(row.id);
       const item = { id: row.id, emoji: row.body, x: 10 + Math.random() * 80 };
       floating.value = [...floating.value.slice(-20), item];
       setTimeout(() => (floating.value = floating.value.filter(f => f.id !== item.id)), 2600);
@@ -321,9 +327,13 @@ export const useRoomStore = defineStore('room', () => {
 
   async function send(kind, body) {
     if (!inRoom.value) return false;
-    const { error: err } = await getSupabase()
+    const { data: row, error: err } = await getSupabase()
       .from('room_messages')
-      .insert({ room_code: code.value, kind, body });
+      .insert({ room_code: code.value, kind, body })
+      .select('id, room_code, user_id, kind, body, created_at')
+      .single();
+    // 自己发的马上显示，不用等 Realtime 推回来（推回来时会按 id 去掉重复）
+    if (!err) onMessage(row);
     if (err) {
       const message = /could not find the table|does not exist/i.test(err.message)
         ? t('聊天还没开通：要先在 Supabase 执行聊天的 SQL')
