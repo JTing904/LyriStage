@@ -9,6 +9,15 @@ import AddToPlaylistButton from './AddToPlaylistButton.vue';
 import Icon from './Icon.vue';
 import { isElectron, setDesktopLyrics } from '../platform';
 import { desktopLyrics } from '../desktop';
+import { useUiStore } from '../stores/ui';
+import { useSleepStore } from '../stores/sleep';
+import { useAuthStore } from '../stores/auth';
+import { useFmDislike } from '../composables/useFmDislike';
+
+const ui = useUiStore();
+const sleep = useSleepStore();
+const auth = useAuthStore();
+const dislike = useFmDislike();
 
 const props = defineProps({
   state: { type: Object, required: true },
@@ -277,6 +286,26 @@ function toggleMute() {
           </svg>
           <span v-if="mode === 'one'" class="badge">1</span>
         </button>
+        <button
+          v-if="state.mode === 'fm' && track && auth.allowed"
+          class="icon toggle"
+          :title="$t('不喜欢（跳过，以后少推荐）')"
+          :aria-label="$t('不喜欢（跳过，以后少推荐）')"
+          @click="dislike"
+        >
+          <Icon name="dislike" :size="20" />
+        </button>
+        <button
+          class="icon toggle queue-btn"
+          :class="{ on: ui.queueOpen }"
+          :title="sleep.active ? $t('播放队列（睡眠定时中）') : $t('播放队列')"
+          :aria-label="$t('播放队列')"
+          :aria-expanded="ui.queueOpen"
+          @click="ui.queueOpen = !ui.queueOpen"
+        >
+          <Icon name="queue" :size="20" />
+          <span v-if="sleep.active" class="sleep-dot" aria-hidden="true"><Icon name="moon" :size="10" /></span>
+        </button>
         <div class="volume">
           <button
             class="icon toggle on"
@@ -373,6 +402,22 @@ function toggleMute() {
   background: rgba(0, 0, 0, 0.08);
 }
 
+.queue-btn {
+  position: relative;
+}
+/* 睡眠定时开着：队列按钮右上角一个小月亮 */
+.sleep-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bar-accent);
+  color: #fff;
+}
 /* ---------- 进度条 ---------- */
 /* 完整：贴在播放条最上缘，平时 2px，滑过 / 拖动时变粗并出现圆点 */
 .progress {

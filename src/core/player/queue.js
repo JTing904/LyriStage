@@ -140,6 +140,55 @@ export class Queue {
     return [...this.upNext, ...rest].slice(0, limit);
   }
 
+  // ---- 播放队列面板的操作 -----------------------------------------------------
+  // section：'queued' = 用户插进来的（upNext）；'list' = 歌单里接下来的（order 里 pos 后面）
+  // index 都是在那一段里的位置
+
+  /** 歌单里接下来的歌（不含正在播的） */
+  get rest() {
+    return this.order.slice(this.pos + 1).map(i => this.tracks[i]);
+  }
+
+  /** @param {'queued' | 'list'} section */
+  remove(section, index) {
+    if (section === 'queued') this.upNext.splice(index, 1);
+    else if (index >= 0) this.order.splice(this.pos + 1 + index, 1);
+  }
+
+  /** 在同一段里把第 from 首移到第 to 首的位置 @param {'queued' | 'list'} section */
+  move(section, from, to) {
+    const list = section === 'queued' ? this.upNext : this.order.slice(this.pos + 1);
+    if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return;
+    const [item] = list.splice(from, 1);
+    list.splice(to, 0, item);
+    if (section === 'list') this.order.splice(this.pos + 1, list.length, ...list);
+  }
+
+  /** 清掉用户插进来的歌 */
+  clearQueued() {
+    this.upNext = [];
+  }
+
+  /**
+   * 直接播接下来的某一首：
+   * - 插进来的歌：从 upNext 拿出来播，其他插队的歌留着
+   * - 歌单里的：跳过中间的歌（插队的歌还是会先播）
+   * @param {'queued' | 'list'} section
+   * @returns {Track | null}
+   */
+  playFromUpcoming(section, index) {
+    if (section === 'queued') {
+      const [track] = this.upNext.splice(index, 1);
+      if (!track) return this.current;
+      this.extra = track;
+      return track;
+    }
+    if (index < 0 || this.pos + 1 + index >= this.order.length) return this.current;
+    this.extra = null;
+    this.pos += 1 + index;
+    return this.current;
+  }
+
   /** 保存到 localStorage 用 */
   toJSON() {
     return {
@@ -155,10 +204,12 @@ export class Queue {
 
   /** @param {ReturnType<Queue['toJSON']>} data */
   restore(data) {
+    // order 可能比 tracks 短（在播放队列里移除过歌）
     const valid =
       Array.isArray(data?.tracks) &&
       Array.isArray(data.order) &&
-      data.order.length === data.tracks.length;
+      (data.order.length > 0 || data.tracks.length === 0) &&
+      data.order.every(i => Number.isInteger(i) && i >= 0 && i < data.tracks.length);
     if (!valid) return;
     Object.assign(this, {
       tracks: data.tracks,

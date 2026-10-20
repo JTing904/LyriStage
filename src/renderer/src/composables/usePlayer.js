@@ -12,7 +12,7 @@ player.on('time', time => {
 });
 
 /** 这些操作要登录才能用 */
-const NEEDS_MEMBER = new Set(['play', 'toggle', 'next', 'prev', 'playList', 'playIndex', 'playFm']);
+const NEEDS_MEMBER = new Set(['play', 'toggle', 'next', 'prev', 'playList', 'playIndex', 'playFm', 'playFromQueue', 'playNext', 'addToQueue']);
 let gated = null;
 
 export function usePlayer() {

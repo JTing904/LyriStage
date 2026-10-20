@@ -11,9 +11,39 @@ import Cover from '../components/Cover.vue';
 import AvatarFigure from '../components/AvatarFigure.vue';
 import Icon from '../components/Icon.vue';
 import { squareAvatar } from '../utils/image';
-import { isElectron, setDesktopLyrics, setDesktopLyricsLocked } from '../platform';
+import {
+  checkForUpdates,
+  installUpdate,
+  isElectron,
+  setDesktopLyrics,
+  setDesktopLyricsLocked,
+  updateStatus,
+} from '../platform';
 import { desktopLyrics } from '../desktop';
 import { t, locale, LOCALES } from '../i18n';
+
+// ---- 电脑版：版本和更新 ----
+const update = ref(null);
+const checking = ref(false);
+if (isElectron) updateStatus().then(s => (update.value = s));
+async function checkUpdate() {
+  checking.value = true;
+  try {
+    update.value = await checkForUpdates();
+  } finally {
+    checking.value = false;
+  }
+}
+const updateText = computed(() => {
+  const s = update.value?.status;
+  if (s === 'dev') return t('开发模式不会自动更新');
+  if (s === 'checking') return t('正在检查…');
+  if (s === 'downloading') return t('有新版本，正在下载…');
+  if (s === 'ready') return t('新版本 {version} 已经下载好', { version: update.value.version });
+  if (s === 'latest') return t('已经是最新版本');
+  if (s === 'error') return t('检查更新失败，等一下再试');
+  return t('有新版本会自动下载，下载好会提示你重启');
+});
 
 const auth = useAuthStore();
 const library = useLibraryStore();
@@ -377,6 +407,22 @@ async function logout() {
             {{ o.label }}
           </button>
         </div>
+      </div>
+    </div>
+
+    <div v-if="isElectron" class="group">
+      <h2>{{ $t('版本') }}</h2>
+      <div class="row">
+        <span class="label">
+          LyriStage {{ update?.current ?? '' }}
+          <small>{{ updateText }}</small>
+        </span>
+        <button v-if="update?.status === 'ready'" class="primary" @click="installUpdate()">
+          {{ $t('重启更新') }}
+        </button>
+        <button v-else class="ghost" :disabled="checking || update?.status === 'dev'" @click="checkUpdate">
+          {{ $t('检查更新') }}
+        </button>
       </div>
     </div>
   </section>

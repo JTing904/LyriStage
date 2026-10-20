@@ -9,12 +9,13 @@ export const useNoticeStore = defineStore('notice', () => {
 
   /**
    * @param {string} message
-   * @param {{ action?: { label: string, run: () => void } }} [options] 有按钮的停久一点，让人来得及按
+   * @param {{ action?: { label: string, run: () => void }, duration?: number }} [options]
+   *   有按钮的停久一点，让人来得及按
    */
-  function show(message, { action } = {}) {
+  function show(message, { action, duration } = {}) {
     clearTimeout(timer);
     current.value = { message, action };
-    timer = setTimeout(() => (current.value = null), action ? 6000 : 2600);
+    timer = setTimeout(() => (current.value = null), duration ?? (action ? 6000 : 2600));
   }
 
   function dismiss() {

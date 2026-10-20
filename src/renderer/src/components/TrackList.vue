@@ -4,8 +4,11 @@
 // 每首右边：红心、加到歌单（自己的歌单里还有「移除」）。
 // 「多选」：勾选好几首，一次加到歌单 / 从歌单移除
 // 在网易云已经下架的歌变灰、标「已下架」（还是可以点，播不了会提示去搜其他版本）
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { isUnavailable } from '@core/netease';
+import { useNoticeStore } from '../stores/notice';
+import { useAuthStore } from '../stores/auth';
+import { t as tr } from '../i18n';
 import { usePlayer } from '../composables/usePlayer';
 import { useLibraryStore } from '../stores/library';
 import LikeButton from './LikeButton.vue';
@@ -77,6 +80,47 @@ function play(index) {
   if (isCurrent(track)) return player.toggle();
   player.playList(props.tracks, index, props.context);
 }
+
+// ---- 每首右边的「⋯」：下一首播放、加入播放队列、加到歌单 ----
+const notice = useNoticeStore();
+/** @type {import('vue').Ref<{ track: any, x: number, y: number } | null>} */
+const menu = ref(null);
+function openMenu(event, track) {
+  const r = event.currentTarget.getBoundingClientRect();
+  // 菜单宽 200、高约 150：靠右对齐按钮，下面放不下就往上开
+  const x = Math.max(8, Math.min(r.right - 200, window.innerWidth - 208));
+  const y = r.bottom + 160 > window.innerHeight ? r.top - 156 : r.bottom + 4;
+  menu.value = { track, x, y };
+}
+const closeMenu = () => (menu.value = null);
+function menuAction(action) {
+  const track = menu.value?.track;
+  closeMenu();
+  if (!track) return;
+  // 没登录时 player 会弹出登录提示，就不要再说"已加入"
+  const allowed = useAuthStore().allowed;
+  if (action === 'next') {
+    player.playNext(track);
+    if (allowed) notice.show(tr('下一首播放：{name}', { name: track.name }));
+  } else if (action === 'queue') {
+    player.addToQueue(track);
+    if (allowed) notice.show(tr('已加入播放队列：{name}', { name: track.name }));
+  } else {
+    library.openAddDialog([track]);
+  }
+}
+const onOutside = event => {
+  if (menu.value && !event.target.closest?.('.track-menu')) closeMenu();
+};
+const onKey = event => event.key === 'Escape' && closeMenu();
+window.addEventListener('pointerdown', onOutside, true);
+window.addEventListener('keydown', onKey);
+window.addEventListener('scroll', closeMenu, true);
+onBeforeUnmount(() => {
+  window.removeEventListener('pointerdown', onOutside, true);
+  window.removeEventListener('keydown', onKey);
+  window.removeEventListener('scroll', closeMenu, true);
+});
 </script>
 
 <template>
@@ -149,11 +193,12 @@ function play(index) {
         <LikeButton :track="t" :size="18" />
         <button
           class="act"
-          :title="$t('加到歌单')"
-          :aria-label="$t('加到歌单')"
-          @click.stop="library.openAddDialog([t])"
+          :title="$t('更多')"
+          :aria-label="$t('更多：{name}', { name: t.name })"
+          aria-haspopup="menu"
+          @click.stop="openMenu($event, t)"
         >
-          <Icon name="plus" :size="18" />
+          <Icon name="more" :size="18" />
         </button>
         <button
           v-if="removable"
@@ -167,8 +212,61 @@ function play(index) {
       </span>
       <span class="time">{{ clock(t.dt) }}</span>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="menu"
+        class="track-menu"
+        role="menu"
+        :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
+      >
+        <button role="menuitem" @click="menuAction('next')">
+          <Icon name="play-next" :size="18" />{{ $t('下一首播放') }}
+        </button>
+        <button role="menuitem" @click="menuAction('queue')">
+          <Icon name="queue" :size="18" />{{ $t('加入播放队列') }}
+        </button>
+        <button role="menuitem" @click="menuAction('playlist')">
+          <Icon name="plus" :size="18" />{{ $t('加到歌单') }}
+        </button>
+      </div>
+    </Teleport>
   </div>
 </template>
+
+<style>
+/* 「⋯」菜单（Teleport 到 body，不能用 scoped） */
+.track-menu {
+  position: fixed;
+  z-index: 300;
+  width: 200px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.3);
+}
+.track-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.track-menu button:hover,
+.track-menu button:focus-visible {
+  background: var(--surface-hover);
+}
+</style>
 
 <style scoped>
 .track-list {

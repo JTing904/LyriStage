@@ -30,4 +30,11 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: LyriStage
-  artifactName: LyriStage-Setup-${version}.${ext}
+  # 固定档名：网站的下载按钮（releases/latest/download/LyriStage-Setup.exe）和自动更新都靠它
+  artifactName: LyriStage-Setup.${ext}
+
+# 自动更新从这里找新版本：Release 要上传 LyriStage-Setup.exe 和 latest.yml
+publish:
+  provider: github
+  owner: JTing904
+  repo: LyriStage

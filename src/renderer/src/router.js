@@ -21,6 +21,7 @@ export const router = createRouter({
       // bare：不显示侧边栏和播放条
       meta: { bare: true },
     },
+    { path: '/report', name: 'report', component: () => import('./views/ReportView.vue'), meta: { member: true } },
     { path: '/room', name: 'room', component: () => import('./views/RoomView.vue'), meta: { member: true } },
     {
       path: '/settings',

@@ -97,3 +97,72 @@ export async function openAuthPage(url) {
     location.assign(url);
   }
 }
+
+// ---- 分享 / 存图片（歌词卡片、听歌报告） ----------------------------------------
+
+const blobToBase64 = blob =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+
+/** 能不能叫出系统的分享（手机 App、支持分享图片的手机浏览器） */
+export function canShareImage() {
+  if (isNativeApp) return true;
+  try {
+    const file = new File([new Blob()], 'x.png', { type: 'image/png' });
+    return Boolean(navigator.canShare?.({ files: [file] }));
+  } catch {
+    return false;
+  }
+}
+
+/** 系统分享（IG、WhatsApp…） */
+export async function shareImage(blob, fileName) {
+  if (isNativeApp) {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    const { Share } = await import('@capacitor/share');
+    const { uri } = await Filesystem.writeFile({
+      path: fileName,
+      data: await blobToBase64(blob),
+      directory: Directory.Cache,
+    });
+    await Share.share({ files: [uri] });
+    return;
+  }
+  await navigator.share({ files: [new File([blob], fileName, { type: 'image/png' })] });
+}
+
+/** 能不能复制图片到剪贴板（电脑版、电脑浏览器） */
+export const canCopyImage = () =>
+  !isNativeApp && typeof ClipboardItem !== 'undefined' && Boolean(navigator.clipboard?.write);
+
+export async function copyImage(blob) {
+  await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+}
+
+/** 存成文件：电脑版会问存到哪里；网页版下载；手机 App 用分享（可以选"存到相册 / 文件"） */
+export async function saveImage(blob, fileName) {
+  if (isNativeApp) return shareImage(blob, fileName);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+// ---- 电脑版自动更新 ---------------------------------------------------------------
+
+/** 新版本下载好了（只有电脑版安装版会触发） */
+export function onUpdateReady(callback) {
+  bridge?.onUpdateReady?.(callback);
+}
+/** @returns {Promise<{ status: string, version?: string, current?: string } | null>} */
+export const updateStatus = () => bridge?.updateStatus?.() ?? Promise.resolve(null);
+export const checkForUpdates = () => bridge?.checkForUpdates?.() ?? Promise.resolve(null);
+export const installUpdate = () => bridge?.installUpdate?.();

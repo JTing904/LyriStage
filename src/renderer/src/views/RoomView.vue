@@ -1,8 +1,8 @@
 <script setup>
 // 一起听：开房间 / 用房间码加入；房间里显示房间码、谁在听、正在播什么
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { useRoomStore, normalizeCode } from '../stores/room';
+import { useRoomStore, normalizeCode, REACTIONS } from '../stores/room';
 import { usePlayer } from '../composables/usePlayer';
 import { artistNames } from '../utils/format';
 import Cover from '../components/Cover.vue';
@@ -23,6 +23,23 @@ onMounted(() => {
     room.joinRoom(code);
   }
 });
+
+// ---- 聊天 ----
+const draft = ref('');
+const sending = ref(false);
+const chatList = ref(null);
+async function sendChat() {
+  if (!draft.value.trim() || sending.value) return;
+  sending.value = true;
+  if (await room.sendChat(draft.value)) draft.value = '';
+  sending.value = false;
+}
+// 有新消息就卷到最下面
+watch(
+  () => room.messages.length,
+  () => nextTick(() => chatList.value && (chatList.value.scrollTop = chatList.value.scrollHeight))
+);
+const timeOf = at => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 const shareLink = computed(() => `https://lyristage.vercel.app/#/room?code=${room.code}`);
 async function copy(text) {
@@ -107,6 +124,42 @@ async function copy(text) {
         </p>
       </section>
 
+      <section class="card chat">
+        <h2>{{ $t('聊天') }}</h2>
+        <div ref="chatList" class="messages" aria-live="polite">
+          <p v-if="!room.messages.length" class="hint">{{ $t('说点什么，或按下面的表情') }}</p>
+          <div
+            v-for="m in room.messages"
+            :key="m.id"
+            class="message"
+            :class="{ mine: m.userId === room.selfId }"
+          >
+            <span class="who">{{ room.nameOf(m.userId) }} · {{ timeOf(m.at) }}</span>
+            <span class="bubble">{{ m.body }}</span>
+          </div>
+        </div>
+        <div class="reaction-bar">
+          <button
+            v-for="e in REACTIONS"
+            :key="e"
+            class="reaction"
+            :aria-label="$t('送出表情 {emoji}', { emoji: e })"
+            @click="room.sendReaction(e)"
+          >
+            {{ e }}
+          </button>
+        </div>
+        <form class="composer" @submit.prevent="sendChat">
+          <input
+            v-model="draft"
+            maxlength="200"
+            :placeholder="$t('说点什么…')"
+            :aria-label="$t('聊天内容')"
+          />
+          <button type="submit" :disabled="!draft.trim() || sending">{{ $t('发送') }}</button>
+        </form>
+      </section>
+
       <section class="card">
         <h2>{{ $t('房间里 {n} 个人', { n: room.members.length }) }}</h2>
         <ul class="members">
@@ -123,6 +176,100 @@ async function copy(text) {
 </template>
 
 <style scoped>
+/* 聊天 */
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  min-height: 120px;
+  overflow-y: auto;
+  padding: 4px 2px;
+}
+.message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+.message.mine {
+  align-items: flex-end;
+}
+.who {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.bubble {
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 14px 14px 14px 4px;
+  background: var(--surface-hover);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.message.mine .bubble {
+  border-radius: 14px 14px 4px 14px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.reaction-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.reaction {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--bg);
+  font-size: 22px;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.reaction:hover {
+  transform: scale(1.12);
+}
+.reaction:active {
+  transform: scale(0.92);
+}
+.composer {
+  display: flex;
+  gap: 8px;
+}
+.composer input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+.composer button {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.composer button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 header h1 {
   margin: 8px 0 8px;
   font-size: clamp(30px, 4vw, 44px);

@@ -325,3 +325,21 @@ describe('player 保存 / 恢复', () => {
     expect(second.player.getState().track.id).toBe('f2');
   });
 });
+
+describe('player 睡眠定时：这首播完就停', () => {
+  it('播完不换下一首，发出 sleep；之后恢复正常', async () => {
+    const { audio, player } = setup();
+    const slept = [];
+    player.on('sleep', () => slept.push(true));
+    await player.playList(tracks, 0);
+    player.setStopAfterCurrent(true);
+    audio.end();
+    await flush();
+    expect(player.getState()).toMatchObject({ track: { id: 1 }, playing: false });
+    expect(slept).toEqual([true]);
+    await player.play();
+    audio.end();
+    await flush();
+    expect(player.getState().track.id).toBe(2);
+  });
+});

@@ -150,3 +150,40 @@ describe('Queue 保存 / 恢复', () => {
     expect(q.prev()).toBeNull();
   });
 });
+
+describe('Queue 播放队列面板的操作', () => {
+  it('移除、移动、清空插队的歌', () => {
+    const q = new Queue();
+    q.setTracks(tracks, 0); // 正在播 1
+    q.addToQueue({ id: 'a' });
+    q.addToQueue({ id: 'b' });
+    q.move('queued', 1, 0);
+    expect(ids(q.upNext)).toEqual(['b', 'a']);
+    q.remove('list', 1); // 歌单接下来是 2 3 4 5，移除 3
+    expect(ids(q.rest)).toEqual([2, 4, 5]);
+    q.move('list', 2, 0); // 5 移到最前面
+    expect(ids(q.rest)).toEqual([5, 2, 4]);
+    q.clearQueued();
+    expect(playAll(q)).toEqual([1, 5, 2, 4]);
+  });
+
+  it('直接播接下来的某一首：插队的歌只拿那一首，歌单的歌跳过中间的', () => {
+    const q = new Queue();
+    q.setTracks(tracks, 0);
+    q.addToQueue({ id: 'a' });
+    q.addToQueue({ id: 'b' });
+    expect(q.playFromUpcoming('queued', 1).id).toBe('b');
+    expect(ids(q.upNext)).toEqual(['a']);
+    expect(q.playFromUpcoming('list', 2).id).toBe(4); // 跳过 2、3
+    expect(playAll(q)).toEqual([4, 'a', 5]);
+  });
+
+  it('移除过歌之后保存再恢复还是有效的', () => {
+    const q = new Queue();
+    q.setTracks(tracks, 0);
+    q.remove('list', 0);
+    const copy = new Queue();
+    copy.restore(JSON.parse(JSON.stringify(q.toJSON())));
+    expect(ids(copy.rest)).toEqual([3, 4, 5]);
+  });
+});

@@ -54,6 +54,29 @@ export async function listRecentHistory({ days = 30, limit = 1000 } = {}) {
 }
 
 /**
+ * 一段时间里的全部听歌记录（听歌报告用）。数据库一次最多给 1000 行，所以分页拿
+ * @param {Date} from
+ * @param {Date} to
+ */
+export async function listHistoryBetween(from, to, { pageSize = 1000, maxRows = 20000 } = {}) {
+  const rows = [];
+  for (let offset = 0; offset < maxRows; offset += pageSize) {
+    const page = unwrap(
+      await requireSupabase()
+        .from('play_history')
+        .select('track_id, track, played_at, listened_seconds, skipped')
+        .gte('played_at', from.toISOString())
+        .lt('played_at', to.toISOString())
+        .order('played_at', { ascending: true })
+        .range(offset, offset + pageSize - 1)
+    );
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return rows;
+}
+
+/**
  * 听歌排行：'week' 最近一周，'all' 所有时间
  * 返回带 playCount 的歌曲对象，和网易云 /user/record 的格式一致
  */

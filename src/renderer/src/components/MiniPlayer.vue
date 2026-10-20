@@ -3,6 +3,9 @@
 import { computed } from 'vue';
 import Icon from './Icon.vue';
 import Cover from './Cover.vue';
+import { useUiStore } from '../stores/ui';
+
+const ui = useUiStore();
 
 const props = defineProps({
   state: { type: Object, required: true },
@@ -36,6 +39,9 @@ const artists = computed(() =>
     </button>
     <button class="icon-btn" :aria-label="$t('下一首')" @click="player.next()">
       <Icon name="next" />
+    </button>
+    <button class="icon-btn" :aria-label="$t('播放队列')" @click="ui.queueOpen = true">
+      <Icon name="queue" :size="22" />
     </button>
     <span class="line"><span :style="{ width: `${progress * 100}%` }" /></span>
   </div>

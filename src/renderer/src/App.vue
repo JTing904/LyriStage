@@ -9,7 +9,7 @@ import { ApiError } from '@core/http/client';
 import { isUnavailable } from '@core/netease';
 import { createFmSource, getLyrics } from './services';
 import { usePlayer } from './composables/usePlayer';
-import { isElectron, onBackButton } from './platform';
+import { installUpdate, isElectron, onBackButton, onUpdateReady } from './platform';
 import { t } from './i18n';
 import { useThemeStore } from './stores/theme';
 import { useAuthStore } from './stores/auth';
@@ -22,6 +22,8 @@ import BottomTabs from './components/BottomTabs.vue';
 import MiniPlayer from './components/MiniPlayer.vue';
 import PlayerBar from './components/PlayerBar.vue';
 import LyricStage from './lyric-stage/LyricStage.vue';
+import QueuePanel from './components/QueuePanel.vue';
+import RoomReactions from './components/RoomReactions.vue';
 
 const { state, player } = usePlayer();
 useThemeStore();
@@ -81,6 +83,14 @@ const offPlayer = [
 ];
 onUnmounted(() => offPlayer.forEach(off => off()));
 
+// 电脑版：新版本在背景下载好了
+onUpdateReady(({ version }) => {
+  notice.show(t('新版本 {version} 已经下载好', { version }), {
+    action: { label: t('重启更新'), run: installUpdate },
+    duration: 20000,
+  });
+});
+
 // Android 返回键：先关对话框、歌词舞台，没有才是一般的返回
 onBackButton(() => {
   const dialog = document.querySelector('dialog[open]');
@@ -128,6 +138,8 @@ watch(
     </div>
 
     <AddToPlaylistDialog />
+    <QueuePanel />
+    <RoomReactions />
     <LoginPrompt />
     <Transition name="toast">
       <div v-if="notice.current" class="toast" role="status">

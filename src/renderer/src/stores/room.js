@@ -11,7 +11,11 @@ import { computed, ref, watch } from 'vue';
 import { getSupabase, toSnapshot } from '@core/data';
 import { player, sharedSources } from '../services';
 import { useAuthStore } from './auth';
+import { useNoticeStore } from './notice';
 import { t } from '../i18n';
+
+/** 可以点的表情（数据库也只接受这几个） */
+export const REACTIONS = ['❤️', '🔥', '😭', '😂', '👏', '🎶'];
 
 /** 房间码：6 个字，去掉了容易看错的 0 O 1 I L */
 const ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
@@ -60,6 +64,12 @@ export const useRoomStore = defineStore('room', () => {
   const members = ref([]);
   /** 房主的账号 id（从数据库的 rooms 表查，不信任每个人自己报的身份） */
   const hostId = ref(null);
+  /** 聊天：[{ id, userId, body, at }]（最近 100 则） */
+  const messages = ref([]);
+  /** 正在画面上飘的表情：[{ id, emoji, x }] */
+  const floating = ref([]);
+  /** 看过的人的名字（有人离开房间后，他之前说的话还要显示名字） */
+  const names = new Map();
   /** 成员收到的提示（例如房主离开了） */
   const notice = ref('');
 
@@ -134,6 +144,7 @@ export const useRoomStore = defineStore('room', () => {
     members.value = list
       .filter(m => m.id && !seen.has(m.id) && seen.add(m.id))
       .map(m => ({ ...m, avatar: safeAvatar(m.avatar) }));
+    for (const m of members.value) names.set(m.id, m.name);
   }
 
   async function connect(roomCode, asRole) {
@@ -159,6 +170,12 @@ export const useRoomStore = defineStore('room', () => {
       .on('presence', { event: 'sync' }, onPresence)
       // 有人进来：房主马上广播一次，新成员不用等心跳（成员不能广播，所以不是成员来要）
       .on('presence', { event: 'join' }, () => broadcast())
+      // 聊天和表情：数据库有新消息就推过来（自己发的也会收到）
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'room_messages', filter: `room_code=eq.${roomCode}` },
+        ({ new: row }) => onMessage(row)
+      )
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
         if (role.value === 'guest' && leftPresences.some(p => p.id === hostId.value)) {
           notice.value = t('房主离开了房间');
@@ -177,6 +194,7 @@ export const useRoomStore = defineStore('room', () => {
     });
 
     status.value = 'joined';
+    loadRecentMessages(roomCode);
     if (asRole === 'host') {
       offPlayer = [player.on('change', broadcast), player.on('track', broadcast)];
       heartbeat = setInterval(broadcast, HEARTBEAT_MS);
@@ -260,7 +278,67 @@ export const useRoomStore = defineStore('room', () => {
     role.value = '';
     members.value = [];
     hostId.value = null;
+    messages.value = [];
+    floating.value = [];
   }
+
+  // ---- 聊天、表情 ----
+  const nameOf = userId =>
+    userId === auth.user?.id ? auth.displayName || t('我') : names.get(userId) || t('朋友');
+
+  function onMessage(row) {
+    if (!row || row.room_code !== code.value) return;
+    if (row.kind === 'react') {
+      const item = { id: row.id, emoji: row.body, x: 10 + Math.random() * 80 };
+      floating.value = [...floating.value.slice(-20), item];
+      setTimeout(() => (floating.value = floating.value.filter(f => f.id !== item.id)), 2600);
+      return;
+    }
+    if (messages.value.some(m => m.id === row.id)) return;
+    messages.value = [
+      ...messages.value.slice(-99),
+      { id: row.id, userId: row.user_id, body: row.body, at: row.created_at },
+    ];
+    // 不在一起听页面时，别人说话就提示一下
+    if (row.user_id !== auth.user?.id && !location.hash.startsWith('#/room')) {
+      useNoticeStore().show(`${nameOf(row.user_id)}：${row.body}`);
+    }
+  }
+
+  async function loadRecentMessages(roomCode) {
+    const { data } = await getSupabase()
+      .from('room_messages')
+      .select('id, room_code, user_id, kind, body, created_at')
+      .eq('room_code', roomCode)
+      .eq('kind', 'chat')
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if (code.value !== roomCode || !data) return;
+    const older = data.reverse().map(row => ({ id: row.id, userId: row.user_id, body: row.body, at: row.created_at }));
+    const known = new Set(older.map(m => m.id));
+    messages.value = [...older, ...messages.value.filter(m => !known.has(m.id))];
+  }
+
+  async function send(kind, body) {
+    if (!inRoom.value) return false;
+    const { error: err } = await getSupabase()
+      .from('room_messages')
+      .insert({ room_code: code.value, kind, body });
+    if (err) {
+      useNoticeStore().show(
+        /row-level security|policy/i.test(err.message) ? t('发不出去：发得太快了，或房间已经关了') : t('发送失败：{error}', { error: err.message })
+      );
+      return false;
+    }
+    return true;
+  }
+  /** @param {string} text */
+  const sendChat = text => {
+    const body = text.trim().slice(0, 200);
+    return body ? send('chat', body) : Promise.resolve(false);
+  };
+  /** @param {string} emoji */
+  const sendReaction = emoji => (REACTIONS.includes(emoji) ? send('react', emoji) : Promise.resolve(false));
 
   // 退出登录就离开房间
   watch(
@@ -276,6 +354,12 @@ export const useRoomStore = defineStore('room', () => {
     notice,
     members,
     hostId,
+    messages,
+    floating,
+    selfId: computed(() => auth.user?.id ?? null),
+    nameOf,
+    sendChat,
+    sendReaction,
     host,
     inRoom,
     createRoom,

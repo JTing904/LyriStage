@@ -7,6 +7,7 @@ import { loadWindowState, trackWindowState } from './windowState';
 import { createTray } from './tray';
 import { createDesktopLyricsController } from './desktopLyrics';
 import { getSettings, updateSettings } from './settings';
+import { setupUpdater } from './updater';
 import appIcon from '../../resources/icon.png?asset';
 import trayIcon from '../../resources/tray.png?asset';
 
@@ -270,6 +271,7 @@ if (!app.requestSingleInstanceLock()) {
       console.error(`[LyriStage] 网易云 API 启动失败（端口 ${API_PORT}）`, err);
     });
     createWindow();
+    setupUpdater({ send: sendToMain, isMain: fromMain });
 
     tray = createTray({
       icon: trayIcon,

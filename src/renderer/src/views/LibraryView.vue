@@ -87,7 +87,12 @@ async function create() {
 
 <template>
   <div class="page">
-    <h1 class="display title">{{ $t('我的音乐库') }}</h1>
+    <div class="title-row">
+      <h1 class="display title">{{ $t('我的音乐库') }}</h1>
+      <RouterLink to="/report" class="report-link">
+        <Icon name="chart" :size="18" />{{ $t('听歌报告') }}
+      </RouterLink>
+    </div>
 
     <div class="top">
       <!-- 我喜欢的音乐 -->
@@ -170,6 +175,28 @@ async function create() {
 </template>
 
 <style scoped>
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.report-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.report-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .title {
   margin: 8px 0 -8px;
   font-size: clamp(30px, 4vw, 44px);

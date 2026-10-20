@@ -7,6 +7,7 @@ import { findStyle } from './styles';
 import { isElectron } from '../platform';
 import PlayerBar from '../components/PlayerBar.vue';
 import StylePicker from './StylePicker.vue';
+import ShareLyricsDialog from './ShareLyricsDialog.vue';
 
 const props = defineProps({
   state: { type: Object, required: true },
@@ -36,6 +37,7 @@ const lightStyle = computed(
 // 控制条：鼠标或手指一段时间不动就隐藏，沉浸看歌词
 const controlsVisible = ref(true);
 const pickerOpen = ref(false);
+const shareOpen = ref(false);
 let hideTimer = 0;
 function wake() {
   controlsVisible.value = true;
@@ -46,6 +48,8 @@ function wake() {
 }
 
 function onKey(event) {
+  // 上面开着对话框（分享、播放队列…）：Esc 只关对话框，空格不要暂停
+  if (document.querySelector('dialog[open]')) return;
   if (event.key === 'Escape') {
     if (pickerOpen.value) pickerOpen.value = false;
     else emit('close');
@@ -104,6 +108,14 @@ onBeforeUnmount(() => {
       >
       <span class="spacer" />
       <button
+        v-if="lines.length"
+        class="pill"
+        :title="$t('把歌词做成图片分享')"
+        @click="shareOpen = true"
+      >
+        {{ $t('分享歌词') }}
+      </button>
+      <button
         class="pill"
         :aria-expanded="pickerOpen"
         @click="pickerOpen = !pickerOpen"
@@ -121,6 +133,8 @@ onBeforeUnmount(() => {
       @update:show-translation="settings.showTranslation = $event"
       @pointerdown.stop
     />
+
+    <ShareLyricsDialog v-if="shareOpen" @close="shareOpen = false" />
 
     <!-- 底部：播放条（YouTube Music 风格，精简、透明） -->
     <PlayerBar

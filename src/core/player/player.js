@@ -62,6 +62,7 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
   let loadToken = 0; // 切歌很快时，丢弃已经过时的音源结果
   let failures = 0;
   let sourceAt = 0; // 什么时候拿到 state.source 的（判断链接是不是过期了）
+  let stopAfterCurrent = false; // 睡眠定时"这首播完就停"
   let retried = false; // 音频出错后已经换过一次链接（再错就不重试，避免一直重来）
 
   // 听歌统计：只累计真正播放过的时间（拖动进度条跳过去的不算）
@@ -290,6 +291,13 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
   });
   audio.on('ended', async () => {
     state.playing = false;
+    if (stopAfterCurrent) {
+      stopAfterCurrent = false;
+      reportPlayed();
+      changed();
+      events.emit('sleep');
+      return;
+    }
     const track =
       state.mode === 'fm' ? await nextFmTrack() : queue.next({ auto: true });
     if (!track) {
@@ -374,8 +382,51 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
       state.shuffle = on;
       changed();
     },
-    playNext: track => queue.playNext(track),
-    addToQueue: track => queue.addToQueue(track),
+    // ---- 播放队列面板 ----
+    playNext(track) {
+      queue.playNext(track);
+      events.emit('queue');
+    },
+    addToQueue(track) {
+      queue.addToQueue(track);
+      events.emit('queue');
+    },
+    /** 面板要显示的内容（FM 模式时没有队列） */
+    getQueue() {
+      return {
+        mode: state.mode,
+        current: state.track,
+        queued: [...queue.upNext],
+        list: state.mode === 'fm' ? [] : queue.rest,
+      };
+    },
+    /** @param {'queued' | 'list'} section */
+    removeFromQueue(section, index) {
+      queue.remove(section, index);
+      events.emit('queue');
+    },
+    /** @param {'queued' | 'list'} section */
+    moveInQueue(section, from, to) {
+      queue.move(section, from, to);
+      events.emit('queue');
+    },
+    clearQueued() {
+      queue.clearQueued();
+      events.emit('queue');
+    },
+    /** @param {'queued' | 'list'} section */
+    async playFromQueue(section, index) {
+      if (state.mode === 'fm') return;
+      const track = queue.playFromUpcoming(section, index);
+      events.emit('queue');
+      await userLoad(track);
+    },
+    /** 睡眠定时：这首播完就停（不换下一首） */
+    setStopAfterCurrent(on) {
+      stopAfterCurrent = Boolean(on);
+    },
+    /** 私人 FM 的来源（按"不喜欢"后要它重新挑） */
+    getFmSource: () => fm,
 
     /** 保存播放进度（界面存进 localStorage） */
     snapshot() {

@@ -46,6 +46,17 @@ contextBridge.exposeInMainWorld('lyristage', {
     ipcRenderer.on('lyristage:desktop-lyrics-state', (_event, state) => callback(state));
   },
 
+  // ---- 自动更新 ----
+  /** 新版本在背景下载好了：{ version } */
+  onUpdateReady: callback => {
+    ipcRenderer.on('lyristage:update-ready', (_event, info) => callback(info));
+  },
+  /** { status, version, current }；status：dev / idle / checking / downloading / ready / latest / error */
+  updateStatus: () => ipcRenderer.invoke('lyristage:update-status'),
+  checkForUpdates: () => ipcRenderer.invoke('lyristage:update-check'),
+  /** 重启 App 装新版 */
+  installUpdate: () => ipcRenderer.send('lyristage:update-install'),
+
   // ---- 桌面歌词窗口 ----
   onLyric: callback => {
     ipcRenderer.on('lyristage:lyric', (_event, payload) => callback(payload));
