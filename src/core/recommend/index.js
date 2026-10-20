@@ -37,14 +37,23 @@ async function loadUserSignals() {
  * @param {NeteaseForRecommend} netease
  * @returns {Promise<Array<{ track: object, origin: string }>>}
  */
-export async function gatherCandidates(seeds, netease) {
+export async function gatherCandidates(seeds, netease, { jobTimeoutMs = 8000, concurrency = 3 } = {}) {
   const tagged = origin => tracks => tracks.map(track => ({ track, origin }));
+  // 每个来源最多等这么久：一个接口卡住（逾时重试最久快一分钟）不要拖住整份推荐，
+  // 来不及的就跳过，候选不够时下面的 withColdStart 会补
+  const inTime = promise =>
+    Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), jobTimeoutMs)),
+    ]);
 
+  // 每个来源是一个"要做的事"，同时最多做 concurrency 个：
+  // 浏览器对同一个服务器最多 6 条连线，全被推荐占满的话，用户这时搜索、点歌都要排队
   const jobs = [
-    ...seeds.artistIds.map(id =>
+    ...seeds.artistIds.map(id => () =>
       netease.artistTopSongs(id).then(tagged('artist'))
     ),
-    ...seeds.trackIds.map(id =>
+    ...seeds.trackIds.map(id => () =>
       netease
         .similarPlaylists(id)
         .then(playlists =>
@@ -55,8 +64,20 @@ export async function gatherCandidates(seeds, netease) {
         .then(lists => tagged('similar')(lists.flat()))
     ),
   ];
-  const results = await Promise.allSettled(jobs);
-  return results.flatMap(r => (r.status === 'fulfilled' ? r.value : []));
+  const results = [];
+  let next = 0;
+  async function worker() {
+    while (next < jobs.length) {
+      const job = jobs[next++];
+      try {
+        results.push(...(await inTime(job())));
+      } catch {
+        // 这个来源失败或太慢，跳过
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, jobs.length) }, worker));
+  return results;
 }
 
 /** 候选太少（新用户、接口失败）时用网易云通用推荐补上 */

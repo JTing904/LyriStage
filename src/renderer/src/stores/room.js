@@ -147,7 +147,20 @@ export const useRoomStore = defineStore('room', () => {
     for (const m of members.value) names.set(m.id, m.name);
   }
 
+  /** 连进房间；Realtime 偶尔会第一次连不上，等一秒自动再试一次 */
   async function connect(roomCode, asRole) {
+    try {
+      await connectOnce(roomCode, asRole);
+    } catch (err) {
+      if (/unauthorized|permission|denied|登录/i.test(err?.message ?? '')) throw err;
+      console.warn('[LyriStage] 连房间失败，再试一次', err);
+      role.value = 'guest'; // 重试前会先 leave()：不要把数据库里的房间删掉
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await connectOnce(roomCode, asRole);
+    }
+  }
+
+  async function connectOnce(roomCode, asRole) {
     const supabase = getSupabase();
     if (!supabase || !auth.allowed) throw new Error(t('要先登录 LyriStage 才能一起听'));
     await leave();

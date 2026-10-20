@@ -163,3 +163,16 @@ describe('gatherCandidates', () => {
     expect(netease.playlistTracks).toHaveBeenCalledTimes(2);
   });
 });
+describe('gatherCandidates 不会被卡住的接口拖住', () => {
+  it('超过时间的来源跳过，其他照样回来', async () => {
+    const netease = {
+      artistTopSongs: id => (id === 1 ? new Promise(() => {}) : Promise.resolve([{ id: `a${id}` }])),
+      similarPlaylists: () => Promise.resolve([]),
+      playlistTracks: () => Promise.resolve([]),
+    };
+    const started = Date.now();
+    const result = await gatherCandidates({ artistIds: [1, 2], trackIds: [] }, netease, { jobTimeoutMs: 50 });
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(result.map(c => c.track.id)).toEqual(['a2']);
+  });
+});
