@@ -131,6 +131,9 @@ async function resolveSource(track) {
 
 const audio = createHtmlAudio();
 export const player = createPlayer({ audio, resolveSource });
+
+// 预先载入下一首的歌词（存进歌词缓存，切过去时马上有）
+player.on('prefetch', track => getLyrics(track).catch(() => {}));
 connectMediaSession(player);
 
 // 开发时：这个文件或它用到的任何文件（core/ 里的播放器、歌词解析…）改了，

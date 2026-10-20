@@ -46,9 +46,32 @@ function withPrivileges(songs, privileges) {
   );
 }
 
+/**
+ * 歌词搜索结果里搜到的那一句，切成一段一段（hit = 搜到的字），界面照着加粗，不用 v-html
+ * @param {unknown} lyrics 网易云给的 lyrics（字符串数组）
+ * @returns {{ text: string, hit: boolean }[] | null}
+ */
+export function lyricMatch(lyrics) {
+  if (!Array.isArray(lyrics)) return null;
+  const line = lyrics.find(l => typeof l === 'string' && l.includes('<b>'));
+  if (!line) return null;
+  const clean = text => text.replace(/<[^>]*>/g, '');
+  const segments = [];
+  let last = 0;
+  for (const m of line.matchAll(/<b>(.*?)<\/b>/g)) {
+    if (m.index > last) segments.push({ text: clean(line.slice(last, m.index)), hit: false });
+    segments.push({ text: clean(m[1]), hit: true });
+    last = m.index + m[0].length;
+  }
+  if (last < line.length) segments.push({ text: clean(line.slice(last)), hit: false });
+  return segments.filter(s => s.text);
+}
+
 /** 搜索类型（网易云 cloudsearch 的 type 参数） */
 export const SEARCH_TYPE = /** @type {const} */ ({
   song: 1,
+  /** 用一句歌词找歌：结果的 lyrics 里，搜到的字用 <b> 标出来 */
+  lyric: 1006,
   album: 10,
   artist: 100,
   playlist: 1000,
@@ -76,6 +99,7 @@ export function createNetease(http) {
     const result = data.result ?? {};
     return {
       song: result.songs ?? [],
+      lyric: (result.songs ?? []).map(s => ({ ...s, lyricMatch: lyricMatch(s.lyrics) })),
       album: result.albums ?? [],
       artist: result.artists ?? [],
       playlist: result.playlists ?? [],

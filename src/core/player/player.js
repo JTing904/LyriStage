@@ -63,6 +63,10 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
   let failures = 0;
   let sourceAt = 0; // 什么时候拿到 state.source 的（判断链接是不是过期了）
   let stopAfterCurrent = false; // 睡眠定时"这首播完就停"
+  // 预先载入下一首：这首过半（或剩 30 秒）时先拿好下一首的播放链接，切歌几乎不用等
+  let prefetchDoneFor = null; // 这首歌已经帮下一首载入过了（歌曲 id）
+  /** @type {{ id: Track['id'], source: Source, at: number } | null} */
+  let prefetched = null;
   let retried = false; // 音频出错后已经换过一次链接（再错就不重试，避免一直重来）
 
   // 听歌统计：只累计真正播放过的时间（拖动进度条跳过去的不算）
@@ -106,11 +110,19 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
 
     let source = null;
     let requestFailed = false;
-    try {
-      source = await resolveSource(track);
-    } catch (err) {
-      requestFailed = true;
-      if (token === loadToken) events.emit('error', { track, error: err });
+    let fetchedAt = Date.now();
+    const ready = prefetched;
+    prefetched = null;
+    if (ready && ready.id === track.id && Date.now() - ready.at < SOURCE_TTL_MS) {
+      source = ready.source; // 预先载入好的，直接用
+      fetchedAt = ready.at;
+    } else {
+      try {
+        source = await resolveSource(track);
+      } catch (err) {
+        requestFailed = true;
+        if (token === loadToken) events.emit('error', { track, error: err });
+      }
     }
     if (token !== loadToken) return; // 已经切到别的歌了
 
@@ -133,6 +145,25 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
     retried = false;
     // 用 state.time 而不是 startAt：找音源的时候用户可能已经拖了进度条
     await useSource(source, { autoplay, startAt: state.time });
+    sourceAt = fetchedAt;
+  }
+
+  /** 这首播到一半（或剩 30 秒）时，先帮下一首拿播放链接；界面收到 prefetch 事件可以顺便载入歌词 */
+  function maybePrefetch(time) {
+    const current = state.track;
+    if (!current || prefetchDoneFor === current.id || state.mode === 'fm' || !state.duration) return;
+    if (time < Math.min(state.duration * 0.5, state.duration - 30)) return;
+    prefetchDoneFor = current.id;
+    const next = queue.peekNext();
+    if (!next || next.id === current.id) return;
+    events.emit('prefetch', next);
+    resolveSource(next)
+      .then(source => {
+        if (source) prefetched = { id: next.id, source, at: Date.now() };
+      })
+      .catch(() => {
+        // 预先载入失败没关系，真的切到那首时会再拿一次
+      });
   }
 
   /** 把找到的音源交给 audio，从 startAt 开始 */
@@ -288,6 +319,7 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
     lastTime = time;
     state.time = time;
     events.emit('time', time);
+    maybePrefetch(time);
   });
   audio.on('ended', async () => {
     state.playing = false;

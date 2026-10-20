@@ -184,6 +184,13 @@ onBeforeUnmount(() => {
             </template>
             <template v-if="!t.ar?.length">{{ artistNames(t) }}</template>
           </span>
+          <!-- 用歌词搜到的：显示搜到的那一句 -->
+          <span v-if="t.lyricMatch?.length" class="lyric-match">
+            <template v-for="(seg, k) in t.lyricMatch" :key="k">
+              <mark v-if="seg.hit">{{ seg.text }}</mark>
+              <template v-else>{{ seg.text }}</template>
+            </template>
+          </span>
         </span>
       </span>
       <span v-if="showAlbum" class="album">
@@ -423,6 +430,18 @@ onBeforeUnmount(() => {
 .album {
   font-size: 13px;
   color: var(--text-dim);
+}
+.lyric-match {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.lyric-match mark {
+  background: none;
+  color: var(--accent);
+  font-weight: 700;
 }
 .artists a:hover,
 .album a:hover {

@@ -87,4 +87,39 @@ export default {
   已经是最新版本: "You're on the latest version",
   '检查更新失败，等一下再试': "Couldn't check for updates. Try again later.",
   '有新版本会自动下载，下载好会提示你重启': "New versions download automatically. You'll be asked to restart when one is ready.",
+  // ---- 房主转让 ----
+  设为房主: 'Make host',
+  '把房主交给 {name}？之后由 {name} 决定播什么，你会变成普通成员继续听。':
+    'Make {name} the host? {name} will choose what plays, and you will keep listening as a member.',
+  '已经把房主交给 {name}': '{name} is now the host',
+  '你现在是房主了，你播什么大家就听什么': "You're the host now. Everyone hears what you play.",
+  '{name} 现在是房主': '{name} is now the host',
+  '转让失败：{error}': "Couldn't hand over: {error}",
+  没有权限: 'not allowed',
+
+  // ---- 用歌词找歌 ----
+  '搜索歌曲、歌手、专辑、歌单或一句歌词': 'Search songs, artists, albums, playlists or a lyric',
+  '输入歌名、歌手、歌单名字，或记得的一句歌词': 'Type a song, artist or playlist, or a line of lyrics you remember',
+
+  // ---- 快捷键 ----
+  快捷键: 'Keyboard shortcuts',
+  '播放 / 暂停': 'Play / pause',
+  '有 Alt 的那组在 App 收到背景时也能用；键盘上的播放、下一首键也可以':
+    'The ones with Alt also work while the app is in the background, and so do the media keys on your keyboard',
+
+  // ---- 导出资料、删除账号 ----
+  导出我的资料: 'Export my data',
+  '下载一个档案，里面有你喜欢的歌、歌单和听歌记录。': 'Download a file with your liked songs, playlists and listening history.',
+  '导出中…': 'Exporting…',
+  导出: 'Export',
+  '导出失败：{error}': "Couldn't export: {error}",
+  删除账号: 'Delete account',
+  '永久删除账号和所有资料，不能复原。': 'Permanently delete your account and all of its data. This cannot be undone.',
+  '永久删除你的 LyriStage 账号？': 'Permanently delete your LyriStage account?',
+  '会一起删掉：我喜欢的音乐、所有歌单、听歌记录、头像、成员身份。删除后不能复原，要再用就得重新注册、重新拿邀请码。想留一份的话，先按「导出」。':
+    'This also deletes your liked songs, all playlists, listening history, profile photo and membership. It cannot be undone: to use LyriStage again you would need to sign up and get a new invite code. To keep a copy, press Export first.',
+  '输入「{word}」确认': 'Type "{word}" to confirm',
+  '删除中…': 'Deleting…',
+  永久删除: 'Delete forever',
+  账号和所有资料已经删除: 'Your account and all of its data have been deleted',
 };

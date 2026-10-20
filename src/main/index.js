@@ -1,5 +1,5 @@
 // Electron 主进程
-import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, nativeTheme, shell } from 'electron';
 import { join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { startApiServer, API_PORT } from './apiServer';
@@ -272,6 +272,20 @@ if (!app.requestSingleInstanceLock()) {
     });
     createWindow();
     setupUpdater({ send: sendToMain, isMain: fromMain });
+
+    // 全局快捷键：App 在背景也能用（键盘上的播放 / 下一首键 Windows 会通过媒体控制交给 App，不用另外注册）
+    const SHORTCUTS = {
+      'CommandOrControl+Alt+Space': 'toggle',
+      'CommandOrControl+Alt+Right': 'next',
+      'CommandOrControl+Alt+Left': 'prev',
+    };
+    for (const [accelerator, command] of Object.entries(SHORTCUTS)) {
+      // 被别的程序占用时注册会失败，不影响其他功能
+      if (!globalShortcut.register(accelerator, () => sendToMain('lyristage:command', command))) {
+        console.warn(`[LyriStage] 快捷键 ${accelerator} 被占用了`);
+      }
+    }
+    app.on('will-quit', () => globalShortcut.unregisterAll());
 
     tray = createTray({
       icon: trayIcon,

@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router';
 import { useRoomStore, normalizeCode, REACTIONS } from '../stores/room';
 import { usePlayer } from '../composables/usePlayer';
 import { artistNames } from '../utils/format';
+import { t } from '../i18n';
 import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
 
@@ -39,6 +40,12 @@ watch(
   () => room.messages.length,
   () => nextTick(() => chatList.value && (chatList.value.scrollTop = chatList.value.scrollHeight))
 );
+function handOver(member) {
+  if (window.confirm(t('把房主交给 {name}？之后由 {name} 决定播什么，你会变成普通成员继续听。', { name: member.name }))) {
+    room.transferHost(member.id);
+  }
+}
+
 const timeOf = at => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 const shareLink = computed(() => `https://lyristage.vercel.app/#/room?code=${room.code}`);
@@ -169,6 +176,13 @@ async function copy(text) {
             </Cover>
             <span class="name">{{ m.name }}</span>
             <span v-if="m.id === room.hostId" class="badge">{{ $t('房主') }}</span>
+            <button
+              v-else-if="room.role === 'host' && m.id !== room.selfId"
+              class="ghost small"
+              @click="handOver(m)"
+            >
+              {{ $t('设为房主') }}
+            </button>
           </li>
         </ul>
       </section>
@@ -177,6 +191,12 @@ async function copy(text) {
 </template>
 
 <style scoped>
+.ghost.small {
+  margin-left: auto;
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+}
 /* 聊天 */
 .chat {
   display: flex;

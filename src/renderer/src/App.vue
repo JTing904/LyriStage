@@ -91,6 +91,25 @@ onUpdateReady(({ version }) => {
   });
 });
 
+// 键盘：空格 播放 / 暂停，Ctrl + ← → 上一首 / 下一首（在输入框里打字、按着按钮时不算；歌词舞台有自己的）
+function onKey(event) {
+  if (stageOpen.value || document.querySelector('dialog[open]')) return;
+  const el = event.target;
+  if (el instanceof HTMLElement && (el.closest('input, textarea, select, button, [contenteditable]') || el.isContentEditable)) return;
+  if (event.key === ' ' && !event.ctrlKey && !event.altKey && !event.metaKey) {
+    event.preventDefault();
+    player.toggle();
+  } else if ((event.ctrlKey || event.metaKey) && event.key === 'ArrowRight') {
+    event.preventDefault();
+    player.next();
+  } else if ((event.ctrlKey || event.metaKey) && event.key === 'ArrowLeft') {
+    event.preventDefault();
+    player.prev();
+  }
+}
+window.addEventListener('keydown', onKey);
+onUnmounted(() => window.removeEventListener('keydown', onKey));
+
 // Android 返回键：先关对话框、歌词舞台，没有才是一般的返回
 onBackButton(() => {
   const dialog = document.querySelector('dialog[open]');

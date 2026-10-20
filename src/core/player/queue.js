@@ -140,6 +140,18 @@ export class Queue {
     return [...this.upNext, ...rest].slice(0, limit);
   }
 
+  /**
+   * 下一首会是哪首（不改变队列，预先载入用）。随机播放一轮结束时会重新洗牌，猜不到，返回 null
+   * @returns {Track | null}
+   */
+  peekNext() {
+    if (this.repeat === 'one') return null; // 单曲循环：下一首还是这首，不用载入
+    if (this.upNext.length > 0) return this.upNext[0];
+    if (this.pos + 1 < this.order.length) return this.tracks[this.order[this.pos + 1]] ?? null;
+    if (this.repeat === 'all' && !this.shuffle) return this.tracks[this.order[0]] ?? null;
+    return null;
+  }
+
   // ---- 播放队列面板的操作 -----------------------------------------------------
   // section：'queued' = 用户插进来的（upNext）；'list' = 歌单里接下来的（order 里 pos 后面）
   // index 都是在那一段里的位置

@@ -2,7 +2,7 @@
 // 设置：账号（编辑头像和名字、退出登录）、邀请朋友（管理员才有）、我的公仔（换衣服）、外观（深色 / 浅色 / 跟随系统）、
 // 桌面歌词（电脑版才有）
 import { computed, ref, watch } from 'vue';
-import { NAME_MAX, clearHistory, createInvite, listInvites } from '@core/data';
+import { NAME_MAX, clearHistory, createInvite, deleteMyAccount, exportMyData, listInvites } from '@core/data';
 import { useAuthStore } from '../stores/auth';
 import { useLibraryStore } from '../stores/library';
 import { useThemeStore, THEME_OPTIONS } from '../stores/theme';
@@ -14,6 +14,7 @@ import { squareAvatar } from '../utils/image';
 import {
   checkForUpdates,
   installUpdate,
+  saveImage as saveFile,
   isElectron,
   setDesktopLyrics,
   setDesktopLyricsLocked,
@@ -108,6 +109,47 @@ const shortDate = iso =>
 
 /** 换介面语言（中文 / English） */
 const setLocale = value => (locale.value = value);
+
+// 导出自己的资料（JSON 档）
+const exporting = ref(false);
+async function exportData() {
+  exporting.value = true;
+  try {
+    const data = await exportMyData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    await saveFile(blob, `LyriStage-my-data-${new Date().toISOString().slice(0, 10)}.json`);
+  } catch (err) {
+    if (err?.name !== 'AbortError') library.say(t('导出失败：{error}', { error: err.message || String(err) }));
+  } finally {
+    exporting.value = false;
+  }
+}
+
+// 删除账号：要打"删除"两个字才按得下去
+const deleteBox = ref(null);
+const deleteWord = ref('');
+const deleting = ref(false);
+const DELETE_WORD = computed(() => t('删除'));
+function openDelete() {
+  deleteWord.value = '';
+  deleteBox.value.showModal();
+}
+async function removeAccount() {
+  if (deleteWord.value.trim() !== DELETE_WORD.value) return;
+  deleting.value = true;
+  try {
+    await deleteMyAccount();
+    deleteBox.value.close();
+    library.say(t('账号和所有资料已经删除'));
+    // 登出后路由会自己回到首页
+    window.location.hash = '#/';
+    window.location.reload();
+  } catch (err) {
+    library.say(t('删除失败：{error}', { error: err.message || String(err) }));
+  } finally {
+    deleting.value = false;
+  }
+}
 
 // 清除听歌记录（隐私权政策里说可以在 App 里删）
 const clearBox = ref(null);
@@ -275,6 +317,22 @@ async function logout() {
         </span>
         <button class="ghost danger" @click="clearBox.showModal()">{{ $t('清除') }}</button>
       </div>
+      <div class="row privacy-row">
+        <span class="label">
+          {{ $t('导出我的资料') }}
+          <small>{{ $t('下载一个档案，里面有你喜欢的歌、歌单和听歌记录。') }}</small>
+        </span>
+        <button class="ghost" :disabled="exporting" @click="exportData">
+          {{ exporting ? $t('导出中…') : $t('导出') }}
+        </button>
+      </div>
+      <div class="row privacy-row">
+        <span class="label">
+          {{ $t('删除账号') }}
+          <small>{{ $t('永久删除账号和所有资料，不能复原。') }}</small>
+        </span>
+        <button class="ghost danger" @click="openDelete">{{ $t('删除账号') }}</button>
+      </div>
       <p class="policy"><a href="./privacy.html" target="_blank" rel="noopener">{{ $t('隐私权政策') }}</a></p>
     </div>
 
@@ -287,6 +345,29 @@ async function logout() {
           <button class="primary" :disabled="clearing" @click="clearAllHistory">{{ $t('清除') }}</button>
         </div>
       </div>
+    </dialog>
+
+    <dialog ref="deleteBox" class="confirm" @click.self="deleteBox.close()">
+      <form class="confirm-box" @submit.prevent="removeAccount">
+        <h3>{{ $t('永久删除你的 LyriStage 账号？') }}</h3>
+        <p>
+          {{ $t('会一起删掉：我喜欢的音乐、所有歌单、听歌记录、头像、成员身份。删除后不能复原，要再用就得重新注册、重新拿邀请码。想留一份的话，先按「导出」。') }}
+        </p>
+        <label class="delete-confirm">
+          {{ $t('输入「{word}」确认', { word: DELETE_WORD }) }}
+          <input v-model="deleteWord" autocomplete="off" />
+        </label>
+        <div class="confirm-buttons">
+          <button type="button" class="ghost" @click="deleteBox.close()">{{ $t('取消') }}</button>
+          <button
+            type="submit"
+            class="primary danger-fill"
+            :disabled="deleting || deleteWord.trim() !== DELETE_WORD"
+          >
+            {{ deleting ? $t('删除中…') : $t('永久删除') }}
+          </button>
+        </div>
+      </form>
     </dialog>
 
     <div v-if="auth.admin" class="group">
@@ -410,6 +491,23 @@ async function logout() {
       </div>
     </div>
 
+    <div class="group">
+      <h2>{{ $t('快捷键') }}</h2>
+      <div class="row shortcut">
+        <span class="label">{{ $t('播放 / 暂停') }}</span>
+        <span class="keys"><kbd>Space</kbd><template v-if="isElectron"> · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd></template></span>
+      </div>
+      <div class="row shortcut">
+        <span class="label">{{ $t('下一首') }}</span>
+        <span class="keys"><kbd>Ctrl</kbd>+<kbd>→</kbd><template v-if="isElectron"> · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>→</kbd></template></span>
+      </div>
+      <div class="row shortcut">
+        <span class="label">{{ $t('上一首') }}</span>
+        <span class="keys"><kbd>Ctrl</kbd>+<kbd>←</kbd><template v-if="isElectron"> · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>←</kbd></template></span>
+      </div>
+      <p v-if="isElectron" class="note">{{ $t('有 Alt 的那组在 App 收到背景时也能用；键盘上的播放、下一首键也可以') }}</p>
+    </div>
+
     <div v-if="isElectron" class="group">
       <h2>{{ $t('版本') }}</h2>
       <div class="row">
@@ -429,6 +527,49 @@ async function logout() {
 </template>
 
 <style scoped>
+.delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 4px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.delete-confirm input {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.primary.danger-fill {
+  border-color: #dc2626;
+  background: #dc2626;
+}
+.shortcut .keys {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 1px 6px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  text-align: center;
+}
+.note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
 .settings {
   max-width: 720px;
   padding: 32px clamp(16px, 4vw, 48px) 48px;

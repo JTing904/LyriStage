@@ -95,7 +95,8 @@ npm run web:dev           # 网页版：http://localhost:5173（同一个 Wi-Fi 
 1. 在 [Supabase](https://supabase.com) 新建项目。
 2. 在 SQL Editor 里按顺序执行 [supabase/migrations](supabase/migrations) 的文件：
    `init`（用户数据）、`invites`（邀请制）、`listen_together`、`avatars`、
-   `security`（一起听只有房主能广播、更安全的邀请码）、`room_chat` 和 `room_chat_fix`（一起听聊天）。
+   `security`（一起听只有房主能广播、更安全的邀请码）、`room_chat` 和 `room_chat_fix`（一起听聊天）、
+   `room_handover`（房主转让）、`delete_account`（在设置页删除账号）。
 3. Authentication → Providers：打开 Email（要 GitHub / Google 登录的话也打开）。
    在 URL Configuration 的 Redirect URLs 加上 `lyristage://auth/callback`（电脑版登录）和 `http://localhost:5173/**`（网页版开发）。
 4. 把项目网址和 anon key 填进 `.env`（`VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`）。

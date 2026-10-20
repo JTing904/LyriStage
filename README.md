@@ -95,7 +95,8 @@ If Electron fails with `Cannot read properties of undefined` inside VS Code, the
 1. Create a [Supabase](https://supabase.com) project.
 2. In the SQL Editor, run the files in [supabase/migrations](supabase/migrations) in order:
    `init` (user data), `invites` (invite-only access), `listen_together`, `avatars`,
-   `security` (host-only broadcast in rooms, safer invite codes), `room_chat` and `room_chat_fix` (Listen Together chat).
+   `security` (host-only broadcast in rooms, safer invite codes), `room_chat` and `room_chat_fix` (Listen Together chat),
+   `room_handover`, `delete_account` (delete your account from Settings).
 3. Authentication → Providers: enable Email (and GitHub / Google if you want them).
    Under URL Configuration add `lyristage://auth/callback` (desktop sign-in) and `http://localhost:5173/**` (web dev) to Redirect URLs.
 4. Put the project URL and anon key in `.env` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).

@@ -15,6 +15,7 @@ import TrackList from '../components/TrackList.vue';
 const TABS = [
   { id: 'all', label: '综合' },
   { id: 'song', label: '单曲' },
+  { id: 'lyric', label: '歌词' },
   { id: 'artist', label: '歌手' },
   { id: 'album', label: '专辑' },
   { id: 'playlist', label: '歌单' },
@@ -167,7 +168,7 @@ const empty = computed(() =>
       <Icon name="search" :size="18" />
       <input
         v-model="input"
-        :placeholder="$t('搜索歌曲、歌手、专辑、歌单')"
+        :placeholder="$t('搜索歌曲、歌手、专辑、歌单或一句歌词')"
         :aria-label="$t('搜索')"
         enterkeyhint="search"
         :autofocus="!q"
@@ -239,7 +240,7 @@ const empty = computed(() =>
 
       <!-- 单一分类 -->
       <template v-else>
-        <TrackList v-if="tab === 'song'" :tracks="items" :context="context" />
+        <TrackList v-if="tab === 'song' || tab === 'lyric'" :tracks="items" :context="context" />
         <TileGrid v-else-if="tab === 'artist'" :items="artistTiles(items)" />
         <TileGrid v-else-if="tab === 'album'" :items="albumTiles(items)" />
         <TileGrid v-else :items="playlistTiles(items)" />
@@ -249,7 +250,7 @@ const empty = computed(() =>
       </template>
     </template>
 
-    <p v-else class="page-state">{{ $t('输入歌名、歌手或歌单名字开始搜索') }}</p>
+    <p v-else class="page-state">{{ $t('输入歌名、歌手、歌单名字，或记得的一句歌词') }}</p>
   </div>
 </template>
 

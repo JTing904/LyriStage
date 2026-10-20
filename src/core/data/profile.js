@@ -67,3 +67,6 @@ async function removeOldAvatars(uid, keep) {
     // 留着旧图也没关系
   }
 }
+
+/** 删除账号前：删掉自己所有的头像图片 @param {string} uid */
+export const removeMyAvatars = uid => removeOldAvatars(uid, null);

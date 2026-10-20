@@ -176,10 +176,18 @@ export const useRoomStore = defineStore('room', () => {
         { event: 'INSERT', schema: 'public', table: 'room_messages', filter: `room_code=eq.${roomCode}` },
         ({ new: row }) => onMessage(row)
       )
+      // 房主换人了（房主转让）
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `code=eq.${roomCode}` },
+        ({ new: row }) => onHostChanged(row)
+      )
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-        if (role.value === 'guest' && leftPresences.some(p => p.id === hostId.value)) {
-          notice.value = t('房主离开了房间');
-        }
+        if (role.value !== 'guest' || !leftPresences.some(p => p.id === hostId.value)) return;
+        // 等几秒再判断：房主转让时新房主会重新连线，一下下不在不代表离开了
+        setTimeout(() => {
+          if (role.value === 'guest' && inRoom.value && !host.value) notice.value = t('房主离开了房间');
+        }, 3000);
       });
 
     await new Promise((resolve, reject) => {
@@ -248,6 +256,54 @@ export const useRoomStore = defineStore('room', () => {
       }, 4000);
     } catch (err) {
       fail(err);
+    }
+  }
+
+  // ---- 房主转让 ----
+
+  /** 重新连线（换角色时用：Realtime 只在连线时检查能不能广播） */
+  async function reconnect(asRole, newHostId) {
+    const roomCode = code.value;
+    role.value = 'guest'; // leave() 看到是成员就不会把房间删掉
+    await connect(roomCode, asRole);
+    hostId.value = newHostId;
+  }
+
+  /** 房主把房间交给另一个成员；自己变成普通成员继续听 */
+  async function transferHost(memberId) {
+    if (role.value !== 'host' || !memberId || memberId === auth.user?.id) return;
+    const { data, error: err } = await getSupabase()
+      .from('rooms')
+      .update({ host_id: memberId })
+      .eq('code', code.value)
+      .select('code');
+    if (err || !data?.length) {
+      useNoticeStore().show(t('转让失败：{error}', { error: err?.message ?? t('没有权限') }));
+      return;
+    }
+    const name = nameOf(memberId);
+    try {
+      await reconnect('guest', memberId);
+      useNoticeStore().show(t('已经把房主交给 {name}', { name }));
+    } catch (e) {
+      fail(e);
+    }
+  }
+
+  /** 收到"房主换人了" */
+  async function onHostChanged(row) {
+    if (!row || row.code !== code.value || row.host_id === hostId.value) return;
+    hostId.value = row.host_id;
+    notice.value = '';
+    if (row.host_id === auth.user?.id && role.value === 'guest') {
+      try {
+        await reconnect('host', row.host_id);
+        useNoticeStore().show(t('你现在是房主了，你播什么大家就听什么'));
+      } catch (e) {
+        fail(e);
+      }
+    } else if (role.value === 'guest') {
+      useNoticeStore().show(t('{name} 现在是房主', { name: nameOf(row.host_id) }));
     }
   }
 
@@ -375,6 +431,7 @@ export const useRoomStore = defineStore('room', () => {
     nameOf,
     sendChat,
     sendReaction,
+    transferHost,
     host,
     inRoom,
     createRoom,

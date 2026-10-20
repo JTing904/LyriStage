@@ -343,3 +343,24 @@ describe('player 睡眠定时：这首播完就停', () => {
     expect(player.getState().track.id).toBe(2);
   });
 });
+
+describe('player 预先载入下一首', () => {
+  it('播过一半就先拿下一首的链接，切过去时直接用，不用再拿一次', async () => {
+    const resolve = vi.fn(async t => ({ url: urlOf(t.id) }));
+    const { audio, player } = setup(resolve);
+    const prefetched = [];
+    player.on('prefetch', t => prefetched.push(t.id));
+    await player.playList(tracks, 0); // 每首 200 秒
+    audio.tick(99);
+    expect(prefetched).toEqual([]);
+    audio.tick(1);
+    await flush();
+    expect(prefetched).toEqual([2]);
+    expect(resolve).toHaveBeenCalledTimes(2); // 第 1 首 + 预先载入第 2 首
+    audio.tick(10); // 同一首不会重复载入
+    await player.next();
+    expect(player.getState().track.id).toBe(2);
+    expect(audio.src).toBe(urlOf(2));
+    expect(resolve).toHaveBeenCalledTimes(2);
+  });
+});

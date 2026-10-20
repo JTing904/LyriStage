@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createNetease, isUnavailable, toHttps } from './index';
+import { createNetease, isUnavailable, lyricMatch, toHttps } from './index';
 import { ApiError } from '../http/client';
 
 /** 假的 http：按路径返回预设数据，记录请求参数 */
@@ -147,4 +147,14 @@ it('songDetails / playlistTracks 把 privileges 挂回每首歌，isUnavailable 
   expect(isUnavailable({ id: 9 })).toBe(false); // 没有版权资料的当成可以播
   const [track] = await netease.playlistTracks(7);
   expect(track.privilege.st).toBe(0);
+});
+
+it('lyricMatch：切出歌词搜索命中的那一句，<b> 的字标成 hit，其他标签去掉', () => {
+  expect(lyricMatch(['第一句', '故事的<b>小黄花</b>啊<i>x</i>'])).toEqual([
+    { text: '故事的', hit: false },
+    { text: '小黄花', hit: true },
+    { text: '啊x', hit: false },
+  ]);
+  expect(lyricMatch(['没有命中'])).toBeNull();
+  expect(lyricMatch(undefined)).toBeNull();
 });
