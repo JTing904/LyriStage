@@ -11,7 +11,7 @@ Nine full-screen lyric stages, a daily mix made from what you love, and rooms wh
 
 [Website](https://jting904.github.io/LyriStage/) · [Download](https://github.com/JTing904/LyriStage/releases/latest) · [Web app](https://lyristage.vercel.app) · [中文](README.zh-CN.md)
 
-![Version](https://img.shields.io/badge/version-2.1.0-ff3b5c) ![License](https://img.shields.io/badge/code-MIT-blue) ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
+![Version](https://img.shields.io/badge/version-2.1.1-ff3b5c) ![License](https://img.shields.io/badge/code-MIT-blue) ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
 <a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage trailer: watch it on the website"></a>
 
