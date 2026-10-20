@@ -9,11 +9,11 @@
 A lyrics-first music player for Windows, Android and iPhone.<br>
 Nine full-screen lyric stages, a daily mix made from what you love, and rooms where friends hear the same line at the same second.
 
-[Website](https://jting904.github.io/LyriStage-releases/) · [Download](https://github.com/JTing904/LyriStage-releases/releases/latest) · [Web app](https://lyristage.vercel.app) · [中文](README.zh-CN.md)
+[Website](https://jting904.github.io/LyriStage/) · [Download](https://github.com/JTing904/LyriStage/releases/latest) · [Web app](https://lyristage.vercel.app) · [中文](README.zh-CN.md)
 
 ![Version](https://img.shields.io/badge/version-2.0.0-ff3b5c) ![License](https://img.shields.io/badge/code-MIT-blue) ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
-<a href="https://jting904.github.io/LyriStage-releases/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage trailer: watch it on the website"></a>
+<a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage trailer: watch it on the website"></a>
 
 </div>
 
@@ -46,8 +46,8 @@ LyriStage is **invite-only** for now. Anyone can look around; playing music, lik
 
 | Platform | How |
 |---|---|
-| Windows 10 / 11 (64-bit) | [LyriStage-Setup.exe](https://github.com/JTing904/LyriStage-releases/releases/latest/download/LyriStage-Setup.exe). The installer isn't code-signed yet, so SmartScreen may warn you: **More info → Run anyway**. |
-| Android 7.0+ | [LyriStage.apk](https://github.com/JTing904/LyriStage-releases/releases/latest/download/LyriStage.apk). Allow your browser to install apps when asked. |
+| Windows 10 / 11 (64-bit) | [LyriStage-Setup.exe](https://github.com/JTing904/LyriStage/releases/latest/download/LyriStage-Setup.exe). The installer isn't code-signed yet, so SmartScreen may warn you: **More info → Run anyway**. |
+| Android 7.0+ | [LyriStage.apk](https://github.com/JTing904/LyriStage/releases/latest/download/LyriStage.apk). Allow your browser to install apps when asked. |
 | iPhone | Open [lyristage.vercel.app](https://lyristage.vercel.app) in Safari, then **Share → Add to Home Screen**. |
 
 ## How it works

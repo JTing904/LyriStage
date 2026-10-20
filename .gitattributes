@@ -12,3 +12,5 @@
 *.ico binary
 *.icns binary
 *.apk binary
+*.mp4 binary
+*.webm binary

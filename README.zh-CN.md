@@ -9,11 +9,11 @@
 以歌词为主角的音乐播放器，支持 Windows、Android 和 iPhone。<br>
 九种全屏歌词舞台、按你口味每天更新的推荐，还能开房间和朋友同一秒听同一句。
 
-[官网](https://jting904.github.io/LyriStage-releases/) · [下载](https://github.com/JTing904/LyriStage-releases/releases/latest) · [网页版](https://lyristage.vercel.app) · [English](README.md)
+[官网](https://jting904.github.io/LyriStage/) · [下载](https://github.com/JTing904/LyriStage/releases/latest) · [网页版](https://lyristage.vercel.app) · [English](README.md)
 
 ![版本](https://img.shields.io/badge/version-2.0.0-ff3b5c) ![许可证](https://img.shields.io/badge/code-MIT-blue) ![平台](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
-<a href="https://jting904.github.io/LyriStage-releases/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage 宣传片：到官网观看"></a>
+<a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage 宣传片：到官网观看"></a>
 
 </div>
 
@@ -46,8 +46,8 @@
 
 | 平台 | 方法 |
 |---|---|
-| Windows 10 / 11（64 位） | [LyriStage-Setup.exe](https://github.com/JTing904/LyriStage-releases/releases/latest/download/LyriStage-Setup.exe)。安装包还没有代码签名，如果出现"Windows 已保护你的电脑"，点**更多信息 → 仍要运行**。 |
-| Android 7.0+ | [LyriStage.apk](https://github.com/JTing904/LyriStage-releases/releases/latest/download/LyriStage.apk)。手机问的时候，允许浏览器安装应用。 |
+| Windows 10 / 11（64 位） | [LyriStage-Setup.exe](https://github.com/JTing904/LyriStage/releases/latest/download/LyriStage-Setup.exe)。安装包还没有代码签名，如果出现"Windows 已保护你的电脑"，点**更多信息 → 仍要运行**。 |
+| Android 7.0+ | [LyriStage.apk](https://github.com/JTing904/LyriStage/releases/latest/download/LyriStage.apk)。手机问的时候，允许浏览器安装应用。 |
 | iPhone | 用 Safari 打开 [lyristage.vercel.app](https://lyristage.vercel.app)，再点**分享 → 添加到主屏幕**。 |
 
 ## 架构
