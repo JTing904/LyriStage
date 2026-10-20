@@ -130,7 +130,8 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
     }
     failures = 0;
     retried = false;
-    await useSource(source, { autoplay, startAt });
+    // 用 state.time 而不是 startAt：找音源的时候用户可能已经拖了进度条
+    await useSource(source, { autoplay, startAt: state.time });
   }
 
   /** 把找到的音源交给 audio，从 startAt 开始 */
@@ -383,6 +384,9 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
         time: state.time,
         volume: state.volume,
         context: state.context,
+        mode: state.mode,
+        // FM 的歌不在列表里，要另外存
+        fmTrack: state.mode === 'fm' ? state.track : null,
       };
     },
     /**
@@ -396,7 +400,20 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
       state.shuffle = queue.shuffle;
       state.context = data.context ?? null;
       if (typeof data.volume === 'number') setVolume(data.volume);
+      if (data.mode === 'fm' && data.fmTrack) {
+        // 上次在听私人 FM：恢复那首。FM 的来源要等知道登录状态才能建，界面之后用 setFmSource 补上
+        state.mode = 'fm';
+        state.context = 'fm';
+        await load(data.fmTrack, { autoplay: false, startAt: data.time ?? 0 });
+        return;
+      }
       await load(queue.current, { autoplay: false, startAt: data.time ?? 0 });
+    },
+    /** 恢复成 FM 模式后，还没有 FM 来源（按下一首时要用） */
+    needsFmSource: () => state.mode === 'fm' && !fm,
+    /** @param {FmSource} fmSource */
+    setFmSource(fmSource) {
+      fm = fmSource;
     },
   };
 }

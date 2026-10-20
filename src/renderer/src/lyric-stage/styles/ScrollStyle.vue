@@ -2,13 +2,14 @@
 // 风格 B：滚动歌词（参考 Apple Music）
 // 整页歌词上下滚动，当前行逐字点亮，离当前行越远越淡越模糊；背景是封面取色的流动色块
 import { computed } from 'vue';
-import { wordProgress } from '@core/lyrics';
 import { useStage, displayWords } from '../useStage';
+import LitWords from '../LitWords.vue';
 import { useCenteredList } from '../useCenteredList';
 import { rgb } from '../palette';
 import CoverBackdrop from '../CoverBackdrop.vue';
 
-const { lines, lineIndex, now, palette, settings, seekToLine } = useStage();
+// 这里不读 now（每一帧都在变）：正在唱的那行交给 LitWords，整页歌词才不会每帧重画
+const { lines, lineIndex, palette, settings, seekToLine } = useStage();
 const { viewport, lineRef, offset } = useCenteredList(lineIndex, {
   anchor: 0.42,
 });
@@ -47,15 +48,7 @@ const blobs = computed(() => ({
           @click="seekToLine(i)"
         >
           <p class="text">
-            <template v-if="i === lineIndex">
-              <span
-                v-for="(word, w) in line.words"
-                :key="w"
-                class="word"
-                :style="{ '--p': wordProgress(word, now) }"
-                >{{ word.text }}</span
-              >
-            </template>
+            <LitWords v-if="i === lineIndex" :words="line.words" />
             <template v-else>{{
               line.words.map(w => w.text).join('')
             }}</template>
@@ -164,7 +157,7 @@ const blobs = computed(() => ({
   letter-spacing: -0.01em;
 }
 /* 逐字点亮：唱过的部分白色，没唱的半透明 */
-.word {
+.text :deep(.word) {
   background: linear-gradient(
     90deg,
     #fff calc(var(--p) * 100%),

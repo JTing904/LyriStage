@@ -17,6 +17,11 @@ const CREDIT_JSON = [
 ].join('\n');
 
 describe('parseLrc', () => {
+  it('[offset:] 整体调整时间：正数是歌词提早出现', () => {
+    expect(parseLrc('[offset:+500]\n[00:02.00]a\n[00:00.20]b').map(l => l.time)).toEqual([0, 1500]);
+    expect(parseLrc('[offset:-300]\n[00:01.00]a').map(l => l.time)).toEqual([1300]);
+  });
+
   it('毫秒按实际位数换算（修正 v1 把 .5 当成 50 毫秒的问题）', () => {
     const lines = parseLrc('[00:01.5]a\n[00:02.50]b\n[00:03.500]c\n[01:04]d');
     expect(lines.map(l => l.time)).toEqual([1500, 2500, 3500, 64000]);

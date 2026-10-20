@@ -153,4 +153,5 @@ export default {
   '网络连不上，检查网络后再按播放': "Can't connect. Check your network, then press play",
   '《{name}》播放失败': "Couldn't play “{name}”",
   已下架: 'Unavailable',
+  重试: 'Retry',
 };

@@ -129,7 +129,8 @@ export class Queue {
   setShuffle(on) {
     if (this.shuffle === on) return;
     this.shuffle = on;
-    const currentIndex = this.extra ? -1 : this.order[this.pos] ?? -1;
+    // 正在播"下一首播放"插进来的歌时，也以列表里原来播到的那首为准，播完插队的歌才接得回去
+    const currentIndex = this.order[this.pos] ?? -1;
     this.#rebuildOrder(currentIndex);
   }
 

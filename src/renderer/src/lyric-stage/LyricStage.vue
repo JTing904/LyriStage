@@ -16,7 +16,7 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const stage = provideStage(props);
-const { settings, track, lyrics, lyricsError, lines } = stage;
+const { settings, track, lyrics, lyricsError, lines, retryLyrics } = stage;
 const style = computed(() => findStyle(settings.style));
 
 const status = computed(() => {
@@ -94,6 +94,7 @@ onBeforeUnmount(() => {
         >
         <template v-else>{{ $t('歌词加载失败：{error}', { error: lyricsError?.message }) }}</template>
       </p>
+      <button v-if="status === 'error'" class="retry" @click="retryLyrics">{{ $t('重试') }}</button>
     </div>
 
     <!-- 顶部：关闭、风格（电脑版这一条也是拖动窗口的地方） -->
@@ -160,6 +161,22 @@ onBeforeUnmount(() => {
 .placeholder-title {
   margin: 0;
   font: 900 clamp(32px, 6vw, 64px) / 1.2 'Noto Serif SC', serif;
+}
+.retry {
+  justify-self: center;
+  margin-top: 18px;
+  padding: 8px 22px;
+  border: 1px solid rgb(255 255 255 / 0.5);
+  border-radius: 999px;
+  background: none;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.retry:hover {
+  background: rgb(255 255 255 / 0.12);
 }
 .placeholder-sub {
   margin: 0;

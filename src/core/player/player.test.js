@@ -255,6 +255,19 @@ describe('player 播放链接过期', () => {
   });
 });
 
+describe('player 载入中拖进度条', () => {
+  it('还在找音源时拖了进度条：音源回来后从拖到的位置开始', async () => {
+    let release;
+    const { audio, player } = setup(t => new Promise(r => (release = () => r({ url: urlOf(t.id) }))));
+    const loading = player.playList(tracks, 0);
+    player.seek(42);
+    release();
+    await loading;
+    expect(audio.seek).toHaveBeenLastCalledWith(42);
+    expect(player.getState()).toMatchObject({ track: { id: 1 }, playing: true });
+  });
+});
+
 describe('player 私人 FM', () => {
   it('歌曲由 FM 一首一首提供；FM 模式没有上一首', async () => {
     const { audio, player } = setup();
@@ -293,5 +306,22 @@ describe('player 保存 / 恢复', () => {
     });
     expect(second.audio.seek).toHaveBeenCalledWith(30);
     expect(second.audio.play).not.toHaveBeenCalled();
+  });
+
+  it('上次在听私人 FM：恢复成 FM 的那首；补上 FM 来源后下一首照样是 FM 的歌', async () => {
+    const first = setup();
+    await first.player.playList(tracks, 2);
+    await first.player.playFm({ next: async () => [{ id: 'f1' }] });
+    first.audio.tick(12);
+    const saved = JSON.parse(JSON.stringify(first.player.snapshot()));
+
+    const second = setup();
+    await second.player.restore(saved);
+    expect(second.player.getState()).toMatchObject({ mode: 'fm', track: { id: 'f1' }, time: 12, playing: false });
+    expect(second.player.needsFmSource()).toBe(true);
+    second.player.setFmSource({ next: async () => [{ id: 'f2' }] });
+    expect(second.player.needsFmSource()).toBe(false);
+    await second.player.next();
+    expect(second.player.getState().track.id).toBe('f2');
   });
 });

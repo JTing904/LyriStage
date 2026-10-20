@@ -7,7 +7,7 @@ import { onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ApiError } from '@core/http/client';
 import { isUnavailable } from '@core/netease';
-import { getLyrics } from './services';
+import { createFmSource, getLyrics } from './services';
 import { usePlayer } from './composables/usePlayer';
 import { isElectron, onBackButton } from './platform';
 import { t } from './i18n';
@@ -48,6 +48,11 @@ watch(
 function openStage() {
   if (auth.requireMember('听歌、看歌词')) stageOpen.value = true;
 }
+
+// 上次关 App 时在听私人 FM：知道登录状态后补上 FM 的来源，按下一首才有歌
+auth.whenReady().then(() => {
+  if (player.needsFmSource()) player.setFmSource(createFmSource(auth.loggedIn));
+});
 
 // 播不了的时候告诉用户原因（以前是默默跳过，看起来像坏了）
 const offPlayer = [

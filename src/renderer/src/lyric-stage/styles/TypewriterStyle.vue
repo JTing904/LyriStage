@@ -19,11 +19,13 @@ const history = computed(() => {
   }));
 });
 
+/** 当前这句的字（换句时才重算，不要每一帧都算） */
+const currentWords = computed(() => (line.value ? displayWords(line.value.words) : []));
+
 /** 当前这句已经打出来的字：每个词按唱到的比例露出 */
 const typed = computed(() => {
-  if (!line.value) return '';
   let out = '';
-  for (const word of displayWords(line.value.words)) {
+  for (const word of currentWords.value) {
     if (now.value < word.start) break;
     const chars = [...word.text];
     const ratio =

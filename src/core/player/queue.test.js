@@ -105,6 +105,18 @@ describe('Queue 下一首播放 / 加入队列', () => {
     expect(q.prev().id).toBe(2);
     expect(q.next().id).toBe(3);
   });
+
+  it('播插队的歌时切换随机播放：播完插队的歌，还是从原来的位置接下去', () => {
+    const q = new Queue({ rng: createRng(3) });
+    q.setTracks(tracks, 2); // 正在播第 3 首
+    q.playNext({ id: 'x' });
+    expect(q.next().id).toBe('x');
+    q.setShuffle(true);
+    // 第 3 首已经播过了：随机顺序以它为起点，接下来不会又从第 1 首重来、也不会再播第 3 首
+    const rest = ids(q.upcoming(10));
+    expect(rest).toHaveLength(4);
+    expect(rest).not.toContain(3);
+  });
 });
 
 describe('Queue 保存 / 恢复', () => {

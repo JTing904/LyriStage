@@ -31,9 +31,23 @@ export function createDesktopLyricsController({ onStateChange }) {
     };
   }
 
+  /** 上次的位置还在某个屏幕上吗（拔掉外接屏幕后，那个位置会看不到） */
+  function onScreen(bounds) {
+    if (!bounds || typeof bounds.x !== 'number' || typeof bounds.y !== 'number') return false;
+    return screen.getAllDisplays().some(({ workArea: a }) => {
+      return (
+        bounds.x + 100 > a.x &&
+        bounds.y + 40 > a.y &&
+        bounds.x + 100 <= a.x + a.width &&
+        bounds.y + 40 <= a.y + a.height
+      );
+    });
+  }
+
   function open() {
     if (win) return;
-    const saved = getSettings().desktopLyrics.bounds;
+    const remembered = getSettings().desktopLyrics.bounds;
+    const saved = onScreen(remembered) ? remembered : null;
     win = new BrowserWindow({
       ...(saved ?? defaultBounds()),
       minWidth: 360,

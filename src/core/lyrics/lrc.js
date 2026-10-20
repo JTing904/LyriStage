@@ -11,6 +11,8 @@
 
 const LINE = /^((?:\[\d+:\d+(?:[.:]\d+)?\])+)(.*)$/;
 const TIMESTAMP = /\[(\d+):(\d+)(?:[.:](\d+))?\]/g;
+// [offset:+500]：整份歌词的时间调整（毫秒）。按 LRC 的规定，正数 = 歌词提早出现
+const OFFSET = /^\[offset:\s*([+-]?\d+)\s*\]/i;
 
 /** "5" → 500，"50" → 500，"500" → 500，"5000" → 500 */
 function fractionToMs(fraction = '') {
@@ -25,7 +27,13 @@ function fractionToMs(fraction = '') {
 export function parseLrc(text) {
   /** @type {LrcLine[]} */
   const lines = [];
+  let offset = 0;
   for (const raw of text.split(/\r?\n/)) {
+    const offsetTag = raw.trim().match(OFFSET);
+    if (offsetTag) {
+      offset = Number(offsetTag[1]);
+      continue;
+    }
     const match = raw.trim().match(LINE);
     if (!match) continue; // [ti:] [by:] 这类信息标签、JSON 信息行
     const [, stamps, content] = match;
@@ -35,6 +43,7 @@ export function parseLrc(text) {
       lines.push({ time, text: content.trim() });
     }
   }
+  if (offset) for (const line of lines) line.time = Math.max(0, line.time - offset);
   // sort 是稳定排序：同一时间的多行保持原来的先后顺序
   return lines.sort((a, b) => a.time - b.time);
 }

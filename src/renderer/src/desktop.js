@@ -56,7 +56,9 @@ export function connectDesktop(bridge) {
   /** 唱到新的一句、播放 / 暂停、拖进度时传给桌面歌词窗口；另外每 2 秒校正一次 */
   function push(force = false) {
     if (!desktopLyrics.enabled) return;
-    const { track, playing } = player.getState();
+    const { track, playing: isPlaying, loading } = player.getState();
+    // 缓冲中声音停了：桌面歌词也要停，不然会自己往前跑、跑到声音前面
+    const playing = isPlaying && !loading;
     const time = player.currentTime();
     const index = findLineIndex(lines, time * 1000 + LINE_LEAD_MS);
     const now = Date.now();

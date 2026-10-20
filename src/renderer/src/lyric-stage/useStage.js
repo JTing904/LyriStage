@@ -124,24 +124,21 @@ export function provideStage({ state, player, getLyrics }) {
   const lyricsError = ref(null);
   const palette = shallowRef(FALLBACK_PALETTE);
 
-  watch(
-    () => state.track?.id,
-    async id => {
-      lyrics.value = null;
-      lyricsError.value = null;
-      if (!id) return;
-      const current = state.track;
-      const [lyricResult, colors] = await Promise.allSettled([
-        getLyrics(current),
-        getPalette(current.al?.picUrl),
-      ]);
-      if (state.track?.id !== id) return; // 已经切歌了
-      if (lyricResult.status === 'fulfilled') lyrics.value = lyricResult.value;
-      else lyricsError.value = lyricResult.reason;
-      if (colors.status === 'fulfilled') palette.value = colors.value;
-    },
-    { immediate: true }
-  );
+  async function loadLyrics(id) {
+    lyrics.value = null;
+    lyricsError.value = null;
+    if (!id) return;
+    const current = state.track;
+    const [lyricResult, colors] = await Promise.allSettled([
+      getLyrics(current),
+      getPalette(current.al?.picUrl),
+    ]);
+    if (state.track?.id !== id) return; // 已经切歌了
+    if (lyricResult.status === 'fulfilled') lyrics.value = lyricResult.value;
+    else lyricsError.value = lyricResult.reason;
+    if (colors.status === 'fulfilled') palette.value = colors.value;
+  }
+  watch(() => state.track?.id, loadLyrics, { immediate: true });
 
   // 每一帧读精确的播放时间（毫秒），逐字动画靠它
   const now = ref(0);
@@ -189,6 +186,8 @@ export function provideStage({ state, player, getLyrics }) {
     lineProgress,
     inInterlude,
     playing: computed(() => state.playing),
+    /** 歌词载入失败时再试一次（例如刚才断网） */
+    retryLyrics: () => loadLyrics(state.track?.id),
     /** 点歌词跳到那一行 */
     seekToLine: index => {
       const target = lines.value[index];
