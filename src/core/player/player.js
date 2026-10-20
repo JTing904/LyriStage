@@ -312,6 +312,9 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
     }
   });
   audio.on('timeupdate', () => {
+    // 新歌还在找音源：这时 audio 里还是上一首（暂停时浏览器会补发一次 timeupdate），
+    // 它的时间不能算进新歌，不然新歌会从上一首播到的位置开始
+    if (!state.source) return;
     const time = audio.currentTime();
     const delta = time - lastTime;
     // 正常播放时两次 timeupdate 间隔不到 1 秒；超过 2 秒或倒退就是拖动了进度条

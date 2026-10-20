@@ -37,6 +37,8 @@ function fakeAudio() {
         events.emit('timeupdate');
       }
     },
+    /** 只发 timeupdate，时间不变（浏览器暂停时会补发一次） */
+    timeupdate: () => events.emit('timeupdate'),
     end: () => events.emit('ended'),
     /** 音频加载失败（例如链接过期） */
     fail: () => events.emit('error'),
@@ -265,6 +267,25 @@ describe('player 载入中拖进度条', () => {
     await loading;
     expect(audio.seek).toHaveBeenLastCalledWith(42);
     expect(player.getState()).toMatchObject({ track: { id: 1 }, playing: true });
+  });
+
+  it('播到一半按下一首：上一首暂停时补发的时间不会带到新歌，新歌从 0 开始', async () => {
+    let release = () => {};
+    let slow = false;
+    const { audio, player } = setup(t =>
+      slow ? new Promise(r => (release = () => r({ url: urlOf(t.id) }))) : allPlayable(t)
+    );
+    await player.playList(tracks, 0);
+    audio.tick(90);
+    slow = true;
+    const loading = player.next();
+    audio.timeupdate(); // 上一首还在 audio 里，时间是 90
+    expect(player.getState().time).toBe(0);
+    release();
+    await loading;
+    expect(audio.src).toBe(urlOf(2));
+    expect(audio.seek).not.toHaveBeenCalled();
+    expect(player.getState().time).toBe(0);
   });
 });
 
