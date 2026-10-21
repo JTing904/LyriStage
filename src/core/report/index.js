@@ -86,3 +86,33 @@ export function buildReport(rows, { top = 5 } = {}) {
     activeDays: days.size,
   };
 }
+
+/**
+ * 歌词里重复最多次的一句（通常就是副歌），年度回顾的「今年最常听到的一句」用。
+ * 太短的（"Oh"、"啦啦"）不算；一样多就取先出现的
+ * @param {Array<{ text: string, translation?: string | null }>} lines
+ * @returns {{ text: string, translation: string | null } | null}
+ */
+export function mostRepeatedLine(lines) {
+  const normalize = s => s.toLowerCase().replace(/[\s\p{P}]/gu, '');
+  const counts = new Map();
+  for (const line of lines) {
+    const key = normalize(line.text ?? '');
+    if ([...key].length < 4) continue;
+    const entry = counts.get(key) ?? { line, count: 0 };
+    entry.count += 1;
+    counts.set(key, entry);
+  }
+  let best = null;
+  for (const entry of counts.values()) if (!best || entry.count > best.count) best = entry;
+  return best ? { text: best.line.text.trim(), translation: best.line.translation ?? null } : null;
+}
+
+/**
+ * 今年比去年多听了百分之几（去年没听过就是 null）
+ * @returns {number | null} 例如 23 = 多 23%，-10 = 少 10%
+ */
+export function minutesChange(thisYear, lastYear) {
+  if (!lastYear) return null;
+  return Math.round(((thisYear - lastYear) / lastYear) * 100);
+}

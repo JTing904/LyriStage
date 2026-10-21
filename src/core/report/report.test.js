@@ -39,3 +39,32 @@ describe('periodRange', () => {
     expect(periodRange('year', now)).toEqual({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 1) });
   });
 });
+
+describe('mostRepeatedLine', () => {
+  it('挑重复最多的一句（副歌），标点和大小写不影响', async () => {
+    const { mostRepeatedLine } = await import('./index');
+    const lines = [
+      { text: 'I just can’t say I don’t love you' },
+      { text: "'Cause I love you, yeah" },
+      { text: 'I would die for you' },
+      { text: 'I would die for you!' },
+      { text: "'Cause I love you, yeah" },
+      { text: 'i would DIE for you' },
+    ];
+    expect(mostRepeatedLine(lines).text).toBe('I would die for you');
+  });
+  it('太短的不算；没有歌词就是 null', async () => {
+    const { mostRepeatedLine } = await import('./index');
+    expect(mostRepeatedLine([{ text: 'Oh' }, { text: 'Oh' }, { text: '晴天里的故事' }]).text).toBe('晴天里的故事');
+    expect(mostRepeatedLine([])).toBeNull();
+  });
+});
+
+describe('minutesChange', () => {
+  it('比去年多 / 少几 %，去年没听是 null', async () => {
+    const { minutesChange } = await import('./index');
+    expect(minutesChange(1230, 1000)).toBe(23);
+    expect(minutesChange(900, 1000)).toBe(-10);
+    expect(minutesChange(500, 0)).toBeNull();
+  });
+});

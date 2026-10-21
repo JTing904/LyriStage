@@ -275,3 +275,100 @@ export async function renderReportCard({ title, report, palette, labels }) {
   paintBrand(ctx);
   return canvas;
 }
+
+/**
+ * 年度回顾的一页（每页都能单独分享，参考 Spotify Wrapped）
+ * @param {object} slide
+ * @param {[string, string]} slide.colors 背景由上到下的两个颜色（CSS 颜色）
+ * @param {string} [slide.eyebrow] 上面的小字
+ * @param {string} [slide.big] 大字（数字、名字）
+ * @param {string} [slide.unit] 大字后面的单位（分钟）
+ * @param {string} [slide.quote] 引言（歌词）
+ * @param {string} [slide.sub] 下面的说明
+ * @param {string} [slide.cover] 封面网址
+ * @param {Array<{ title: string, sub: string, cover?: string }>} [slide.list] 排行
+ * @returns {Promise<HTMLCanvasElement>}
+ */
+export async function renderStoryCard(slide) {
+  await loadCardFonts();
+  const [cover, ...listCovers] = await Promise.all([
+    loadCover(slide.cover, 720),
+    ...(slide.list ?? []).map(item => loadCover(item.cover, 160)),
+  ]);
+  const canvas = document.createElement('canvas');
+  canvas.width = CARD_WIDTH;
+  canvas.height = CARD_HEIGHT;
+  const ctx = canvas.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, CARD_WIDTH * 0.4, CARD_HEIGHT);
+  g.addColorStop(0, slide.colors[0]);
+  g.addColorStop(1, slide.colors[1]);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+
+  const left = 100;
+  const width = CARD_WIDTH - left * 2;
+  let y = 260;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+
+  if (cover) {
+    paintCover(ctx, cover, (CARD_WIDTH - 600) / 2, y, 600, 40);
+    y += 600 + 130;
+  }
+  if (slide.eyebrow) {
+    ctx.font = `700 42px ${SANS}`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    for (const line of wrapText(ctx, slide.eyebrow, width).slice(0, 2)) {
+      ctx.fillText(line, left, y);
+      y += 58;
+    }
+    y += 40;
+  }
+  if (slide.big) {
+    const size = slide.big.length > 8 ? 110 : 180;
+    ctx.font = `900 ${size}px ${SERIF}`;
+    ctx.fillStyle = '#fff';
+    for (const line of wrapText(ctx, slide.big, width).slice(0, 3)) {
+      ctx.fillText(line, left, y + size * 0.8);
+      y += size * 1.1;
+    }
+    if (slide.unit) {
+      ctx.font = `700 52px ${SANS}`;
+      ctx.fillText(slide.unit, left, y + 30);
+      y += 90;
+    }
+    y += 30;
+  }
+  if (slide.quote) {
+    ctx.font = `900 76px ${SERIF}`;
+    ctx.fillStyle = '#fff';
+    for (const line of wrapText(ctx, `“${slide.quote}”`, width).slice(0, 6)) {
+      ctx.fillText(line, left, y + 60);
+      y += 100;
+    }
+    y += 40;
+  }
+  (slide.list ?? []).slice(0, 5).forEach((item, i) => {
+    paintCover(ctx, listCovers[i], left, y, 120, 16);
+    ctx.textBaseline = 'middle';
+    ctx.font = `900 44px ${SANS}`;
+    ctx.fillStyle = '#fff';
+    const textLeft = left + 150;
+    ctx.fillText(wrapText(ctx, `${i + 1}  ${item.title}`, width - 150)[0] ?? '', textLeft, y + 40);
+    ctx.font = `400 32px ${SANS}`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.fillText(wrapText(ctx, item.sub, width - 150)[0] ?? '', textLeft, y + 88);
+    ctx.textBaseline = 'alphabetic';
+    y += 160;
+  });
+  if (slide.sub) {
+    ctx.font = `400 40px ${SANS}`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    for (const line of wrapText(ctx, slide.sub, width).slice(0, 4)) {
+      ctx.fillText(line, left, y + 20);
+      y += 56;
+    }
+  }
+  paintBrand(ctx);
+  return canvas;
+}

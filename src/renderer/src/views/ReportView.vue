@@ -11,6 +11,11 @@ import { usePlayCollection } from '../composables/usePlayCollection';
 import { t, locale } from '../i18n';
 import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
+import YearReview from '../components/YearReview.vue';
+
+// 年度回顾（像 Spotify Wrapped 的限动）
+const yearReview = ref(null);
+const thisYear = new Date().getFullYear();
 
 const notice = useNoticeStore();
 const { playAll } = usePlayCollection();
@@ -108,6 +113,16 @@ async function share(action) {
 <template>
   <div class="page">
     <h1 class="display title">{{ title }}</h1>
+
+    <button class="wrapped" @click="yearReview.open()">
+      <span class="wrapped-year display">{{ thisYear }}</span>
+      <span class="wrapped-text">
+        <strong>{{ $t('看你的年度回顾') }}</strong>
+        <small>{{ $t('你的年度歌曲、最常听到的一句歌词，一页一页看，每页都能分享') }}</small>
+      </span>
+      <Icon name="chevron-right" :size="22" />
+    </button>
+    <YearReview ref="yearReview" />
 
     <div class="tabs" role="tablist">
       <button role="tab" :aria-selected="period === 'month'" :class="{ on: period === 'month' }" @click="period = 'month'">
@@ -388,5 +403,35 @@ h2 {
     margin-top: 44px;
     font-size: 28px;
   }
+}
+
+/* 年度回顾的入口：一张亮色的卡片 */
+.wrapped {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(120deg, #ff3b5c, #5b21b6);
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wrapped-year {
+  font-size: 34px;
+  line-height: 1;
+}
+.wrapped-text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+.wrapped-text small {
+  font-size: 13px;
+  opacity: 0.85;
 }
 </style>
