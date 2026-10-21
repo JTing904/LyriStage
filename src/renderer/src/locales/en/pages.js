@@ -100,11 +100,9 @@ export default {
   按时间自动换: 'Change by time of day',
   桌面歌词: 'Desktop lyrics',
   显示桌面歌词: 'Show desktop lyrics',
-  'App 收起来（最小化或关到托盘）时，在桌面上显示正在唱的歌词':
-    'When the app is minimized or in the tray, show the current lyrics on your desktop',
+  'App 收起来时，在桌面上显示歌词': 'Show lyrics on the desktop when LyriStage is minimized',
   锁定位置: 'Lock position',
-  '锁定后鼠标会穿过歌词，点得到后面的东西；在托盘图标按右键也能解锁':
-    'When locked, clicks pass through the lyrics to whatever is behind them. Right-click the tray icon to unlock.',
+  '锁定后点得到歌词后面的东西': 'Click through the lyrics to what’s behind them',
   外观: 'Appearance',
   主题: 'Theme',
   语言: 'Language',

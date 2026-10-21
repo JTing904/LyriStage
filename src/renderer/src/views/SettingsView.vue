@@ -533,7 +533,7 @@ async function logout() {
       <div class="row switch-row">
         <span class="label">
           {{ $t('锁屏和通知栏显示歌词') }}
-          <small>{{ $t('正在唱的那句会出现在锁屏、通知栏，连车上的蓝牙屏幕也看得到') }}</small>
+          <small>{{ $t('车上的蓝牙屏幕也看得到') }}</small>
         </span>
         <input
           type="checkbox"
@@ -550,7 +550,7 @@ async function logout() {
       <div class="row switch-row">
         <span class="label">
           {{ $t('显示桌面歌词') }}
-          <small>{{ $t('App 收起来（最小化或关到托盘）时，在桌面上显示正在唱的歌词') }}</small>
+          <small>{{ $t('App 收起来时，在桌面上显示歌词') }}</small>
         </span>
         <input
           type="checkbox"
@@ -563,7 +563,7 @@ async function logout() {
       <div class="row switch-row">
         <span class="label">
           {{ $t('锁定位置') }}
-          <small>{{ $t('锁定后鼠标会穿过歌词，点得到后面的东西；在托盘图标按右键也能解锁') }}</small>
+          <small>{{ $t('锁定后点得到歌词后面的东西') }}</small>
         </span>
         <input
           type="checkbox"
@@ -581,7 +581,7 @@ async function logout() {
       <div class="row switch-row">
         <span class="label">
           {{ $t('均衡器') }}
-          <small>{{ $t('调整低音、人声、高音。只存在这台设备上，因为每个人的耳机、喇叭都不一样') }}</small>
+          <small>{{ $t('调整低音、人声、高音') }}</small>
         </span>
         <input
           v-model="audioEffects.settings.enabled"
@@ -594,7 +594,7 @@ async function logout() {
       <div class="row switch-row">
         <span class="label">
           {{ $t('音量平衡') }}
-          <small>{{ $t('每首歌的音量拉到差不多大，不会一首大声一首小声（B 站上传的歌常常比较小声）') }}</small>
+          <small>{{ $t('让每首歌的音量差不多大') }}</small>
         </span>
         <input
           v-model="audioEffects.settings.leveler"

@@ -56,7 +56,6 @@ function setBand(i, value) {
         <span class="hz">{{ label(hz) }}</span>
       </label>
     </div>
-    <p class="note">{{ $t('往上是加大、往下是减小（dB）。双击一条滑杆回到 0') }}</p>
   </div>
 </template>
 
@@ -132,10 +131,5 @@ input[type='range'] {
   accent-color: var(--accent);
   cursor: pointer;
   touch-action: none;
-}
-.note {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-faint);
 }
 </style>
