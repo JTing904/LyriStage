@@ -240,6 +240,11 @@ h1 {
   .description {
     font-size: 13px;
   }
+  /* 「展开」只有一行小字，手指不好点：加大可点的范围 */
+  .more {
+    margin: -8px 0 -4px;
+    padding: 8px 12px 8px 0;
+  }
   .meta {
     font-size: 13px;
   }

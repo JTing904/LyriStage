@@ -329,6 +329,18 @@ describe('player 保存 / 恢复', () => {
     expect(second.audio.play).not.toHaveBeenCalled();
   });
 
+  it('恢复的那首拿不到音源：打开 App 时不报错，按播放才报', async () => {
+    const first = setup();
+    await first.player.playList(tracks, 1);
+    const saved = JSON.parse(JSON.stringify(first.player.snapshot()));
+
+    const second = setup(async () => null);
+    await second.player.restore(saved);
+    expect(second.unplayable).toEqual([]);
+    await second.player.play();
+    expect(second.unplayable[0]).toBe(2); // 之后会自动跳下一首再试
+  });
+
   it('上次在听私人 FM：恢复成 FM 的那首；补上 FM 来源后下一首照样是 FM 的歌', async () => {
     const first = setup();
     await first.player.playList(tracks, 2);

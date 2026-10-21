@@ -381,4 +381,12 @@ h2 {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* 手机：顶部让出返回列，标题小一点 */
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
+  .title {
+    margin-top: 44px;
+    font-size: 28px;
+  }
+}
 </style>

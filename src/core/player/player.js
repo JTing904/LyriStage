@@ -121,7 +121,9 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
         source = await resolveSource(track);
       } catch (err) {
         requestFailed = true;
-        if (token === loadToken) events.emit('error', { track, error: err });
+        // 没要播放（App 打开时恢复上次的歌）就不报错：用户什么都还没按，跳出错误很奇怪；
+        // 之后按播放会再拿一次，那时候才报
+        if (token === loadToken && autoplay) events.emit('error', { track, error: err });
       }
     }
     if (token !== loadToken) return; // 已经切到别的歌了
@@ -135,7 +137,7 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
     if (!source) {
       state.loading = false;
       changed();
-      events.emit('unplayable', { track });
+      if (autoplay) events.emit('unplayable', { track }); // 同上：恢复上次的歌时不报
       failures += 1;
       // 拿不到就自动跳下一首，连续失败太多次就停下
       if (autoplay && failures < MAX_CONSECUTIVE_FAILURES) await next();

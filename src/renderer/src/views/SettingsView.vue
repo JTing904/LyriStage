@@ -1026,4 +1026,24 @@ code {
     flex-wrap: wrap;
   }
 }
+
+/* 清除、删除账号：平常就是红字，一眼看得出是危险操作 */
+.ghost.danger {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
+}
+/* 手机：顶部让出返回列；标题、卡片小一点 */
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
+  h1 {
+    margin: 44px 0 16px;
+    font-size: 28px;
+  }
+  .row {
+    padding: 12px 14px;
+  }
+  .ghost {
+    padding: 7px 14px;
+    font-size: 13px;
+  }
+}
 </style>

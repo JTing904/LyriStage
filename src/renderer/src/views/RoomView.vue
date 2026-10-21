@@ -480,4 +480,10 @@ button {
   font-size: 12px;
   font-weight: 700;
 }
+
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
+  header h1 {
+    font-size: 28px;
+  }
+}
 </style>

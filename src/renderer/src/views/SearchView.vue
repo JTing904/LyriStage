@@ -288,6 +288,10 @@ const empty = computed(() =>
   overflow-x: auto;
   scrollbar-width: none;
 }
+/* 全局有自订的滚动条样式，这里明确藏起来（手机上会在按钮下面露出一条） */
+.tabs::-webkit-scrollbar {
+  display: none;
+}
 .tabs button {
   flex: none;
   padding: 8px 16px;
@@ -366,6 +370,38 @@ const empty = computed(() =>
 @media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
   .top {
     grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  /* 最佳结果：横向的小卡片（封面在左、名字在右），不要占半个画面 */
+  .best {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-areas:
+      'cover name'
+      'cover tag';
+    align-items: center;
+    column-gap: 14px;
+    row-gap: 6px;
+    padding: 12px;
+  }
+  .best-cover {
+    grid-area: cover;
+    width: 72px;
+  }
+  .best strong {
+    grid-area: name;
+    align-self: end;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 20px;
+  }
+  .best .tag {
+    grid-area: tag;
+    align-self: start;
+    justify-self: start;
+    padding: 2px 10px;
+    font-size: 12px;
   }
 }
 </style>

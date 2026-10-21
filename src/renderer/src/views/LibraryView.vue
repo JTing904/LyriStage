@@ -444,4 +444,10 @@ async function create() {
     flex-wrap: wrap;
   }
 }
+
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
+  .title {
+    font-size: 28px;
+  }
+}
 </style>

@@ -302,6 +302,13 @@ function onContentScroll() {
     display: block;
     background: var(--bg);
   }
+  /* 提示放在迷你播放条和底部 Tab 的上方，不要盖住它们；字多换行时不要变成椭圆 */
+  .toast {
+    bottom: calc(148px + env(safe-area-inset-bottom));
+    width: max-content;
+    border-radius: 16px;
+    font-size: 13px;
+  }
 }
 /* 手机横屏：画面矮，Tab 改成左边一条直的，迷你播放条留在底部，内容才不会被挤扁 */
 @media (pointer: coarse) and (max-height: 600px) and (orientation: landscape) {
@@ -319,6 +326,9 @@ function onContentScroll() {
   }
   .area-mobile > .mini {
     grid-area: mini;
+  }
+  .toast {
+    bottom: calc(84px + env(safe-area-inset-bottom));
   }
 }
 </style>
