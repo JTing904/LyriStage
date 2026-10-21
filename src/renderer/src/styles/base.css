@@ -101,6 +101,12 @@ a {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/* 手指点的：对话框打开时会自动把焦点放在第一个按钮，那圈框是给键盘用的，用手指时不用显示 */
+@media (pointer: coarse) {
+  button:focus-visible {
+    outline: none;
+  }
+}
 img {
   max-width: 100%;
 }

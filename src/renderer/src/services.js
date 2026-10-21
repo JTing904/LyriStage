@@ -9,8 +9,10 @@ import { createDexieStore } from '@core/cache/dexie';
 import {
   configureSupabase,
   getAccessToken,
+  getBilibiliPick,
   getCurrentUser,
   recordPlay,
+  saveBilibiliPick,
 } from '@core/data';
 import { PersonalFM } from '@core/recommend';
 import { apiBase, isElectron, localApiHeaders } from './platform';
@@ -123,7 +125,12 @@ async function resolveSource(track) {
   const shared = sharedSources.get(track.id);
   // 房主（电脑版）分享的 B 站链接可能要带 B 站的 Referer，手机、网页版播不了，先自己找
   if (shared && (isElectron || shared.source !== 'bilibili')) return shared;
-  return (await netease.unblockUrl(track.id)) ?? shared ?? null;
+  // 以前有人在 B 站挑过这首的视频，就直接告诉服务器（省掉一次 B 站搜索）；
+  // 服务器这次用了新的视频就记下来给大家用
+  const pick = await getBilibiliPick(track.id);
+  const found = await netease.unblockUrl(track.id, { bvid: pick });
+  if (found?.bvid && found.bvid !== pick) saveBilibiliPick(track.id, found.bvid);
+  return found ?? shared ?? null;
 }
 
 const audio = createHtmlAudio();

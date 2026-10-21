@@ -323,11 +323,6 @@ h2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@media (max-width: 640px) {
-  .cards {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 .card {
   position: relative;
   display: flex;
@@ -582,5 +577,63 @@ h2 {
 }
 .retry button:disabled {
   opacity: 0.6;
+}
+
+/* 手机：每日推荐和私人 FM 并排成两个方块（参考 Apple Music「为你推荐」），
+   继续播放占一整排；不要一张卡就占掉半个画面 */
+@media (max-width: 640px) {
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .continue {
+    grid-column: 1 / -1;
+  }
+  .daily,
+  .fm {
+    min-height: 0;
+    aspect-ratio: 1;
+    gap: 6px;
+    padding: 16px;
+    border-radius: 18px;
+  }
+  .daily .label,
+  .fm .label {
+    font-size: 12px;
+  }
+  .day {
+    font-size: 52px;
+  }
+  .daily .sub {
+    font-size: 12px;
+  }
+  .daily .hint {
+    display: none;
+  }
+  .fm-line {
+    font-size: 18px;
+  }
+  .fab {
+    right: 12px;
+    bottom: 12px;
+    width: 42px;
+    height: 42px;
+  }
+  .hello h1 {
+    font-size: 26px;
+  }
+  /* FM 方块：在播的歌名已经是上面的大字，下面只留播放钮 */
+  .fm-cover,
+  .fm-meta {
+    display: none;
+  }
+  .fm-row {
+    margin-top: auto;
+    justify-content: flex-end;
+  }
+  .fm-play {
+    width: 42px;
+    height: 42px;
+  }
 }
 </style>

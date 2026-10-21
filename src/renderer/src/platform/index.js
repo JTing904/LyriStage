@@ -32,6 +32,18 @@ export const localApiHeaders = bridge?.apiHeaders ?? {};
 export const PHONE_LANDSCAPE_QUERY =
   '(pointer: coarse) and (orientation: landscape) and (max-height: 600px)';
 
+/**
+ * 手机 App：状态栏、导航列的图标颜色。darkBackground=true 用白色图标。
+ * 一直用白色图标的话，浅色页面上 Android 会自动垫一层深色底，顶部变成一条咖啡色
+ */
+export async function setSystemBarsStyle(darkBackground) {
+  if (!isNativeApp) return;
+  const { SystemBars, SystemBarsStyle } = await import('@capacitor/core');
+  await SystemBars.setStyle({
+    style: darkBackground ? SystemBarsStyle.Dark : SystemBarsStyle.Light,
+  }).catch(() => {});
+}
+
 /** 手机 App：藏起 / 叫回状态栏和导航列（横屏看歌词时全屏）。其他平台什么都不做 */
 export async function setSystemBarsHidden(hidden) {
   if (!isNativeApp) return;
@@ -168,6 +180,55 @@ export async function saveImage(blob, fileName) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+// ---- 手机 App：有没有新版本 ---------------------------------------------------------
+// 电脑版会自动更新；Android 装的是 APK，只能提示用户去下载。
+// 不提示的话，像 2.1.1 那样服务器换了做法、旧版不能用时，用户根本不知道要更新
+
+const LATEST_RELEASE_API = 'https://api.github.com/repos/JTing904/LyriStage/releases/latest';
+const RELEASES_PAGE = 'https://github.com/JTing904/LyriStage/releases/latest';
+const UPDATE_CHECKED_KEY = 'lyristage:update-checked';
+/** GitHub 没登录每小时只能问 60 次，没必要每次打开都问 */
+const UPDATE_CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * Android：GitHub 上有比现在装的新的版本，就回传 { version, url }（APK 的下载网址）；
+ * 没有、不是 Android、刚问过、网络出错都回传 null
+ */
+export async function findAndroidUpdate() {
+  if (!isNativeApp) return null;
+  try {
+    const last = Number(localStorage.getItem(UPDATE_CHECKED_KEY));
+    if (Date.now() - last < UPDATE_CHECK_EVERY_MS) return null;
+    const [{ App }, { isNewerVersion }] = await Promise.all([
+      import('@capacitor/app'),
+      import('@core/version'),
+    ]);
+    const { version: current } = await App.getInfo();
+    const res = await fetch(LATEST_RELEASE_API, { headers: { Accept: 'application/vnd.github+json' } });
+    if (!res.ok) return null;
+    localStorage.setItem(UPDATE_CHECKED_KEY, String(Date.now()));
+    const release = await res.json();
+    if (!isNewerVersion(release.tag_name, current)) return null;
+    const apk = release.assets?.find(asset => asset.name?.endsWith('.apk'));
+    return {
+      version: String(release.tag_name).replace(/^v/i, ''),
+      url: apk?.browser_download_url ?? RELEASES_PAGE,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** 用系统浏览器打开网址（下载 APK） */
+export async function openInBrowser(url) {
+  if (isNativeApp) {
+    const { Browser } = await import('@capacitor/browser');
+    await Browser.open({ url });
+  } else {
+    window.open(url, '_blank', 'noopener');
+  }
 }
 
 // ---- 电脑版自动更新 ---------------------------------------------------------------

@@ -9,7 +9,14 @@ import { ApiError } from '@core/http/client';
 import { isUnavailable, isUnblockRateLimited } from '@core/netease';
 import { createFmSource, getLyrics } from './services';
 import { usePlayer } from './composables/usePlayer';
-import { installUpdate, isElectron, onBackButton, onUpdateReady } from './platform';
+import {
+  findAndroidUpdate,
+  installUpdate,
+  isElectron,
+  onBackButton,
+  onUpdateReady,
+  openInBrowser,
+} from './platform';
 import { t } from './i18n';
 import { useThemeStore } from './stores/theme';
 import { useAuthStore } from './stores/auth';
@@ -90,6 +97,15 @@ onUnmounted(() => offPlayer.forEach(off => off()));
 onUpdateReady(({ version }) => {
   notice.show(t('新版本 {version} 已经下载好', { version }), {
     action: { label: t('重启更新'), run: installUpdate },
+    duration: 20000,
+  });
+});
+
+// Android：GitHub 上有新版本就提示去下载（电脑版会自动更新，网页版永远是最新的）
+findAndroidUpdate().then(update => {
+  if (!update) return;
+  notice.show(t('有新版本 {version}', { version: update.version }), {
+    action: { label: t('下载'), run: () => openInBrowser(update.url) },
     duration: 20000,
   });
 });

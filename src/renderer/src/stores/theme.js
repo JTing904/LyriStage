@@ -1,7 +1,7 @@
 // 主题：深色 / 浅色 / 跟随系统
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { ref, watch } from 'vue';
-import { setNativeTheme } from '../platform';
+import { setNativeTheme, setSystemBarsStyle } from '../platform';
 
 const KEY = 'lyristage:theme';
 
@@ -27,7 +27,22 @@ function apply(mode) {
   else root.setAttribute('data-theme', mode);
   // 电脑版：让 Electron 也切换，系统按钮颜色、窗口底色跟着变
   setNativeTheme(mode);
+  syncSystemBars();
 }
+
+const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+/** 现在实际是不是深色（跟随系统时看系统） */
+function isDark() {
+  const mode = document.documentElement.getAttribute('data-theme');
+  return mode ? mode === 'dark' : systemDark.matches;
+}
+
+/** 手机 App：状态栏图标跟着主题（歌词舞台关掉时也要叫这个，舞台会暂时改成白色图标） */
+export function syncSystemBars() {
+  setSystemBarsStyle(isDark());
+}
+// 跟随系统时，系统切换深浅色也要跟着变
+systemDark.addEventListener('change', syncSystemBars);
 
 export const useThemeStore = defineStore('theme', () => {
   const mode = ref(load());

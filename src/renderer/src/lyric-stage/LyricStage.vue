@@ -1,10 +1,11 @@
 <script setup>
 // 歌词舞台：全屏显示，负责共用的部分（数据、风格切换、播放控制），
 // 歌词怎么画交给 styles/ 里的风格组件
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { provideStage } from './useStage';
 import { findStyle } from './styles';
-import { isElectron, PHONE_LANDSCAPE_QUERY, setSystemBarsHidden } from '../platform';
+import { isElectron, PHONE_LANDSCAPE_QUERY, setSystemBarsHidden, setSystemBarsStyle } from '../platform';
+import { syncSystemBars } from '../stores/theme';
 import PlayerBar from '../components/PlayerBar.vue';
 import StylePicker from './StylePicker.vue';
 import ShareLyricsDialog from './ShareLyricsDialog.vue';
@@ -33,6 +34,9 @@ const status = computed(() => {
 const lightStyle = computed(
   () => status.value === 'ready' && Boolean(style.value.light)
 );
+// 手机：舞台大多是深色画面，状态栏用白色图标；浅色风格用深色图标。关掉舞台时换回跟主题
+watch(lightStyle, light => setSystemBarsStyle(!light), { immediate: true });
+onBeforeUnmount(syncSystemBars);
 
 // 控制条：鼠标或手指一段时间不动就隐藏，沉浸看歌词
 const controlsVisible = ref(true);
@@ -49,7 +53,7 @@ function wake() {
 
 // 手机横屏：藏起状态栏和导航列，整个画面都给歌词（转回竖屏、关掉舞台时叫回来）
 const phoneLandscape = window.matchMedia(PHONE_LANDSCAPE_QUERY);
-const syncSystemBars = () => setSystemBarsHidden(phoneLandscape.matches);
+const syncBarsVisibility = () => setSystemBarsHidden(phoneLandscape.matches);
 
 // 往下滑关闭（手机）：手指往下拉，舞台跟着往下移；拉超过 1/4 画面或甩得够快就关。
 // 只认明显往下的手势，左右滑、点歌词跳转都不受影响
@@ -96,13 +100,13 @@ function onKey(event) {
 onMounted(() => {
   wake();
   window.addEventListener('keydown', onKey);
-  phoneLandscape.addEventListener('change', syncSystemBars);
-  syncSystemBars();
+  phoneLandscape.addEventListener('change', syncBarsVisibility);
+  syncBarsVisibility();
 });
 onBeforeUnmount(() => {
   clearTimeout(hideTimer);
   window.removeEventListener('keydown', onKey);
-  phoneLandscape.removeEventListener('change', syncSystemBars);
+  phoneLandscape.removeEventListener('change', syncBarsVisibility);
   setSystemBarsHidden(false);
 });
 </script>

@@ -217,7 +217,11 @@ async function unblock(res, url, sources, { addsBilibiliReferer = false } = {}) 
         name: info.name,
         artists: info.artists.map(a => a.name),
         durationMs: info.duration,
-      }, { needsNoReferer: !addsBilibiliReferer });
+      }, {
+        needsNoReferer: !addsBilibiliReferer,
+        // App 从大家共用的 bilibili_picks 表查到的视频（服务器会再检查）
+        hint: url.searchParams.get('bvid') || undefined,
+      });
       if (found) return sendJson(res, 200, { code: 200, data: found });
       errors.push('bilibili: 没有像原曲的视频');
     } catch (err) {

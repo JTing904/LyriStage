@@ -140,14 +140,18 @@ export function createNetease(http) {
       return { url: toHttps(item.url), br: item.br, source: 'netease' };
     },
 
-    /** 解灰：去其他平台找同一首歌（server/lib/handler.js）；找不到返回 null */
-    async unblockUrl(id) {
+    /**
+     * 解灰：去其他平台找同一首歌（server/lib/handler.js）；找不到返回 null
+     * @param {{ bvid?: string | null }} [hint] 以前在 B 站挑过的视频（大家共用的记录），服务器会再检查
+     */
+    async unblockUrl(id, { bvid } = {}) {
       try {
-        const data = await http.get('/song/url/match', { id });
+        const data = await http.get('/song/url/match', { id, bvid });
         return {
           url: data.data.url,
           br: data.data.br,
           source: data.data.source,
+          bvid: data.data.bvid ?? null,
         };
       } catch (err) {
         // 网络断了、B 站暂时限制搜索：要让播放器知道（不要当成"这首没有音源"而跳歌）

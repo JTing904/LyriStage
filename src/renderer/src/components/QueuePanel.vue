@@ -485,7 +485,10 @@ h3 {
   .queue-panel {
     inset: auto 0 0 0;
     width: 100%;
+    /* 浏览器默认给 dialog 设了 max-width，不取消的话右边会露出一条 */
+    max-width: none;
     height: 82vh;
+    padding-bottom: env(safe-area-inset-bottom);
     border-radius: 18px 18px 0 0;
     border-bottom: 0;
   }

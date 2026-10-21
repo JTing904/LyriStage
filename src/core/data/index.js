@@ -6,3 +6,4 @@ export * from './track';
 export * from './invites';
 export * from './profile';
 export * from './account';
+export * from './bilibiliPicks';

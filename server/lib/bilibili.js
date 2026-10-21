@@ -187,12 +187,24 @@ async function searchVideos(keyword) {
 /**
  * 在 B 站找这首歌，返回音频链接；找不到返回 null
  * @param {{ name: string, artists: string[], durationMs?: number }} song
- * @param {{ needsNoReferer?: boolean }} [options]
+ * @param {{ needsNoReferer?: boolean, hint?: string }} [options]
  *   needsNoReferer：只要不带 Referer 也能拿到的链接（手机、网页版的 <audio> 带不了 B 站的 Referer）
- * @returns {Promise<{ url: string, br: number, source: 'bilibili' } | null>}
+ *   hint：以前挑过的视频（App 从大家共用的 bilibili_picks 表查到的），检查过像原曲才用，省掉一次搜索
+ * @returns {Promise<{ url: string, br: number, source: 'bilibili', bvid: string } | null>}
  */
-async function findOnBilibili(song, { needsNoReferer = true } = {}) {
+async function findOnBilibili(song, { needsNoReferer = true, hint } = {}) {
   const key = songKey(song);
+  if (hint && /^BV[0-9A-Za-z]{10}$/.test(hint)) {
+    try {
+      const found = await audioOf(hint, needsNoReferer, song);
+      if (found) {
+        rememberVideos(key, [hint, ...(cachedVideos(key) ?? []).filter(b => b !== hint)]);
+        return found;
+      }
+    } catch {
+      // 这个视频不行了（被删、不像原曲），照常搜
+    }
+  }
   let bvids = cachedVideos(key);
   if (!bvids) {
     const keyword = [song.name, song.artists[0]].filter(Boolean).join(' ');
@@ -236,9 +248,23 @@ async function playableWithoutReferer(url) {
   }
 }
 
-/** 视频里音质最高、App 播得了的音频 */
-async function audioOf(bvid, needsNoReferer) {
+/**
+ * 视频里音质最高、App 播得了的音频
+ * @param {object} [mustMatch] 给了歌曲资料就先检查这个视频像不像原曲（别人存的 hint 不一定对）
+ */
+async function audioOf(bvid, needsNoReferer, mustMatch) {
   const view = await callApi('/x/web-interface/wbi/view', { bvid });
+  if (mustMatch) {
+    const seconds = Number(view.duration) || 0;
+    const asSearchResult = {
+      bvid,
+      title: view.title,
+      author: view.owner?.name,
+      duration: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`,
+      play: view.stat?.view,
+    };
+    if (!pickVideo([asSearchResult], mustMatch)) return null;
+  }
   const play = await callApi('/x/player/wbi/playurl', {
     bvid,
     cid: view.cid,
@@ -251,9 +277,10 @@ async function audioOf(bvid, needsNoReferer) {
   const urls = [best.baseUrl || best.base_url, ...(best.backupUrl || best.backup_url || [])]
     .filter(Boolean)
     .map(url => url.replace(/^http:\/\//, 'https://'));
-  if (!needsNoReferer) return urls.length ? { url: urls[0], br: best.bandwidth, source: 'bilibili' } : null;
+  const result = url => ({ url, br: best.bandwidth, source: 'bilibili', bvid });
+  if (!needsNoReferer) return urls.length ? result(urls[0]) : null;
   for (const url of urls) {
-    if (await playableWithoutReferer(url)) return { url, br: best.bandwidth, source: 'bilibili' };
+    if (await playableWithoutReferer(url)) return result(url);
   }
   return null;
 }
