@@ -246,6 +246,12 @@ export function createNetease(http) {
       return data.songs ?? [];
     },
 
+    /** 相似歌曲（网易云算的，大约 50 首；旧格式，要统一） */
+    async similarSongs(trackId) {
+      const data = await http.get('/simi/song', { id: trackId });
+      return (data.songs ?? []).map(normalizeSong);
+    },
+
     /** 包含这首歌的相似歌单 */
     async similarPlaylists(trackId) {
       const data = await http.get('/simi/playlist', { id: trackId });

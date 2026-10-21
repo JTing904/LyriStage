@@ -17,6 +17,9 @@ export default {
   '更多：{name}': 'More: {name}',
   下一首播放: 'Play next',
   加入播放队列: 'Add to queue',
+  相似歌曲电台: 'Song radio',
+  '开始《{name}》的电台：接下来是相似的歌': 'Starting “{name}” radio: similar songs up next',
+  '电台会一首一首挑相似的歌，没有固定的播放队列。': 'Radio picks similar songs one at a time, so there is no fixed queue.',
   '下一首播放：{name}': 'Playing next: {name}',
   '已加入播放队列：{name}': 'Added to queue: {name}',
 

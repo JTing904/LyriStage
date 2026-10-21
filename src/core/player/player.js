@@ -389,13 +389,14 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
       await userLoad(queue.jumpTo(index));
     },
     /**
-     * 私人 FM：歌曲由 fmSource 一首一首提供
+     * 私人 FM、歌曲电台：歌曲由 fmSource 一首一首提供
      * @param {FmSource} fmSource
+     * @param {{ context?: string }} [options] 听歌记录里记的来源：私人 FM 是 'fm'，电台是 'radio:<歌曲 ID>'
      */
-    async playFm(fmSource) {
+    async playFm(fmSource, { context = 'fm' } = {}) {
       fm = fmSource;
       state.mode = 'fm';
-      state.context = 'fm';
+      state.context = context;
       await userLoad(await nextFmTrack());
     },
     play,

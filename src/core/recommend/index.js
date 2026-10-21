@@ -231,3 +231,92 @@ export class PersonalFM {
     this.queue = [];
   }
 }
+
+// 相似歌曲电台 ----------------------------------------------------------------------
+
+/**
+ * 从一首歌开始的电台（参考 Spotify 的歌曲电台）：先播这首，再播网易云算的相似歌曲，
+ * 按你的口味排序（常听的歌手优先、跳过不喜欢的）。之后从播过的歌里随机挑一首继续找相似的，
+ * 一路"走"下去，不会只在原地打转。用私人 FM 的播放模式（没有上一首、可以按不喜欢）
+ */
+export class SongRadio {
+  /** @param {{ netease: NeteaseForRecommend & { similarSongs: (id: number) => Promise<object[]> }, seed: object, batchSize?: number }} options */
+  constructor({ netease, seed, batchSize = 15 }) {
+    this.netease = netease;
+    this.seed = seed;
+    this.batchSize = batchSize;
+    this.queue = [];
+    this.served = new Set(); // 播过的不重复
+    this.walk = [seed]; // 下一批相似歌曲从这些歌出发
+    this.started = false;
+    this.loading = null;
+    this.signals = null;
+  }
+
+  /** 你的口味（没登录、读不到就当没有，照样能播） */
+  _taste() {
+    if (!this.signals) {
+      this.signals = loadUserSignals()
+        .then(s => ({ affinity: computeArtistAffinity(s.history, s.liked), disliked: s.disliked }))
+        .catch(() => ({ affinity: new Map(), disliked: [] }));
+    }
+    return this.signals;
+  }
+
+  async _refill() {
+    if (!this.loading) {
+      this.loading = (async () => {
+        const { affinity, disliked } = await this._taste();
+        // 随机挑一首当这次的出发点；都用完了就回到起点那首
+        const from = this.walk.length
+          ? this.walk.splice(Math.floor(Math.random() * this.walk.length), 1)[0]
+          : this.seed;
+        let candidates = await this.netease.similarSongs(from.id).catch(() => []);
+        // 冷门歌没有相似歌曲：用同一个歌手的热门歌补
+        const artistId = from.ar?.[0]?.id;
+        if (candidates.length < 5 && artistId) {
+          candidates = candidates.concat(await this.netease.artistTopSongs(artistId).catch(() => []));
+        }
+        const exclude = new Set([
+          ...disliked,
+          ...this.served,
+          ...this.queue.map(t => String(t.id)),
+        ]);
+        const picked = rankCandidates(
+          candidates.map(track => ({ track, origin: /** @type {const} */ ('similar') })),
+          { affinity, excludeIds: exclude, rng: createRng(Date.now()), count: this.batchSize }
+        );
+        this.queue.push(...picked);
+        this.walk.push(...picked.slice(0, 3));
+      })().finally(() => {
+        this.loading = null;
+      });
+    }
+    return this.loading;
+  }
+
+  /** 取接下来的 n 首（第一次会先给起点那首） */
+  async next(n = 1) {
+    const out = [];
+    if (!this.started) {
+      this.started = true;
+      out.push(this.seed);
+      this.served.add(String(this.seed.id));
+    }
+    for (let tries = 0; this.queue.length < n - out.length && tries < 4; tries++) {
+      await this._refill();
+    }
+    const more = this.queue.splice(0, Math.max(0, n - out.length));
+    more.forEach(t => this.served.add(String(t.id)));
+    out.push(...more);
+    // 补货放后台，下次取的时候就不用等
+    if (this.queue.length < 5) this._refill().catch(() => {});
+    return out;
+  }
+
+  /** 按了不喜欢：清掉已经挑好的，下一批用新的口味重挑 */
+  invalidate() {
+    this.queue = [];
+    this.signals = null;
+  }
+}

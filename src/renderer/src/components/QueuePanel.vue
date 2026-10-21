@@ -15,7 +15,7 @@ import Icon from './Icon.vue';
 
 const ui = useUiStore();
 const sleep = useSleepStore();
-const { player } = usePlayer();
+const { state, player } = usePlayer();
 
 const LIST_LIMIT = 100; // 歌单很长时只显示接下来这么多首
 
@@ -154,7 +154,11 @@ const SLEEP_OPTIONS = [15, 30, 60];
         </section>
 
         <p v-if="view.mode === 'fm'" class="hint">
-          {{ $t('私人 FM 会一首一首为你挑歌，没有固定的播放队列。') }}
+          {{
+            String(state.context).startsWith('radio:')
+              ? $t('电台会一首一首挑相似的歌，没有固定的播放队列。')
+              : $t('私人 FM 会一首一首为你挑歌，没有固定的播放队列。')
+          }}
         </p>
 
         <!-- 你加入的 -->

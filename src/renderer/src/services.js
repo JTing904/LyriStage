@@ -14,7 +14,7 @@ import {
   recordPlay,
   saveBilibiliPick,
 } from '@core/data';
-import { PersonalFM } from '@core/recommend';
+import { PersonalFM, SongRadio } from '@core/recommend';
 import { apiBase, isElectron, localApiHeaders } from './platform';
 import { connectMediaSession } from './mediaSession';
 
@@ -88,6 +88,9 @@ export function createFmSource(loggedIn) {
     },
   };
 }
+
+/** 从这首歌开始的电台（相似歌曲，按你的口味排） */
+export const createSongRadio = track => new SongRadio({ netease, seed: track });
 
 // 歌词很少变，缓存 7 天、最多 500 首
 const DAY = 86400 * 1000;

@@ -11,6 +11,7 @@ import { useAuthStore } from '../stores/auth';
 import { t as tr } from '../i18n';
 import { usePlayer } from '../composables/usePlayer';
 import { useLibraryStore } from '../stores/library';
+import { createSongRadio } from '../services';
 import LikeButton from './LikeButton.vue';
 import { artistNames, clock } from '../utils/format';
 import Cover from './Cover.vue';
@@ -81,15 +82,15 @@ function play(index) {
   player.playList(props.tracks, index, props.context);
 }
 
-// ---- 每首右边的「⋯」：下一首播放、加入播放队列、加到歌单 ----
+// ---- 每首右边的「⋯」：下一首播放、加入播放队列、相似歌曲电台、加到歌单 ----
 const notice = useNoticeStore();
 /** @type {import('vue').Ref<{ track: any, x: number, y: number } | null>} */
 const menu = ref(null);
 function openMenu(event, track) {
   const r = event.currentTarget.getBoundingClientRect();
-  // 菜单宽 200、高约 150：靠右对齐按钮，下面放不下就往上开
+  // 菜单宽 200、高约 200：靠右对齐按钮，下面放不下就往上开
   const x = Math.max(8, Math.min(r.right - 200, window.innerWidth - 208));
-  const y = r.bottom + 160 > window.innerHeight ? r.top - 156 : r.bottom + 4;
+  const y = r.bottom + 210 > window.innerHeight ? r.top - 204 : r.bottom + 4;
   menu.value = { track, x, y };
 }
 const closeMenu = () => (menu.value = null);
@@ -105,6 +106,9 @@ function menuAction(action) {
   } else if (action === 'queue') {
     player.addToQueue(track);
     if (allowed) notice.show(tr('已加入播放队列：{name}', { name: track.name }));
+  } else if (action === 'radio') {
+    player.playFm(createSongRadio(track), { context: `radio:${track.id}` });
+    if (allowed) notice.show(tr('开始《{name}》的电台：接下来是相似的歌', { name: track.name }));
   } else {
     library.openAddDialog([track]);
   }
@@ -232,6 +236,9 @@ onBeforeUnmount(() => {
         </button>
         <button role="menuitem" @click="menuAction('queue')">
           <Icon name="queue" :size="18" />{{ $t('加入播放队列') }}
+        </button>
+        <button role="menuitem" @click="menuAction('radio')">
+          <Icon name="radio" :size="18" />{{ $t('相似歌曲电台') }}
         </button>
         <button role="menuitem" @click="menuAction('playlist')">
           <Icon name="plus" :size="18" />{{ $t('加到歌单') }}
