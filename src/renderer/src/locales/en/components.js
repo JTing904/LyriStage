@@ -151,6 +151,7 @@ export default {
   搜索其他版本: 'Find other versions',
   '《{name}》暂时没有音源': 'No audio for “{name}” right now',
   '网络连不上，检查网络后再按播放': "Can't connect. Check your network, then press play",
+  'B 站暂时限制搜索，过一会儿再按播放': 'Bilibili is limiting searches for now. Try again in a little while',
   '《{name}》播放失败': "Couldn't play “{name}”",
   已下架: 'Unavailable',
   重试: 'Retry',

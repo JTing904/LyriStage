@@ -143,6 +143,47 @@ async function callApi(path, params) {
   return json.data;
 }
 
+/** B 站限制搜索（短时间搜太多次，要求人机验证）。过一阵子会自己解除 */
+class BilibiliRateLimited extends Error {
+  constructor() {
+    super('bilibili: 搜索被限制（要求人机验证），过一会儿再试');
+    this.name = 'BilibiliRateLimited';
+  }
+}
+
+// 歌 → 挑好的视频（bvid，最像的排前面）。视频不会变，记住以后换新链接（链接 2 小时过期、
+// 播放器 10 分钟换一次）、预载下一首都只要拿音频，不用再搜：
+// 搜索是 B 站最容易限制的接口，同一首歌反复搜很快就会被要求人机验证
+const VIDEO_CACHE_MAX = 3000;
+const NOT_FOUND_TTL_MS = 6 * 60 * 60 * 1000;
+/** @type {Map<string, { bvids: string[], at: number }>} */
+const videoCache = new Map();
+const songKey = song =>
+  [song.name, song.artists.join('/'), Math.round((song.durationMs || 0) / 1000)].join('|');
+
+function cachedVideos(key) {
+  const hit = videoCache.get(key);
+  if (!hit) return null;
+  // 没找到的过几个小时再试（可能有人新上传）
+  if (!hit.bvids.length && Date.now() - hit.at > NOT_FOUND_TTL_MS) {
+    videoCache.delete(key);
+    return null;
+  }
+  return hit.bvids;
+}
+function rememberVideos(key, bvids) {
+  videoCache.delete(key);
+  videoCache.set(key, { bvids, at: Date.now() });
+  if (videoCache.size > VIDEO_CACHE_MAX) videoCache.delete(videoCache.keys().next().value);
+}
+
+async function searchVideos(keyword) {
+  const data = await callApi('/x/web-interface/wbi/search/type', { search_type: 'video', keyword });
+  // 被风控时不给结果，只给一个 v_voucher（要人机验证）
+  if (data.v_voucher && !data.result) throw new BilibiliRateLimited();
+  return data.result || [];
+}
+
 /**
  * 在 B 站找这首歌，返回音频链接；找不到返回 null
  * @param {{ name: string, artists: string[], durationMs?: number }} song
@@ -151,20 +192,25 @@ async function callApi(path, params) {
  * @returns {Promise<{ url: string, br: number, source: 'bilibili' } | null>}
  */
 async function findOnBilibili(song, { needsNoReferer = true } = {}) {
-  const keyword = [song.name, song.artists[0]].filter(Boolean).join(' ');
-  const search = () => callApi('/x/web-interface/wbi/search/type', { search_type: 'video', keyword });
-  let data = await search();
-  if (!data.result?.length) {
-    // 短时间搜太多次，B 站会回空结果：换新的 cookie 再搜一次
-    session = null;
-    data = await search();
+  const key = songKey(song);
+  let bvids = cachedVideos(key);
+  if (!bvids) {
+    const keyword = [song.name, song.artists[0]].filter(Boolean).join(' ');
+    bvids = rankVideos(await searchVideos(keyword), song)
+      .slice(0, 4)
+      .map(v => v.bvid);
+    rememberVideos(key, bvids);
   }
   // 视频可能被删了或有地区限制（view 回 -404），就试下一个
   const errors = [];
-  for (const video of rankVideos(data.result || [], song).slice(0, 4)) {
+  for (const bvid of bvids) {
     try {
-      const found = await audioOf(video.bvid, needsNoReferer);
-      if (found) return found;
+      const found = await audioOf(bvid, needsNoReferer);
+      if (found) {
+        // 能用的放第一个，下次直接用它
+        if (bvid !== bvids[0]) rememberVideos(key, [bvid, ...bvids.filter(b => b !== bvid)]);
+        return found;
+      }
     } catch (err) {
       errors.push(err);
     }
@@ -212,4 +258,4 @@ async function audioOf(bvid, needsNoReferer) {
   return null;
 }
 
-module.exports = { findOnBilibili, pickVideo, parseDuration };
+module.exports = { findOnBilibili, pickVideo, parseDuration, BilibiliRateLimited };

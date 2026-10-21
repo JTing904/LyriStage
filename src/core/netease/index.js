@@ -68,6 +68,10 @@ export function lyricMatch(lyrics) {
 }
 
 /** 搜索类型（网易云 cloudsearch 的 type 参数） */
+/** 解灰时 B 站暂时限制搜索（要人机验证）：过一会儿再试就好，不是这首歌没有 */
+export const isUnblockRateLimited = err =>
+  err instanceof ApiError && err.status === 503 && err.body?.reason === 'rate-limited';
+
 export const SEARCH_TYPE = /** @type {const} */ ({
   song: 1,
   /** 用一句歌词找歌：结果的 lyrics 里，搜到的字用 <b> 标出来 */
@@ -146,8 +150,8 @@ export function createNetease(http) {
           source: data.data.source,
         };
       } catch (err) {
-        // 网络断了要让播放器知道（不要当成"这首没有音源"而跳歌）
-        if (err instanceof ApiError && err.status === undefined) throw err;
+        // 网络断了、B 站暂时限制搜索：要让播放器知道（不要当成"这首没有音源"而跳歌）
+        if (err instanceof ApiError && (err.status === undefined || isUnblockRateLimited(err))) throw err;
         return null;
       }
     },

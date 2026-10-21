@@ -3,7 +3,8 @@
 // - 其他路径交给 @neteasecloudmusicapienhanced/api，默认带上大陆 realIP
 // - /song/url/match（解灰）自己实现，见下面 unblock()
 const crypto = require('crypto');
-const { findOnBilibili } = require('./bilibili');
+const { findOnBilibili, BilibiliRateLimited } = require('./bilibili');
+const { findOnPublicSources } = require('./publicSources');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -68,14 +69,15 @@ function sameToken(given, expected) {
 // 海外请求网易云会被限制版权，默认带上大陆 IP（请求里已有 realIP 就用请求的）
 const DEFAULT_REAL_IP = '211.161.244.70';
 
-// 解灰：网易云拿不到播放链接时，去其他平台找同一首歌。
+// 解灰：网易云拿不到播放链接时，去其他地方找同一首歌。
 // 新版 API 自带的 /song/url/match 用的第三方网站在马来西亚全部失效。2026-10 在马来西亚实测：
-//   B 站   ✓ 大多数歌都有人上传原曲（自己挑版本，见 bilibili.js），最先找
+//   公开音源 ✓ 5 个"歌曲 ID → 链接"接口（publicSources.js），VIP 歌拿得到网易云的完整文件，最先问
+//   B 站    ✓ 网易云完全没有版权的歌（例如周杰伦）靠这个（bilibili.js）
 //   以下是 @unblockneteasemusic/server 的音源：
 //   pyncmd ✗ GD Studio 9 月起要求加密签名，不带一律 400
 //   kuwo   ✗ 海外 IP 不管搜什么都返回同一个 2.6 秒的占位音频
 //   其他（qq、migu、kugou、joox、youtube…）全部失败；ytdlp 要另外装 yt-dlp
-// 所以默认只用 B 站；环境变量 UNM_SOURCES 可以再加 @unblockneteasemusic/server 的音源
+// 所以默认不用它；环境变量 UNM_SOURCES 可以再加 @unblockneteasemusic/server 的音源
 const DEFAULT_UNM_SOURCES = [];
 // 小于这个大小的音频当成占位文件（正常歌曲 128k 码率 1 分钟就有约 1MB）
 const MIN_AUDIO_BYTES = 300 * 1024;
@@ -190,7 +192,7 @@ async function unblock(res, url, sources, { addsBilibiliReferer = false } = {}) 
   const id = url.searchParams.get('id');
   if (!id) return sendJson(res, 400, { code: 400, msg: '缺少 id' });
   const requested = url.searchParams.get('source');
-  const list = requested ? requested.split(',') : ['bilibili', ...sources];
+  const list = requested ? requested.split(',') : ['public', 'bilibili', ...sources];
   const errors = [];
   let info = null;
   try {
@@ -200,6 +202,15 @@ async function unblock(res, url, sources, { addsBilibiliReferer = false } = {}) 
     errors.push(`find: ${err}`);
   }
 
+  // 先问公开音源（网易云自己的完整文件，音质最好，不用搜索）
+  if (list.includes('public')) {
+    const found = await findOnPublicSources(id, { durationMs: info?.duration });
+    if (found) return sendJson(res, 200, { code: 200, data: found });
+    errors.push('public: 都没有');
+  }
+
+  // 网易云完全没有的歌（例如周杰伦）：去 B 站找有人上传的
+  const others = list.filter(s => s !== 'bilibili' && s !== 'public');
   if (info && list.includes('bilibili')) {
     try {
       const found = await findOnBilibili({
@@ -210,11 +221,14 @@ async function unblock(res, url, sources, { addsBilibiliReferer = false } = {}) 
       if (found) return sendJson(res, 200, { code: 200, data: found });
       errors.push('bilibili: 没有像原曲的视频');
     } catch (err) {
+      // B 站要求人机验证：不是这首歌没有，过一会儿再试就好，让 App 说清楚（不要跳歌）
+      if (err instanceof BilibiliRateLimited && !others.length) {
+        return sendJson(res, 503, { code: 503, reason: 'rate-limited', msg: err.message });
+      }
       errors.push(String(err));
     }
   }
 
-  const others = list.filter(s => s !== 'bilibili');
   if (others.length) {
     try {
       const match = require('@unblockneteasemusic/server');

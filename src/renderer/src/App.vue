@@ -1,12 +1,12 @@
 <script setup>
 // App 外框：
 // - 电脑（宽 ≥ 900px）：左边侧边栏 + 中间内容 + 底部完整播放条
-// - 手机（窄）：内容 + 迷你播放条 + 底部 Tab
+// - 手机（窄，或手机横过来：矮又是触控）：内容 + 迷你播放条 + 底部 Tab
 // 歌词舞台是盖在最上面的全屏层
 import { onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ApiError } from '@core/http/client';
-import { isUnavailable } from '@core/netease';
+import { isUnavailable, isUnblockRateLimited } from '@core/netease';
 import { createFmSource, getLyrics } from './services';
 import { usePlayer } from './composables/usePlayer';
 import { installUpdate, isElectron, onBackButton, onUpdateReady } from './platform';
@@ -74,7 +74,9 @@ const offPlayer = [
   player.on('error', ({ track, error }) => {
     // 浏览器要用户先点一下页面才允许出声，不算错误
     if (error?.name === 'NotAllowedError') return;
-    if (error instanceof ApiError && error.status === undefined) {
+    if (isUnblockRateLimited(error)) {
+      notice.show(t('B 站暂时限制搜索，过一会儿再按播放'));
+    } else if (error instanceof ApiError && error.status === undefined) {
       notice.show(t('网络连不上，检查网络后再按播放'));
     } else if (track) {
       notice.show(t('《{name}》播放失败', { name: track.name }));
@@ -269,7 +271,7 @@ watch(
 }
 
 /* 手机 / 窄窗口 */
-@media (max-width: 899px) {
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
   .shell {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto;
