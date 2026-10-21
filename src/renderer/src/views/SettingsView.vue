@@ -16,13 +16,22 @@ import {
   installUpdate,
   saveImage as saveFile,
   isElectron,
+  isNativeApp,
   setDesktopLyrics,
   setDesktopLyricsLocked,
   updateStatus,
 } from '../platform';
 import { desktopLyrics } from '../desktop';
 import { netease } from '../services';
+import { isLockScreenLyricsOn, setLockScreenLyrics } from '../mediaSession';
 import { t, locale, LOCALES } from '../i18n';
+
+// ---- 锁屏歌词（Android App）----
+const lockLyrics = ref(isLockScreenLyricsOn());
+function toggleLockLyrics(on) {
+  lockLyrics.value = on;
+  setLockScreenLyrics(on);
+}
 
 // ---- 电脑版：版本和更新 ----
 const update = ref(null);
@@ -469,6 +478,23 @@ async function logout() {
             </button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div v-if="isNativeApp" class="group">
+      <h2>{{ $t('锁屏歌词') }}</h2>
+      <div class="row switch-row">
+        <span class="label">
+          {{ $t('锁屏和通知栏显示歌词') }}
+          <small>{{ $t('正在唱的那句会出现在锁屏、通知栏，连车上的蓝牙屏幕也看得到') }}</small>
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          class="switch"
+          :checked="lockLyrics"
+          @change="toggleLockLyrics($event.target.checked)"
+        />
       </div>
     </div>
 
