@@ -3,8 +3,8 @@
 // - 其他路径交给 @neteasecloudmusicapienhanced/api，默认带上大陆 realIP
 // - /song/url/match（解灰）自己实现，见下面 unblock()
 const crypto = require('crypto');
-const { findOnBilibili, BilibiliRateLimited } = require('./bilibili');
-const { findOnPublicSources } = require('./publicSources');
+const { findOnBilibili, checkBilibili, BilibiliRateLimited } = require('./bilibili');
+const { findOnPublicSources, checkPublicSources } = require('./publicSources');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -258,6 +258,20 @@ async function unblock(res, url, sources, { addsBilibiliReferer = false } = {}) 
   });
 }
 
+// 音源状态用的测试歌：网易云要 VIP 的歌（国际孤独等级，3:14），
+// 和网易云没有版权、要靠 B 站的歌在 B 站挑好的视频（晴天）
+const STATUS_SONG = { id: 2026303431, durationMs: 194000 };
+const STATUS_BVID = 'BV1BZbSzZEGT';
+
+/** 解灰的每个音源现在能不能用（设置页的「音源状态」，界面上只给管理员看） */
+async function unblockStatus(res) {
+  const [publicSources, bilibili] = await Promise.all([
+    checkPublicSources(STATUS_SONG.id, STATUS_SONG.durationMs),
+    checkBilibili(STATUS_BVID),
+  ]);
+  sendJson(res, 200, { code: 200, data: { sources: [...publicSources, bilibili], checkedAt: Date.now() } });
+}
+
 /**
  * 创建请求处理函数 (req, res) => Promise<void>
  * @param {object} [options]
@@ -342,6 +356,9 @@ function createHandler(options = {}) {
     stripBlockedParams(req, url);
     if (url.pathname === '/song/url/match') {
       return unblock(res, url, unmSources, { addsBilibiliReferer: options.addsBilibiliReferer });
+    }
+    if (url.pathname === '/unblock/status') {
+      return unblockStatus(res);
     }
     if (!url.searchParams.has('realIP')) {
       url.searchParams.set('realIP', realIP);

@@ -502,14 +502,15 @@ button:disabled {
     display: block;
     margin-bottom: 8px;
   }
+  /* 公仔小一点：太高的话（还没载入时是一片空白）会把登录按钮推到画面外 */
   .mobile-figure {
     display: block;
-    height: 200px;
-    margin-bottom: 16px;
+    height: min(140px, 18vh);
+    margin-bottom: 8px;
   }
   .panel {
     align-items: flex-start;
-    padding-top: 48px;
+    padding-top: 28px;
   }
 }
 </style>

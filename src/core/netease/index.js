@@ -160,6 +160,15 @@ export function createNetease(http) {
       }
     },
 
+    /**
+     * 解灰的每个音源现在能不能用（管理员在设置页看）
+     * @returns {Promise<{ sources: Array<{ name: string, ok: boolean, ms: number, rateLimitedAt?: number | null }>, checkedAt: number }>}
+     */
+    async unblockStatus() {
+      const data = await http.get('/unblock/status');
+      return data.data;
+    },
+
     /** 歌词原文：lrc 普通歌词、yrc 逐字歌词、translation 翻译、romaji 罗马音（交给 core/lyrics 的 buildLyrics） */
     async lyric(id) {
       const data = await http.get('/lyric/new', { id });

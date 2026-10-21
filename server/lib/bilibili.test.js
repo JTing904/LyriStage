@@ -60,6 +60,14 @@ describe('pickVideo', () => {
     expect(pickVideo(results, { name: '孤勇者', artists: ['陈奕迅'], durationMs: 240000 }).bvid).toBe('BV2');
   });
 
+  it('时长几乎一样的优先，就算播放量比较少（歌词才对得准）', () => {
+    const results = [
+      v('BV1', '4:35', 900000, 'a', '孤勇者 - 陈奕迅 无损'),
+      v('BV2', '4:31', 20000, 'b', '孤勇者 - 陈奕迅'),
+    ];
+    expect(pickVideo(results, { name: '孤勇者', artists: ['陈奕迅'], durationMs: 270000 }).bvid).toBe('BV2');
+  });
+
   it('没有一个像原曲就返回 null（宁可不播也不要播错歌）', () => {
     const results = [v('BV1', '5:17', 100, 'a', '晴天 MV'), v('BV2', '4:30', 100, 'b', '雨天 - 周杰伦')];
     expect(pickVideo(results, { name: '晴天', artists: ['周杰伦'], durationMs: 269000 })).toBeNull();

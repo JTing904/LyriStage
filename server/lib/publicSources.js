@@ -59,29 +59,69 @@ async function looksLikeFullSong(url, durationMs) {
 }
 
 /**
+ * 问一个音源要这首歌，拿到整首歌就回传网址
+ * @returns {Promise<string | null>}
+ */
+async function askSource(source, id, durationMs) {
+  const res = await fetch(source.url(id), {
+    redirect: 'manual',
+    headers: { 'User-Agent': UA },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  const raw = await audioUrlFrom(res);
+  if (!raw || !/^https?:\/\//.test(raw)) return null;
+  // 音源给的常常是 http 链接，HTTPS 网页里会被当成混合内容拦截
+  const url = raw.replace(/^http:\/\//, 'https://');
+  return (await looksLikeFullSong(url, durationMs)) ? url : null;
+}
+
+/**
  * 依次问每个公开音源，第一个拿到整首歌的就用
  * @param {number | string} id 网易云歌曲 ID
  * @param {{ durationMs?: number }} [song]
  * @returns {Promise<{ url: string, br: number | null, source: string } | null>}
  */
 async function findOnPublicSources(id, { durationMs } = {}) {
-  for (const source of SOURCES) {
+  for (const source of byHealth()) {
     try {
-      const res = await fetch(source.url(id), {
-        redirect: 'manual',
-        headers: { 'User-Agent': UA },
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
-      const raw = await audioUrlFrom(res);
-      if (!raw || !/^https?:\/\//.test(raw)) continue;
-      // 音源给的常常是 http 链接，HTTPS 网页里会被当成混合内容拦截
-      const url = raw.replace(/^http:\/\//, 'https://');
-      if (await looksLikeFullSong(url, durationMs)) return { url, br: null, source: source.name };
+      const url = await askSource(source, id, durationMs);
+      if (url) {
+        lastFailedAt.delete(source.name);
+        return { url, br: null, source: source.name };
+      }
     } catch {
-      // 这个音源挂了或太慢，试下一个
+      // 这个音源挂了或太慢（出错、超时），试下一个
+      lastFailedAt.set(source.name, Date.now());
     }
   }
   return null;
 }
 
-module.exports = { findOnPublicSources, audioUrlFrom };
+// 最近出错或超时的音源排到最后：不然排第一个的挂了，每首歌都要先白等它超时（6 秒）。
+// 注意"没有这首歌"不算出错（那是歌的问题，不是音源的问题）
+const FAILED_RECENTLY_MS = 10 * 60 * 1000;
+/** @type {Map<string, number>} */
+const lastFailedAt = new Map();
+function byHealth() {
+  const failedRecently = source => Date.now() - (lastFailedAt.get(source.name) ?? 0) < FAILED_RECENTLY_MS;
+  return [...SOURCES.filter(s => !failedRecently(s)), ...SOURCES.filter(failedRecently)];
+}
+
+/**
+ * 音源状态（管理员在设置页看）：每个音源都问一次同一首 VIP 歌，一起问
+ * @returns {Promise<Array<{ name: string, ok: boolean, ms: number }>>}
+ */
+function checkPublicSources(id, durationMs) {
+  return Promise.all(
+    SOURCES.map(async source => {
+      const started = Date.now();
+      const ok = await askSource(source, id, durationMs).then(Boolean, () => false);
+      // 顺便更新排序：测出来不能用的先排到后面
+      if (ok) lastFailedAt.delete(source.name);
+      else lastFailedAt.set(source.name, Date.now());
+      return { name: source.name, ok, ms: Date.now() - started };
+    })
+  );
+}
+
+module.exports = { findOnPublicSources, checkPublicSources, audioUrlFrom };

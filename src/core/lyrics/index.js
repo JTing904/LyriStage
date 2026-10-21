@@ -7,6 +7,7 @@ import { estimateWords } from './words';
 
 export { parseLrc, parseYrc, estimateWords };
 export { splitWords } from './words';
+export { findLrclibLyrics, hasTimedLyrics } from './lrclib';
 
 /**
  * @typedef {import('./yrc').Word} Word

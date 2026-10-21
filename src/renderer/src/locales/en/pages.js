@@ -71,6 +71,16 @@ export default {
   资料已更新: 'Profile updated',
   '保存失败：{error}': "Couldn't save: {error}",
   邀请朋友: 'Invite friends',
+  音源状态: 'Audio sources',
+  'VIP 歌和没版权的歌要靠这些音源。用一首 VIP 歌各测一次，测的是{route}的网络。':
+    'VIP songs and songs NetEase has no rights to play from these sources. Each one is tested with a VIP song, over the network of {route}.',
+  这台电脑: 'this computer',
+  '服务器（香港）': 'the server (Hong Kong)',
+  检查: 'Check',
+  '检查中…': 'Checking…',
+  可以用: 'Working',
+  不能用: 'Down',
+  '上次被要求验证：{time}': 'Last asked for a captcha: {time}',
   '每个邀请码只能用一次。生成后会自动复制，直接贴给朋友就好。':
     'Each invite code works once. It\'s copied automatically, so just paste it to your friend.',
   '生成中…': 'Generating…',

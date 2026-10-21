@@ -18,6 +18,8 @@ const TIMEOUT_MS = 8000;
 const SESSION_TTL_MS = 60 * 60 * 1000;
 /** 时长最多差几秒还算同一个版本 */
 const MAX_DURATION_DIFF_S = 6;
+/** 差这么少的优先：B 站的版本和网易云的时长差越多，歌词越可能快或慢几秒 */
+const CLOSE_DURATION_S = 2;
 
 const MIXIN_KEY_ENC_TAB = [
   46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49,
@@ -78,9 +80,17 @@ function rankVideos(results, song) {
     .map(v => ({
       ...v,
       hasArtist: artists.some(a => v.text.includes(a) || normalize(v.author || '').includes(a)),
+      // 时长差越多，越可能是别的版本（前面多一段、剪过），歌词会对不准
+      closeDuration: target ? Math.abs(v.seconds - target) <= CLOSE_DURATION_S : false,
     }));
 
-  return candidates.sort((a, b) => b.hasArtist - a.hasArtist || (b.play || 0) - (a.play || 0));
+  // 先看时长几乎一样（歌词才对得准），再看有没有歌手名，最后看播放量
+  return candidates.sort(
+    (a, b) =>
+      b.closeDuration - a.closeDuration ||
+      b.hasArtist - a.hasArtist ||
+      (b.play || 0) - (a.play || 0)
+  );
 }
 
 /** 最像原曲的那个，没有就是 null */
@@ -143,6 +153,9 @@ async function callApi(path, params) {
   return json.data;
 }
 
+/** 上次被要求人机验证的时间（音源状态显示用） */
+let rateLimitedAt = 0;
+
 /** B 站限制搜索（短时间搜太多次，要求人机验证）。过一阵子会自己解除 */
 class BilibiliRateLimited extends Error {
   constructor() {
@@ -180,7 +193,10 @@ function rememberVideos(key, bvids) {
 async function searchVideos(keyword) {
   const data = await callApi('/x/web-interface/wbi/search/type', { search_type: 'video', keyword });
   // 被风控时不给结果，只给一个 v_voucher（要人机验证）
-  if (data.v_voucher && !data.result) throw new BilibiliRateLimited();
+  if (data.v_voucher && !data.result) {
+    rateLimitedAt = Date.now();
+    throw new BilibiliRateLimited();
+  }
   return data.result || [];
 }
 
@@ -285,4 +301,14 @@ async function audioOf(bvid, needsNoReferer, mustMatch) {
   return null;
 }
 
-module.exports = { findOnBilibili, pickVideo, parseDuration, BilibiliRateLimited };
+/**
+ * 音源状态（管理员在设置页看）：拿一个已知的视频试着取音频。
+ * 不测搜索（搜索最容易被限制，测一次就少一次），只回报上次被要求人机验证是什么时候
+ */
+async function checkBilibili(bvid) {
+  const started = Date.now();
+  const ok = await audioOf(bvid, false).then(Boolean, () => false);
+  return { name: 'bilibili', ok, ms: Date.now() - started, rateLimitedAt: rateLimitedAt || null };
+}
+
+module.exports = { findOnBilibili, checkBilibili, pickVideo, parseDuration, BilibiliRateLimited };

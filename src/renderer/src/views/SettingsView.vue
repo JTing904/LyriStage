@@ -21,6 +21,7 @@ import {
   updateStatus,
 } from '../platform';
 import { desktopLyrics } from '../desktop';
+import { netease } from '../services';
 import { t, locale, LOCALES } from '../i18n';
 
 // ---- 电脑版：版本和更新 ----
@@ -51,6 +52,25 @@ const library = useLibraryStore();
 const theme = useThemeStore();
 const avatar = useAvatarStore();
 const AVATAR_CHOICES = [...OUTFITS, { id: 'auto', label: '按时间自动换' }];
+
+// ---- 音源状态（管理员）：解灰靠别人的免费服务，坏了要第一个知道 ----
+const sourceStatus = ref(null);
+const sourceChecking = ref(false);
+const sourceError = ref('');
+async function checkSources() {
+  sourceChecking.value = true;
+  sourceError.value = '';
+  try {
+    sourceStatus.value = await netease.unblockStatus();
+  } catch (err) {
+    sourceError.value = err.message;
+  } finally {
+    sourceChecking.value = false;
+  }
+}
+const SOURCE_LABEL = { bilibili: 'B 站' };
+/** 测的是这个 App 走的那条路：电脑版是自己电脑的网络，手机和网页是 Vercel 的服务器（香港） */
+const sourceRoute = isElectron ? '这台电脑' : '服务器（香港）';
 
 // ---- 邀请朋友（管理员）----
 const invites = ref([]);
@@ -369,6 +389,32 @@ async function logout() {
         </div>
       </form>
     </dialog>
+
+    <div v-if="auth.admin" class="group">
+      <h2>{{ $t('音源状态') }}</h2>
+      <div class="row source-row">
+        <div class="invite-top">
+          <p class="hint">
+            {{ $t('VIP 歌和没版权的歌要靠这些音源。用一首 VIP 歌各测一次，测的是{route}的网络。', { route: $t(sourceRoute) }) }}
+          </p>
+          <button class="ghost" :disabled="sourceChecking" @click="checkSources">
+            {{ sourceChecking ? $t('检查中…') : $t('检查') }}
+          </button>
+        </div>
+        <p v-if="sourceError" class="invite-error" role="alert">{{ sourceError }}</p>
+        <ul v-if="sourceStatus" class="source-list">
+          <li v-for="s in sourceStatus.sources" :key="s.name" :class="{ down: !s.ok }">
+            <span class="dot" aria-hidden="true" />
+            <span class="source-name">{{ SOURCE_LABEL[s.name] ?? s.name }}</span>
+            <span class="status">{{ s.ok ? $t('可以用') : $t('不能用') }}</span>
+            <span class="date">{{ (s.ms / 1000).toFixed(1) }}s</span>
+            <span v-if="s.rateLimitedAt" class="source-note">
+              {{ $t('上次被要求验证：{time}', { time: new Date(s.rateLimitedAt).toLocaleString() }) }}
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
 
     <div v-if="auth.admin" class="group">
       <h2>{{ $t('邀请朋友') }}</h2>
@@ -871,6 +917,57 @@ code {
   margin: 0;
   font-size: 13px;
   color: var(--accent);
+}
+/* 音源状态：绿点可以用，红点不能用 */
+.source-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+.source-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+.source-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.source-list li:last-child {
+  border-bottom: 0;
+}
+.source-list .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2fa463;
+}
+.source-list li.down .dot {
+  background: var(--accent);
+}
+.source-name {
+  flex: 1;
+  font-weight: 700;
+}
+.source-list .status,
+.source-list .date {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.source-list li.down .status {
+  color: var(--accent);
+  font-weight: 700;
+}
+.source-note {
+  flex-basis: 100%;
+  padding-left: 20px;
+  font-size: 12px;
+  color: var(--text-faint);
 }
 .invite-list {
   margin: 0;

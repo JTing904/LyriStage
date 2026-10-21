@@ -1,7 +1,7 @@
 // 把 core 里的模块按当前平台的配置组装好，界面直接 import 这里
 import { createHttp } from '@core/http/client';
 import { createNetease } from '@core/netease';
-import { buildLyrics } from '@core/lyrics';
+import { buildLyrics, findLrclibLyrics, hasTimedLyrics } from '@core/lyrics';
 import { createPlayer } from '@core/player/player';
 import { createHtmlAudio } from '@core/player/audio';
 import { createCache } from '@core/cache';
@@ -97,13 +97,28 @@ const lyricCache = createCache(createDexieStore('lyristage-lyrics'), {
 });
 
 /**
+ * 歌词原文：网易云的；网易云没有带时间的歌词，就去 LRCLIB 找（英文、日文歌常常有）
+ * @param {{ id: number, name?: string, ar?: Array<{ name: string }>, al?: { name?: string }, dt?: number }} track
+ */
+async function loadLyrics(track) {
+  const raw = await netease.lyric(track.id);
+  if (hasTimedLyrics(raw) || !track.name) return raw;
+  const lrc = await findLrclibLyrics({
+    name: track.name,
+    artists: (track.ar ?? []).map(a => a.name),
+    album: track.al?.name,
+    durationMs: track.dt,
+  }).catch(() => null); // LRCLIB 连不上就当没有
+  return lrc ? { ...raw, lrc, source: 'lrclib' } : raw;
+}
+
+/**
  * 整理好的歌词（core/lyrics 的 Lyrics 格式）
  * @param {{ id: number, dt?: number }} track
  */
 export async function getLyrics(track) {
-  const raw = await lyricCache.getOrLoad(`lyric:${track.id}`, () =>
-    netease.lyric(track.id)
-  );
+  // v2：加了 LRCLIB 以后换 key，以前存的"没有歌词"不要再用 7 天
+  const raw = await lyricCache.getOrLoad(`lyric:v2:${track.id}`, () => loadLyrics(track));
   return buildLyrics(raw, { durationMs: track.dt });
 }
 
