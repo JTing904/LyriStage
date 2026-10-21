@@ -3,7 +3,7 @@
 // 每页一个颜色，每页都能单独存成图片分享。
 // LyriStage 自己的特色：「今年你最常听到的一句」——年度歌曲里重复最多次的那句歌词
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { listHistoryBetween } from '@core/data';
+import { listHistoryBetween, listMonthlyHistory } from '@core/data';
 import { buildReport, minutesChange, mostRepeatedLine } from '@core/report';
 import { getLyrics } from '../services';
 import { getPalette, rgb } from '../lyric-stage/palette';
@@ -29,12 +29,16 @@ async function load() {
   loading.value = true;
   error.value = '';
   try {
-    const [now, before] = await Promise.all([
+    const [now, before, beforeMonthly] = await Promise.all([
       listHistoryBetween(new Date(year, 0, 1), new Date(year + 1, 0, 1)),
       listHistoryBetween(new Date(year - 1, 0, 1), new Date(year, 0, 1)),
+      // 去年较早的月份可能已经整理成每月小结（compact_play_history）
+      listMonthlyHistory(new Date(year - 1, 0, 1), new Date(year, 0, 1)),
     ]);
     report.value = buildReport(now);
-    lastYearMinutes.value = buildReport(before).totalMinutes;
+    lastYearMinutes.value =
+      buildReport(before).totalMinutes +
+      Math.round(beforeMonthly.reduce((sum, m) => sum + Number(m.listened_seconds), 0) / 60);
     const top = report.value.topTracks[0]?.track;
     const [lyrics, songPalette, artistPalette] = await Promise.all([
       top ? getLyrics(top).catch(() => null) : null,

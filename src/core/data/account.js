@@ -2,7 +2,7 @@
 // 账号：导出自己的资料、删除账号（设置页"隐私"）
 import { requireSupabase, unwrap } from './supabase';
 import { listLikedTracks, listPlaylists, getPlaylist } from './library';
-import { listDislikedTrackIds, listHistoryBetween } from './history';
+import { listDislikedTrackIds, listHistoryBetween, listMonthlyHistory } from './history';
 import { removeMyAvatars } from './profile';
 
 const PAGE = 1000;
@@ -32,6 +32,8 @@ export async function exportMyData() {
     listDislikedTrackIds(),
     listHistoryBetween(new Date(0), new Date(Date.now() + 86400 * 1000), { maxRows: 200000 }),
   ]);
+  // 一年多以前的听歌记录已经整理成每月小结
+  const monthlyHistory = await listMonthlyHistory(new Date(0), new Date(Date.now() + 86400 * 1000));
   const fullPlaylists = [];
   for (const p of playlists) fullPlaylists.push(await getPlaylist(p.id));
   return {
@@ -48,6 +50,7 @@ export async function exportMyData() {
     playlists: fullPlaylists,
     dislikedTrackIds: disliked,
     playHistory: history,
+    playHistoryMonthly: monthlyHistory,
   };
 }
 

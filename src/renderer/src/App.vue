@@ -6,6 +6,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ApiError } from '@core/http/client';
+import { adminStorageUsage } from '@core/data';
 import { isUnavailable, isUnblockRateLimited } from '@core/netease';
 import { createFmSource, getLyrics } from './services';
 import { usePlayer } from './composables/usePlayer';
@@ -112,6 +113,30 @@ findAndroidUpdate().then(update => {
     duration: 20000,
   });
 });
+
+// 管理员：数据库快满时提醒（免费方案 500 MB；每天最多检查一次）
+const STORAGE_CHECKED_KEY = 'lyristage:storage-checked';
+watch(
+  () => auth.admin,
+  async admin => {
+    if (!admin) return;
+    try {
+      if (Date.now() - Number(localStorage.getItem(STORAGE_CHECKED_KEY)) < 86400 * 1000) return;
+      localStorage.setItem(STORAGE_CHECKED_KEY, String(Date.now()));
+      const { total } = await adminStorageUsage();
+      const percent = Math.round((total / (500 * 1024 * 1024)) * 100);
+      if (percent >= 70) {
+        notice.show(t('数据库已经用了 {p}%，快满了', { p: percent }), {
+          action: { label: t('查看'), run: () => router.push('/settings') },
+          duration: 20000,
+        });
+      }
+    } catch {
+      // 查不到就算了
+    }
+  },
+  { immediate: true }
+);
 
 // 键盘：空格 播放 / 暂停，Ctrl + ← → 上一首 / 下一首（在输入框里打字、按着按钮时不算；歌词舞台有自己的）
 function onKey(event) {

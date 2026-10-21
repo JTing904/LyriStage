@@ -119,6 +119,7 @@ export default {
     'The free Supabase database holds 500 MB. Listening history keeps growing, so tidy it up when it gets close.',
   '查看': 'Check',
   '用了 {used} / 500 MB': '{used} of 500 MB used',
+  '数据库已经用了 {p}%，快满了': 'The database is {p}% full',
   '听歌记录': 'Listening history',
   '我喜欢': 'Liked songs',
   '歌单里的歌': 'Playlist songs',

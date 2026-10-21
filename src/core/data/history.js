@@ -92,12 +92,35 @@ export async function playRanking(range = 'week', maxRows = 100) {
 }
 
 export async function clearHistory() {
-  unwrap(
-    await requireSupabase()
-      .from('play_history')
-      .delete()
-      .gte('played_at', '1970-01-01')
-  );
+  const db = requireSupabase();
+  unwrap(await db.from('play_history').delete().gte('played_at', '1970-01-01'));
+  // 一年多以前整理成的每月小结也一起删（还没执行 2026-10-26 那份 SQL 时没有这两张表，就跳过）
+  for (const table of ['play_history_monthly', 'play_hours_monthly']) {
+    const { error } = await db.from(table).delete().gte('month', '1970-01-01');
+    if (error && !isMissingTable(error)) throw error;
+  }
+}
+
+/** 表还不存在（数据库还没执行对应的 SQL） */
+const isMissingTable = error =>
+  error?.code === '42P01' || error?.code === 'PGRST205' || /does not exist|schema cache/.test(error?.message ?? '');
+
+/**
+ * 一年多以前整理成的每月小结（compact_play_history 做的）
+ * @returns {Promise<Array<{ month: string, source: string, track_id: string, track: object, plays: number, skips: number, listened_seconds: number }>>}
+ */
+export async function listMonthlyHistory(from, to) {
+  const { data, error } = await requireSupabase()
+    .from('play_history_monthly')
+    .select('month, source, track_id, track, plays, skips, listened_seconds')
+    .gte('month', from.toISOString().slice(0, 10))
+    .lt('month', to.toISOString().slice(0, 10))
+    .order('month');
+  if (error) {
+    if (isMissingTable(error)) return [];
+    throw error;
+  }
+  return data;
 }
 
 // 不喜欢 --------------------------------------------------------------------------
