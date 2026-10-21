@@ -11,7 +11,7 @@ Nine full-screen lyric stages, a daily mix made from what you love, and rooms wh
 
 [Website](https://jting904.github.io/LyriStage/) · [Download](https://github.com/JTing904/LyriStage/releases/latest) · [Web app](https://lyristage.vercel.app) · [中文](README.zh-CN.md)
 
-![Version](https://img.shields.io/badge/version-2.1.1-ff3b5c) ![License](https://img.shields.io/badge/code-MIT-blue) ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
+![Version](https://img.shields.io/badge/version-2.1.2-ff3b5c) ![License](https://img.shields.io/badge/code-MIT-blue) ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
 <a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage trailer: watch it on the website"></a>
 
@@ -23,12 +23,15 @@ Nine full-screen lyric stages, a daily mix made from what you love, and rooms wh
 - **Share lyrics.** Pick 1-4 lines and turn them into a story-sized card in the cover's colours.
 - **Search by lyrics.** Remember only one line? Search it.
 - **Daily Mix and Personal FM.** A new playlist every morning, picked by LyriStage's own recommendation engine from your listening. Dislike a song on FM and you'll hear fewer like it. No NetEase account needed.
-- **Listening report.** Your month or year in music: minutes, top songs and artists, when you listen most. Shareable as an image.
+- **Listening report and Year in Review.** Your month or year in music, plus a story-style year in review with your song of the year and the lyric you heard most. Every page can be shared as an image.
+- **Song radio.** Start a station from any song: similar songs, ranked by your taste.
 - **Listen Together.** Open a room, share the six-letter code, and everyone hears the same song at the same moment. Chat, send reactions, and hand the room to someone else.
+- **Friends.** Add friends with a code (they approve it) and see what they're listening to. Turn sharing off or use a private session any time.
+- **Shared playlists.** Invite others to add songs; each song shows who added it.
 - **Queue and sleep timer.** Play next, add to queue, drag to reorder; stop after 15/30/60 minutes or at the end of the song.
 - **Your own library.** Likes, playlists, listening history, profile name and photo, synced between PC and phone. Export your data or delete your account from Settings.
 - **Windows.** Tray icon, desktop lyrics while the app is minimized, global shortcuts, automatic updates, a 3D figurine on the home page.
-- **Android.** Background playback, lock-screen and notification controls.
+- **Android.** Background playback, lock-screen and notification controls, lyrics on the lock screen, full-screen lyrics in landscape.
 - **iPhone.** A web app you can add to the Home Screen.
 - **中文 / English**, light and dark themes.
 
@@ -100,7 +103,9 @@ If Electron fails with `Cannot read properties of undefined` inside VS Code, the
 2. In the SQL Editor, run the files in [supabase/migrations](supabase/migrations) in order:
    `init` (user data), `invites` (invite-only access), `listen_together`, `avatars`,
    `security` (host-only broadcast in rooms, safer invite codes), `room_chat` and `room_chat_fix` (Listen Together chat),
-   `room_handover`, `delete_account` (delete your account from Settings).
+   `room_handover`, `delete_account` (delete your account from Settings), `bilibili_picks` and `bilibili_picks_grant`,
+   `friends_and_shared_playlists` and `playlist_people_profiles`, `history_compaction` (monthly clean-up of old history;
+   needs the `pg_cron` extension), `slim_play_history`.
 3. Authentication → Providers: enable Email (and GitHub / Google if you want them).
    Under URL Configuration add `lyristage://auth/callback` (desktop sign-in) and `http://localhost:5173/**` (web dev) to Redirect URLs.
 4. Put the project URL and anon key in `.env` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).

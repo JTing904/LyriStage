@@ -11,7 +11,7 @@
 
 [官网](https://jting904.github.io/LyriStage/) · [下载](https://github.com/JTing904/LyriStage/releases/latest) · [网页版](https://lyristage.vercel.app) · [English](README.md)
 
-![版本](https://img.shields.io/badge/version-2.1.1-ff3b5c) ![许可证](https://img.shields.io/badge/code-MIT-blue) ![平台](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
+![版本](https://img.shields.io/badge/version-2.1.2-ff3b5c) ![许可证](https://img.shields.io/badge/code-MIT-blue) ![平台](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
 <a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage 宣传片：到官网观看"></a>
 
@@ -23,12 +23,15 @@
 - **歌词分享卡片**：选 1 到 4 句，用封面颜色做成限动尺寸的图片。
 - **用歌词找歌**：只记得一句歌词也搜得到。
 - **每日推荐、私人 FM**：每天早上一份新歌单，由 LyriStage 自己的推荐算法根据你的听歌记录挑选。FM 按「不喜欢」以后就少推荐这类歌。不需要网易云账号。
-- **听歌报告**：这个月、今年听了多久、最常听的歌和歌手、最常在几点听，可以做成图片分享。
+- **听歌报告、年度回顾**：这个月、今年听了多久、最常听的歌和歌手；年度回顾像限时动态一样一页一页看，有年度歌曲、今年最常听到的一句歌词，每页都能做成图片分享。
+- **相似歌曲电台**：从任何一首歌开始，接着播相似的歌，按你的口味排。
 - **一起听**：开一个房间，把六位房间码发给朋友，大家同一时间听同一首。可以聊天、送表情，房主也能把房间交给别人。
+- **好友**：用好友码加好友（要对方同意），看得到好友在听什么；随时可以关掉分享或开私人模式。
+- **共同歌单**：邀请朋友一起加歌，每首歌会显示是谁加的。
 - **播放队列、睡眠定时**：下一首播放、加入队列、拖动排序；15 / 30 / 60 分钟后或这首播完就停。
 - **自己的音乐库**：我喜欢、歌单、听歌记录、个人名字和头像，电脑和手机同步。在设置页可以导出资料、删除账号。
 - **Windows**：托盘、最小化时的桌面歌词、全局快捷键、自动更新、首页的 3D 公仔。
-- **Android**：后台播放、锁屏和通知栏控制。
+- **Android**：后台播放、锁屏和通知栏控制、锁屏歌词、横屏全屏看歌词。
 - **iPhone**：网页版，可以加到主屏幕。
 - **中文 / English**，深色、浅色主题。
 
@@ -100,7 +103,9 @@ npm run web:dev           # 网页版：http://localhost:5173（同一个 Wi-Fi 
 2. 在 SQL Editor 里按顺序执行 [supabase/migrations](supabase/migrations) 的文件：
    `init`（用户数据）、`invites`（邀请制）、`listen_together`、`avatars`、
    `security`（一起听只有房主能广播、更安全的邀请码）、`room_chat` 和 `room_chat_fix`（一起听聊天）、
-   `room_handover`（房主转让）、`delete_account`（在设置页删除账号）。
+   `room_handover`（房主转让）、`delete_account`（在设置页删除账号）、`bilibili_picks` 和 `bilibili_picks_grant`、
+   `friends_and_shared_playlists` 和 `playlist_people_profiles`（好友、共同歌单）、
+   `history_compaction`（每月自动整理旧的听歌记录，要先开启 `pg_cron`）、`slim_play_history`（听歌记录瘦身）。
 3. Authentication → Providers：打开 Email（要 GitHub / Google 登录的话也打开）。
    在 URL Configuration 的 Redirect URLs 加上 `lyristage://auth/callback`（电脑版登录）和 `http://localhost:5173/**`（网页版开发）。
 4. 把项目网址和 anon key 填进 `.env`（`VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`）。
