@@ -120,6 +120,12 @@ img {
   margin: 0 auto;
   padding: 24px clamp(16px, 3vw, 40px) 48px;
 }
+/* 手机：区块之间不要空太多 */
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
+  .page {
+    gap: 20px;
+  }
+}
 .page-state {
   margin: 0;
   padding: 64px 0;

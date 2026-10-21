@@ -218,10 +218,14 @@ onBeforeUnmount(() => {
   display: none;
 }
 @media (pointer: coarse) {
+  /* 提示线在最上面，按钮列往下让一点，窄屏时才不会和右边的按钮叠在一起 */
+  .stage .topbar {
+    top: calc(env(safe-area-inset-top) + 12px);
+  }
   .grabber {
     position: absolute;
     z-index: 10;
-    top: calc(env(safe-area-inset-top) + 6px);
+    top: calc(env(safe-area-inset-top) + 5px);
     left: 50%;
     display: block;
     width: 36px;
@@ -359,7 +363,7 @@ button:focus-visible {
 .picker {
   position: absolute;
   z-index: 11;
-  top: calc(env(safe-area-inset-top) + var(--titlebar-height) + 8px);
+  top: calc(env(safe-area-inset-top) + var(--titlebar-height) + 20px);
   right: calc(12px + env(safe-area-inset-right));
 }
 

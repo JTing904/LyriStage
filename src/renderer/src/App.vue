@@ -3,7 +3,7 @@
 // - 电脑（宽 ≥ 900px）：左边侧边栏 + 中间内容 + 底部完整播放条
 // - 手机（窄，或手机横过来：矮又是触控）：内容 + 迷你播放条 + 底部 Tab
 // 歌词舞台是盖在最上面的全屏层
-import { onUnmounted, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ApiError } from '@core/http/client';
 import { isUnavailable, isUnblockRateLimited } from '@core/netease';
@@ -20,6 +20,7 @@ import LoginPrompt from './components/LoginPrompt.vue';
 import AppSidebar from './components/AppSidebar.vue';
 import BottomTabs from './components/BottomTabs.vue';
 import MiniPlayer from './components/MiniPlayer.vue';
+import MobileBackBar from './components/MobileBackBar.vue';
 import PlayerBar from './components/PlayerBar.vue';
 import LyricStage from './lyric-stage/LyricStage.vue';
 import QueuePanel from './components/QueuePanel.vue';
@@ -130,8 +131,20 @@ onBackButton(() => {
 const content = ref(null);
 watch(
   () => route.fullPath,
-  () => content.value?.scrollTo({ top: 0 })
+  () => {
+    content.value?.scrollTo({ top: 0 });
+    scrolled.value = false;
+  }
 );
+
+// 手机：底部 Tab 的四个主页面以外（歌手、歌单、设置…）顶部要有返回列；
+// 往下滑过页头后，返回列变实心并显示名字
+const TAB_PAGES = ['home', 'search', 'library', 'room'];
+const showBackBar = computed(() => !TAB_PAGES.includes(String(route.name)));
+const scrolled = ref(false);
+function onContentScroll() {
+  scrolled.value = (content.value?.scrollTop ?? 0) > 180;
+}
 </script>
 
 <template>
@@ -144,7 +157,8 @@ watch(
   <div v-else class="shell" :class="{ electron: isElectron }">
     <div v-if="isElectron" class="drag-strip" aria-hidden="true" />
     <AppSidebar class="area-side" />
-    <main ref="content" class="area-main">
+    <main ref="content" class="area-main" @scroll.passive="onContentScroll">
+      <MobileBackBar v-if="showBackBar" :scrolled="scrolled" />
       <RouterView />
     </main>
     <PlayerBar
@@ -287,6 +301,24 @@ watch(
     grid-area: mobile;
     display: block;
     background: var(--bg);
+  }
+}
+/* 手机横屏：画面矮，Tab 改成左边一条直的，迷你播放条留在底部，内容才不会被挤扁 */
+@media (pointer: coarse) and (max-height: 600px) and (orientation: landscape) {
+  .shell {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'tabs main'
+      'tabs mini';
+  }
+  .area-mobile {
+    display: contents;
+  }
+  .area-mobile > .tabs {
+    grid-area: tabs;
+  }
+  .area-mobile > .mini {
+    grid-area: mini;
   }
 }
 </style>

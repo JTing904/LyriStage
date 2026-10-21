@@ -1,8 +1,9 @@
 <script setup>
 // 歌单 / 专辑 / 歌手 / 每日推荐的页头：封面、类型、名字、介绍、播放按钮。
 // 背景是封面的主色往下渐变（深浅主题都适用）
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { getPalette, rgb } from '../lyric-stage/palette';
+import { useUiStore } from '../stores/ui';
 import Cover from './Cover.vue';
 import Icon from './Icon.vue';
 
@@ -31,6 +32,17 @@ watch(
   { immediate: true }
 );
 
+// 手机：页头滑出画面后，顶部的返回列显示名字
+const ui = useUiStore();
+watch(
+  () => props.title,
+  title => (ui.pageTitle = title),
+  { immediate: true }
+);
+onBeforeUnmount(() => {
+  if (ui.pageTitle === props.title) ui.pageTitle = '';
+});
+
 const expanded = ref(false);
 const longDescription = computed(() => props.description.length > 90);
 </script>
@@ -57,13 +69,24 @@ const longDescription = computed(() => props.description.length > 90);
       </button>
       <p v-if="meta" class="meta">{{ meta }}</p>
       <div class="actions">
-        <button class="play" :disabled="!playable" @click="emit('play')">
-          <Icon name="play" :size="20" />{{ $t('播放全部') }}
-        </button>
-        <button class="shuffle" :disabled="!playable" @click="emit('shuffle')">
-          <Icon name="shuffle" :size="18" />{{ $t('随机播放') }}
-        </button>
+        <!-- 手机：随机播放只留图标，播放全部是右边的大圆钮（文字收起来，给读屏用 aria-label） -->
         <slot name="actions" />
+        <button
+          class="shuffle"
+          :disabled="!playable"
+          :aria-label="$t('随机播放')"
+          @click="emit('shuffle')"
+        >
+          <Icon name="shuffle" :size="18" /><span class="label">{{ $t('随机播放') }}</span>
+        </button>
+        <button
+          class="play"
+          :disabled="!playable"
+          :aria-label="$t('播放全部')"
+          @click="emit('play')"
+        >
+          <Icon name="play" :size="20" /><span class="label">{{ $t('播放全部') }}</span>
+        </button>
       </div>
     </div>
   </header>
@@ -181,22 +204,100 @@ h1 {
   border-color: var(--text-dim);
 }
 
+/* 电脑：播放全部在最前面 */
+.play {
+  order: -2;
+}
+.shuffle {
+  order: -1;
+}
+
+/* 手机（参考 Spotify）：封面小一点、置中；名字靠左；
+   操作列：自定的按钮在左，随机播放（图标）+ 播放（大圆钮）在右，拇指按得到 */
 @media (max-width: 640px) {
   .collection-header {
     flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    padding-top: 32px;
-    text-align: center;
+    align-items: stretch;
+    gap: 16px;
+    /* 顶部让出返回列（52px） */
+    padding-top: 56px;
+    padding-bottom: 8px;
   }
   .cover {
-    width: min(220px, 60vw);
+    align-self: center;
+    width: min(200px, 52vw);
   }
   .info {
-    align-items: center;
+    gap: 6px;
+  }
+  .kind {
+    display: none;
+  }
+  h1 {
+    font-size: clamp(22px, 6.4vw, 28px);
+    line-height: 1.2;
+  }
+  .description {
+    font-size: 13px;
+  }
+  .meta {
+    font-size: 13px;
   }
   .actions {
+    align-self: stretch;
+    align-items: center;
+    flex-wrap: nowrap;
+    margin-top: 4px;
+  }
+  .play,
+  .shuffle {
+    order: 0;
+  }
+  .actions :slotted(button) {
+    height: 36px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+  .shuffle {
+    width: 44px;
+    padding: 0;
     justify-content: center;
+    margin-left: auto;
+  }
+  .play {
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    justify-content: center;
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .actions .label {
+    display: none;
+  }
+}
+
+/* 手机横屏：画面矮，封面放左边、缩小 */
+@media (pointer: coarse) and (max-height: 600px) and (orientation: landscape) {
+  .collection-header {
+    align-items: center;
+    gap: 20px;
+    padding-top: 56px;
+    padding-bottom: 8px;
+  }
+  .cover {
+    width: 120px;
+  }
+  .kind {
+    display: none;
+  }
+  h1 {
+    font-size: 26px;
+  }
+  .actions button,
+  .actions :slotted(button) {
+    height: 38px;
+    padding: 0 16px;
+    font-size: 14px;
   }
 }
 </style>

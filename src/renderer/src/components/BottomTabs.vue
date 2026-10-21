@@ -48,4 +48,17 @@ const TABS = [
   color: var(--text);
   font-weight: 700;
 }
+/* 手机横屏：变成左边一条直的（App.vue 把它放到左边） */
+@media (pointer: coarse) and (max-height: 600px) and (orientation: landscape) {
+  .tabs {
+    grid-template-columns: none;
+    grid-auto-rows: 60px;
+    align-content: center;
+    width: 76px;
+    height: auto;
+    padding-bottom: 0;
+    border-top: 0;
+    border-right: 1px solid var(--line);
+  }
+}
 </style>

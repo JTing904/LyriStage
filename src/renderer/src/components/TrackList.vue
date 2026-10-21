@@ -521,6 +521,18 @@ onBeforeUnmount(() => {
   .time {
     display: none;
   }
+  /* 「多选」那一列不要占太多位置；多选时固定在顶部，让出返回列 */
+  .toolbar {
+    min-height: 32px;
+    margin-bottom: 0;
+  }
+  .toolbar:not(.active) .tool {
+    padding: 4px 12px;
+    font-size: 12px;
+  }
+  .toolbar.active {
+    top: 56px;
+  }
   /* 手机多选：勾选框要看得到 */
   .selecting .track:not(.head) {
     grid-template-columns: 28px minmax(0, 1fr);
