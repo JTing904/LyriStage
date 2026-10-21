@@ -5,6 +5,7 @@ import { buildLyrics, findLrclibLyrics, hasTimedLyrics } from '@core/lyrics';
 import { createPlayer } from '@core/player/player';
 import { createHtmlAudio } from '@core/player/audio';
 import { createAudioEffects } from './audioEffects';
+import { connectWidget } from './widget';
 import { createCache } from '@core/cache';
 import { createDexieStore } from '@core/cache/dexie';
 import {
@@ -160,6 +161,7 @@ export const audioEffects = createAudioEffects(audio);
 // 预先载入下一首的歌词（存进歌词缓存，切过去时马上有）
 player.on('prefetch', track => getLyrics(track).catch(() => {}));
 connectMediaSession(player, { getLyrics });
+connectWidget(player, { getLyrics });
 
 // 开发时：这个文件或它用到的任何文件（core/ 里的播放器、歌词解析…）改了，
 // Vite 会重新执行这个文件、建一个新的播放器，旧的如果正在播放会继续响，变成两首歌一起播。

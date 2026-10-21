@@ -4,4 +4,14 @@
     <string name="title_activity_main">LyriStage</string>
     <string name="package_name">com.jting904.lyristage</string>
     <string name="custom_url_scheme">com.jting904.lyristage</string>
+
+    <!-- 桌面小组件 -->
+    <string name="widget_label">LyriStage 正在播放</string>
+    <string name="widget_description">歌名、播放控制，拉高显示歌词</string>
+    <string name="widget_nothing_playing">还没有在播放的歌</string>
+    <string name="widget_open">打开 LyriStage</string>
+    <string name="widget_play">播放</string>
+    <string name="widget_pause">暂停</string>
+    <string name="widget_prev">上一首</string>
+    <string name="widget_next">下一首</string>
 </resources>

@@ -24,11 +24,16 @@ import {
 import { desktopLyrics } from '../desktop';
 import { netease, audioEffects } from '../services';
 import EqualizerPanel from '../components/EqualizerPanel.vue';
+import { pinWidget } from '../widget';
 import { isLockScreenLyricsOn, setLockScreenLyrics } from '../mediaSession';
 import { t, locale, LOCALES } from '../i18n';
 
 // ---- 锁屏歌词（Android App）----
 const lockLyrics = ref(isLockScreenLyricsOn());
+const widgetHint = ref('');
+async function addWidget() {
+  widgetHint.value = (await pinWidget()) ? '' : t('长按桌面空白处 → 小组件 → LyriStage');
+}
 function toggleLockLyrics(on) {
   lockLyrics.value = on;
   setLockScreenLyrics(on);
@@ -542,6 +547,17 @@ async function logout() {
           :checked="lockLyrics"
           @change="toggleLockLyrics($event.target.checked)"
         />
+      </div>
+    </div>
+
+    <div v-if="isNativeApp" class="group">
+      <h2>{{ $t('桌面小组件') }}</h2>
+      <div class="row switch-row">
+        <span class="label">
+          {{ $t('正在播放小组件') }}
+          <small>{{ widgetHint || $t('在桌面播放、切歌，拉高显示歌词') }}</small>
+        </span>
+        <button class="primary" @click="addWidget">{{ $t('加到桌面') }}</button>
       </div>
     </div>
 

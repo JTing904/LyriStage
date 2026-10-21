@@ -138,6 +138,13 @@ export default {
   锁屏歌词: 'Lock screen lyrics',
   锁屏和通知栏显示歌词: 'Show lyrics on the lock screen',
   '车上的蓝牙屏幕也看得到': 'Also shows on your car’s Bluetooth display',
+  // ---- 桌面小组件（设置，Android） ----
+  桌面小组件: 'Home screen widget',
+  正在播放小组件: 'Now Playing widget',
+  '在桌面播放、切歌，拉高显示歌词': 'Control playback from your home screen; make it taller to see lyrics',
+  加到桌面: 'Add',
+  '长按桌面空白处 → 小组件 → LyriStage': 'Long-press your home screen → Widgets → LyriStage',
+
   // ---- 均衡器（设置 → 音效） ----
   音效: 'Sound',
   均衡器: 'Equalizer',
