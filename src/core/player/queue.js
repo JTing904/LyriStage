@@ -161,6 +161,12 @@ export class Queue {
     return this.order.slice(this.pos + 1).map(i => this.tracks[i]);
   }
 
+  /** 歌单里已经播过的歌（海报墙用）；正在播插队的歌时，插队前那首也算播过 */
+  get played() {
+    const end = this.extra ? this.pos + 1 : this.pos;
+    return this.order.slice(0, Math.max(0, end)).map(i => this.tracks[i]);
+  }
+
   /** @param {'queued' | 'list'} section */
   remove(section, index) {
     if (section === 'queued') this.upNext.splice(index, 1);
@@ -185,10 +191,17 @@ export class Queue {
    * 直接播接下来的某一首：
    * - 插进来的歌：从 upNext 拿出来播，其他插队的歌留着
    * - 歌单里的：跳过中间的歌（插队的歌还是会先播）
-   * @param {'queued' | 'list'} section
+   * - 播过的（'played'）：回到那一首，后面照歌单顺序接着播
+   * @param {'queued' | 'list' | 'played'} section
    * @returns {Track | null}
    */
   playFromUpcoming(section, index) {
+    if (section === 'played') {
+      if (index < 0 || index >= this.played.length) return this.current;
+      this.extra = null;
+      this.pos = index;
+      return this.current;
+    }
     if (section === 'queued') {
       const [track] = this.upNext.splice(index, 1);
       if (!track) return this.current;

@@ -15,6 +15,12 @@ export default {
     'Nothing else is queued. Choose "Play next" or "Add to queue" from a song\'s ⋯ menu and it will show up here.',
   更多: 'More',
   '更多：{name}': 'More: {name}',
+  // 海报墙
+  海报墙: 'Poster wall',
+  '播放队列 · {n} 首': 'Queue · {n} song | Queue · {n} songs',
+  关灯: 'Lights off',
+  正在播: 'Now playing',
+  播放队列是空的: 'The queue is empty',
   下一首播放: 'Play next',
   加入播放队列: 'Add to queue',
   相似歌曲电台: 'Song radio',

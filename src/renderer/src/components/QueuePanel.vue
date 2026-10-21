@@ -38,6 +38,10 @@ watch(
   { immediate: true }
 );
 const close = () => (ui.queueOpen = false);
+function openWall() {
+  close();
+  ui.wallOpen = true;
+}
 
 // ---- 拖动排序 ----
 const scroller = ref(null);
@@ -119,6 +123,9 @@ const SLEEP_OPTIONS = [15, 30, 60];
     <div class="panel">
       <header class="head">
         <h2>{{ $t('播放队列') }}</h2>
+        <button v-if="view.mode !== 'fm' && view.current" class="wall-btn" @click="openWall">
+          <Icon name="grid" :size="16" />{{ $t('海报墙') }}
+        </button>
         <button class="icon-btn" :aria-label="$t('关闭')" @click="close"><Icon name="x" :size="20" /></button>
       </header>
 
@@ -289,8 +296,28 @@ const SLEEP_OPTIONS = [15, 30, 60];
   padding: 14px 12px 8px 20px;
 }
 .head h2 {
+  flex: 1;
   margin: 0;
   font-size: 18px;
+}
+.wall-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  margin-right: 4px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wall-btn:hover {
+  border-color: var(--text-dim);
 }
 .scroller {
   flex: 1;

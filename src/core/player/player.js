@@ -436,6 +436,7 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
         current: state.track,
         queued: [...queue.upNext],
         list: state.mode === 'fm' ? [] : queue.rest,
+        played: state.mode === 'fm' ? [] : queue.played,
       };
     },
     /** @param {'queued' | 'list'} section */
@@ -452,7 +453,7 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
       queue.clearQueued();
       events.emit('queue');
     },
-    /** @param {'queued' | 'list'} section */
+    /** @param {'queued' | 'list' | 'played'} section */
     async playFromQueue(section, index) {
       if (state.mode === 'fm') return;
       const track = queue.playFromUpcoming(section, index);

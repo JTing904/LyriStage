@@ -254,40 +254,6 @@ onBeforeUnmount(() => {
   </div>
 </template>
 
-<style>
-/* 「⋯」菜单（Teleport 到 body，不能用 scoped） */
-.track-menu {
-  position: fixed;
-  z-index: 300;
-  width: 200px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.3);
-}
-.track-menu button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 40px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 8px;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  font-size: 14px;
-  text-align: left;
-  cursor: pointer;
-}
-.track-menu button:hover,
-.track-menu button:focus-visible {
-  background: var(--surface-hover);
-}
-</style>
-
 <style scoped>
 /* 共同歌单：谁加的 */
 .added-by {

@@ -24,6 +24,7 @@ import { useAuthStore } from './stores/auth';
 import { useRecentStore } from './stores/recent';
 import { useFriendsStore } from './stores/friends';
 import { useNoticeStore } from './stores/notice';
+import { useUiStore } from './stores/ui';
 import AddToPlaylistDialog from './components/AddToPlaylistDialog.vue';
 import LoginPrompt from './components/LoginPrompt.vue';
 import AppSidebar from './components/AppSidebar.vue';
@@ -33,6 +34,7 @@ import MobileBackBar from './components/MobileBackBar.vue';
 import PlayerBar from './components/PlayerBar.vue';
 import LyricStage from './lyric-stage/LyricStage.vue';
 import QueuePanel from './components/QueuePanel.vue';
+import QueueWall from './components/QueueWall.vue';
 import RoomReactions from './components/RoomReactions.vue';
 
 const { state, player } = usePlayer();
@@ -44,6 +46,7 @@ useFriendsStore();
 const notice = useNoticeStore();
 
 const stageOpen = ref(false);
+const ui = useUiStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -54,6 +57,7 @@ watch(
     if (allowed || !auth.ready) return;
     player.pause();
     stageOpen.value = false;
+    ui.wallOpen = false;
     if (route.meta.member) router.replace('/');
   }
 );
@@ -164,6 +168,10 @@ onBackButton(() => {
     dialog.close();
     return true;
   }
+  if (ui.wallOpen) {
+    ui.wallOpen = false;
+    return true;
+  }
   if (stageOpen.value) {
     stageOpen.value = false;
     return true;
@@ -232,6 +240,8 @@ function onContentScroll() {
         </button>
       </div>
     </Transition>
+
+    <QueueWall v-if="ui.wallOpen" @close="ui.wallOpen = false" />
 
     <LyricStage
       v-if="stageOpen"

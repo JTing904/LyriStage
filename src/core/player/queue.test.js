@@ -178,6 +178,27 @@ describe('Queue 播放队列面板的操作', () => {
     expect(playAll(q)).toEqual([4, 'a', 5]);
   });
 
+  it('播过的歌：可以回到那一首，后面照顺序接着播', () => {
+    const q = new Queue();
+    q.setTracks(tracks, 0);
+    q.next();
+    q.next(); // 正在播 3
+    expect(ids(q.played)).toEqual([1, 2]);
+    q.playNext({ id: 'a' });
+    q.next(); // 正在播插队的 a：3 也算播过
+    expect(ids(q.played)).toEqual([1, 2, 3]);
+    expect(q.playFromUpcoming('played', 1).id).toBe(2);
+    expect(ids(q.played)).toEqual([1]);
+    expect(playAll(q)).toEqual([2, 3, 4, 5]);
+  });
+
+  it('播过的歌：位置不对就不动', () => {
+    const q = new Queue();
+    q.setTracks(tracks, 2);
+    expect(q.playFromUpcoming('played', 5).id).toBe(3);
+    expect(q.playFromUpcoming('played', -1).id).toBe(3);
+  });
+
   it('移除过歌之后保存再恢复还是有效的', () => {
     const q = new Queue();
     q.setTracks(tracks, 0);
