@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/auth';
 import { useRecentStore } from '../stores/recent';
 import { useAvatarStore } from '../stores/avatar';
 import { useFriendsStore } from '../stores/friends';
+import WeeklyBoard from '../components/WeeklyBoard.vue';
 import { t, locale } from '../i18n';
 import AvatarFigure from '../components/AvatarFigure.vue';
 import Cover from '../components/Cover.vue';
@@ -183,6 +184,9 @@ const clock = ms => {
         </button>
       </div>
     </section>
+
+    <!-- 好友周榜：这周前三名（有好友、这周有人听过才显示） -->
+    <WeeklyBoard v-if="friendsStore.available && friendsStore.friends.length" compact />
 
     <p v-if="failed" class="retry">
       {{ $t('有些内容没有载入成功。') }}

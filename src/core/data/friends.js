@@ -171,3 +171,30 @@ export function watchFriends(onChange) {
     .subscribe();
   return () => db.removeChannel(channel);
 }
+
+// ---- 好友周榜（supabase/migrations/20261027000000_friends_weekly_board.sql） ----------
+
+/**
+ * 我和好友这一周（马来西亚时间星期一起）听了多久、几首、最常听的歌手和歌，听最久的排前面。
+ * 关掉分享的好友不会出现。数据库还没执行那份 SQL 时回传 null（界面就不显示周榜）
+ * @param {{ weeksAgo?: number }} [options] 0 = 这周，1 = 上周
+ * @returns {Promise<Array<{ id: string, name: string, avatar: string | null, isMe: boolean, minutes: number, plays: number, topArtist: string | null, topTrack: object | null }> | null>}
+ */
+export async function friendsWeeklyBoard({ weeksAgo = 0 } = {}) {
+  const { data, error } = await requireSupabase().rpc('friends_weekly_board', { weeks_ago: weeksAgo });
+  if (error) {
+    // PGRST202 / 42883：函数不存在（还没执行 SQL）
+    if (error.code === 'PGRST202' || error.code === '42883') return null;
+    throw error;
+  }
+  return data.map(r => ({
+    id: r.user_id,
+    name: r.display_name || '',
+    avatar: r.avatar_url,
+    isMe: r.is_me,
+    minutes: r.minutes,
+    plays: r.plays,
+    topArtist: r.top_artist,
+    topTrack: r.top_track,
+  }));
+}

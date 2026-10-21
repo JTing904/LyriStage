@@ -105,7 +105,7 @@ If Electron fails with `Cannot read properties of undefined` inside VS Code, the
    `security` (host-only broadcast in rooms, safer invite codes), `room_chat` and `room_chat_fix` (Listen Together chat),
    `room_handover`, `delete_account` (delete your account from Settings), `bilibili_picks` and `bilibili_picks_grant`,
    `friends_and_shared_playlists` and `playlist_people_profiles`, `history_compaction` (monthly clean-up of old history;
-   needs the `pg_cron` extension), `slim_play_history`.
+   needs the `pg_cron` extension), `slim_play_history`, `friends_weekly_board`.
 3. Authentication → Providers: enable Email (and GitHub / Google if you want them).
    Under URL Configuration add `lyristage://auth/callback` (desktop sign-in) and `http://localhost:5173/**` (web dev) to Redirect URLs.
 4. Put the project URL and anon key in `.env` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).

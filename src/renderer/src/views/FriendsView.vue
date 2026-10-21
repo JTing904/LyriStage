@@ -9,6 +9,7 @@ import { usePlayer } from '../composables/usePlayer';
 import { timeAgo } from '../utils/format';
 import { t } from '../i18n';
 import Cover from '../components/Cover.vue';
+import WeeklyBoard from '../components/WeeklyBoard.vue';
 import Icon from '../components/Icon.vue';
 
 const friendsStore = useFriendsStore();
@@ -170,6 +171,8 @@ async function togglePrivate() {
       </section>
 
       <!-- 好友在听什么 -->
+      <WeeklyBoard v-if="friendsStore.friends.length" />
+
       <section>
         <h2 class="section-title">{{ $t('好友') }}</h2>
         <p v-if="!rows.length" class="empty">{{ $t('还没有好友。把你的好友码传给朋友吧。') }}</p>
