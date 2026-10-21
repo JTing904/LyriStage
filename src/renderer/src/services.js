@@ -13,7 +13,7 @@ import {
   recordPlay,
 } from '@core/data';
 import { PersonalFM } from '@core/recommend';
-import { apiBase, isElectron, isNativeApp, localApiHeaders } from './platform';
+import { apiBase, isElectron, localApiHeaders } from './platform';
 import { connectMediaSession } from './mediaSession';
 
 configureSupabase({
@@ -107,26 +107,23 @@ export async function getLyrics(track) {
 
 /**
  * 一起听：房主分享的音频链接（歌曲 ID → 链接）。
- * 网页版自己没办法解灰，VIP 歌就用房主找到的链接播
+ * 网页版、手机自己解灰找不到时，用房主（电脑版）找到的
  * @type {Map<number, { url: string, br?: number, source?: string }>}
  */
 export const sharedSources = new Map();
 
 /**
- * 播放链接：先找网易云，拿不到再用房主分享的，再拿不到才自己解灰
+ * 播放链接：先找网易云，拿不到再用房主分享的，再拿不到才解灰（去 B 站找，见 server/lib/bilibili.js）
  * - 电脑版：本机的 API 解灰
- * - 手机 App：手机自己去找（Vercel 上的 API 解灰连不上音源）
+ * - 手机 App、网页版：Vercel 上的 API 解灰
  */
 async function resolveSource(track) {
   const official = await netease.songUrl(track.id);
   if (official) return official;
   const shared = sharedSources.get(track.id);
-  if (shared) return shared;
-  if (isNativeApp) {
-    const { unblockOnDevice } = await import('./unblockOnDevice');
-    return unblockOnDevice(track.id);
-  }
-  return netease.unblockUrl(track.id);
+  // 房主（电脑版）分享的 B 站链接可能要带 B 站的 Referer，手机、网页版播不了，先自己找
+  if (shared && (isElectron || shared.source !== 'bilibili')) return shared;
+  return (await netease.unblockUrl(track.id)) ?? shared ?? null;
 }
 
 const audio = createHtmlAudio();

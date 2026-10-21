@@ -3,6 +3,7 @@
 // - 其他路径交给 @neteasecloudmusicapienhanced/api，默认带上大陆 realIP
 // - /song/url/match（解灰）自己实现，见下面 unblock()
 const crypto = require('crypto');
+const { findOnBilibili } = require('./bilibili');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -68,13 +69,14 @@ function sameToken(given, expected) {
 const DEFAULT_REAL_IP = '211.161.244.70';
 
 // 解灰：网易云拿不到播放链接时，去其他平台找同一首歌。
-// 新版 API 自带的 /song/url/match 用的第三方网站在马来西亚全部失效，
-// 这里改用 @unblockneteasemusic/server。2026-10 在马来西亚实测：
-//   pyncmd ✓（320k，部分歌曲）
-//   kuwo   ✗ 海外 IP 不管搜什么都返回同一个 2.6 秒的占位音频，而且返回得快，
-//            会抢在 pyncmd 前面，所以默认不用
-//   其他（qq、migu、kugou、bilibili、youtube…）全部失败
-const DEFAULT_UNM_SOURCES = ['pyncmd'];
+// 新版 API 自带的 /song/url/match 用的第三方网站在马来西亚全部失效。2026-10 在马来西亚实测：
+//   B 站   ✓ 大多数歌都有人上传原曲（自己挑版本，见 bilibili.js），最先找
+//   以下是 @unblockneteasemusic/server 的音源：
+//   pyncmd ✗ GD Studio 9 月起要求加密签名，不带一律 400
+//   kuwo   ✗ 海外 IP 不管搜什么都返回同一个 2.6 秒的占位音频
+//   其他（qq、migu、kugou、joox、youtube…）全部失败；ytdlp 要另外装 yt-dlp
+// 所以默认只用 B 站；环境变量 UNM_SOURCES 可以再加 @unblockneteasemusic/server 的音源
+const DEFAULT_UNM_SOURCES = [];
 // 小于这个大小的音频当成占位文件（正常歌曲 128k 码率 1 分钟就有约 1MB）
 const MIN_AUDIO_BYTES = 300 * 1024;
 
@@ -184,32 +186,58 @@ function createMemberCheck({ supabaseUrl, anonKey }) {
   };
 }
 
-async function unblock(res, url, sources) {
+async function unblock(res, url, sources, { addsBilibiliReferer = false } = {}) {
   const id = url.searchParams.get('id');
   if (!id) return sendJson(res, 400, { code: 400, msg: '缺少 id' });
   const requested = url.searchParams.get('source');
+  const list = requested ? requested.split(',') : ['bilibili', ...sources];
+  const errors = [];
+  let info = null;
   try {
-    const match = require('@unblockneteasemusic/server');
-    const result = await match(
-      Number(id),
-      requested ? requested.split(',') : sources
-    );
-    // 音源给的大多是 http 链接，HTTPS 网页里会被当成混合内容拦截
-    const audioUrl = result.url.replace(/^http:\/\//, 'https://');
-    if (!(await looksLikeRealAudio(audioUrl))) {
-      return sendJson(res, 404, { code: 404, msg: '找到的音频是占位文件' });
-    }
-    sendJson(res, 200, {
-      code: 200,
-      data: { url: audioUrl, br: result.br, source: result.source ?? null },
-    });
+    // 歌名、歌手、时长（用 @unblockneteasemusic/server 的 find，直接问网易云）
+    info = await require('@unblockneteasemusic/server/src/provider/find')(Number(id));
   } catch (err) {
-    sendJson(res, 404, {
-      code: 404,
-      msg: '其他平台也没找到这首歌',
-      detail: String(err),
-    });
+    errors.push(`find: ${err}`);
   }
+
+  if (info && list.includes('bilibili')) {
+    try {
+      const found = await findOnBilibili({
+        name: info.name,
+        artists: info.artists.map(a => a.name),
+        durationMs: info.duration,
+      }, { needsNoReferer: !addsBilibiliReferer });
+      if (found) return sendJson(res, 200, { code: 200, data: found });
+      errors.push('bilibili: 没有像原曲的视频');
+    } catch (err) {
+      errors.push(String(err));
+    }
+  }
+
+  const others = list.filter(s => s !== 'bilibili');
+  if (others.length) {
+    try {
+      const match = require('@unblockneteasemusic/server');
+      const result = await match(Number(id), others);
+      // 音源给的大多是 http 链接，HTTPS 网页里会被当成混合内容拦截
+      const audioUrl = result.url.replace(/^http:\/\//, 'https://');
+      if (await looksLikeRealAudio(audioUrl)) {
+        return sendJson(res, 200, {
+          code: 200,
+          data: { url: audioUrl, br: result.br, source: result.source ?? null },
+        });
+      }
+      errors.push('找到的音频是占位文件');
+    } catch (err) {
+      errors.push(String(err));
+    }
+  }
+
+  sendJson(res, 404, {
+    code: 404,
+    msg: '其他平台也没找到这首歌',
+    detail: errors.join('; '),
+  });
 }
 
 /**
@@ -219,6 +247,8 @@ async function unblock(res, url, sources) {
  * @param {string[]} [options.unmSources]
  * @param {{ supabaseUrl: string, anonKey: string }} [options.requireMember]
  *   设了就只让 LyriStage 成员使用（Vercel 上用）
+ * @param {boolean} [options.addsBilibiliReferer]
+ *   电脑版：主进程会替 B 站音频请求补上 Referer，解灰可以用需要 Referer 的链接
  * @param {string} [options.localToken]
  *   电脑版本机 API 用：每次启动随机产生的通行证，只有 App 自己的页面知道。
  *   请求没带对的 X-LyriStage-Token 就拒绝，浏览器里其他网站就调不了这个 API
@@ -293,7 +323,7 @@ function createHandler(options = {}) {
     }
     stripBlockedParams(req, url);
     if (url.pathname === '/song/url/match') {
-      return unblock(res, url, unmSources);
+      return unblock(res, url, unmSources, { addsBilibiliReferer: options.addsBilibiliReferer });
     }
     if (!url.searchParams.has('realIP')) {
       url.searchParams.set('realIP', realIP);

@@ -7,7 +7,8 @@ export const API_PORT = 10754;
 
 /** @param {string} token 每次启动随机产生的通行证（只交给主窗口的页面） */
 export function startApiServer(token) {
-  const handler = createHandler({ localToken: token });
+  // 主进程会替 B 站音频补 Referer（见 index.js），解灰时不用挑不需要 Referer 的链接
+  const handler = createHandler({ localToken: token, addsBilibiliReferer: true });
   const server = http.createServer((req, res) => {
     handler(req, res).catch(err => {
       console.error('[LyriStage API]', req.url, err);

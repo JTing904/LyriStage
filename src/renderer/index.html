@@ -14,6 +14,11 @@
     <meta name="apple-mobile-web-app-title" content="LyriStage" />
     <meta name="color-scheme" content="dark light" />
     <!--
+      不送 Referer：B 站的音频（解灰）看到别的网站的 Referer 会回 403，不送就可以播。
+      顺便也不让其他网站知道请求是从 LyriStage 来的
+    -->
+    <meta name="referrer" content="no-referrer" />
+    <!--
       内容安全策略：只允许连接自己的 API、本机 API（电脑版）和 Supabase；
       ws://localhost:* 是开发时 Vite 热更新用的；字体来自 Google Fonts；
       wasm-unsafe-eval 只允许 WebAssembly（3D 公仔的模型解压要用），不允许 JS 的 eval

@@ -1,5 +1,5 @@
 // Electron 主进程
-import { app, BrowserWindow, globalShortcut, ipcMain, nativeTheme, shell } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, nativeTheme, session, shell } from 'electron';
 import { join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { startApiServer, API_PORT } from './apiServer';
@@ -267,6 +267,15 @@ if (!app.requestSingleInstanceLock()) {
   }
 
   app.whenReady().then(() => {
+    // 解灰的 B 站音频：有的视频不带 B 站的 Referer 一律 403。
+    // 电脑版可以替音频请求补上（手机和网页版做不到，只能用不需要 Referer 的）
+    session.defaultSession.webRequest.onBeforeSendHeaders(
+      { urls: ['https://*.bilivideo.com/*', 'https://*.akamaized.net/upgcxcode/*'] },
+      (details, callback) => {
+        details.requestHeaders.Referer = 'https://www.bilibili.com/';
+        callback({ requestHeaders: details.requestHeaders });
+      }
+    );
     startApiServer(apiToken).catch(err => {
       console.error(`[LyriStage] 网易云 API 启动失败（端口 ${API_PORT}）`, err);
     });
