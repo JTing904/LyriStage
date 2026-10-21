@@ -4,6 +4,7 @@ import { createNetease } from '@core/netease';
 import { buildLyrics, findLrclibLyrics, hasTimedLyrics } from '@core/lyrics';
 import { createPlayer } from '@core/player/player';
 import { createHtmlAudio } from '@core/player/audio';
+import { createAudioEffects } from './audioEffects';
 import { createCache } from '@core/cache';
 import { createDexieStore } from '@core/cache/dexie';
 import {
@@ -153,6 +154,8 @@ async function resolveSource(track) {
 
 const audio = createHtmlAudio();
 export const player = createPlayer({ audio, resolveSource });
+/** 均衡器、音量平衡（设置页） */
+export const audioEffects = createAudioEffects(audio);
 
 // 预先载入下一首的歌词（存进歌词缓存，切过去时马上有）
 player.on('prefetch', track => getLyrics(track).catch(() => {}));

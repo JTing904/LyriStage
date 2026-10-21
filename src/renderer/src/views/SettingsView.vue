@@ -22,7 +22,8 @@ import {
   updateStatus,
 } from '../platform';
 import { desktopLyrics } from '../desktop';
-import { netease } from '../services';
+import { netease, audioEffects } from '../services';
+import EqualizerPanel from '../components/EqualizerPanel.vue';
 import { isLockScreenLyricsOn, setLockScreenLyrics } from '../mediaSession';
 import { t, locale, LOCALES } from '../i18n';
 
@@ -575,6 +576,35 @@ async function logout() {
       </div>
     </div>
 
+    <div v-if="audioEffects.supported" class="group">
+      <h2>{{ $t('音效') }}</h2>
+      <div class="row switch-row">
+        <span class="label">
+          {{ $t('均衡器') }}
+          <small>{{ $t('调整低音、人声、高音。只存在这台设备上，因为每个人的耳机、喇叭都不一样') }}</small>
+        </span>
+        <input
+          v-model="audioEffects.settings.enabled"
+          type="checkbox"
+          role="switch"
+          class="switch"
+        />
+      </div>
+      <EqualizerPanel v-if="audioEffects.settings.enabled" :settings="audioEffects.settings" class="eq-panel" />
+      <div class="row switch-row">
+        <span class="label">
+          {{ $t('音量平衡') }}
+          <small>{{ $t('每首歌的音量拉到差不多大，不会一首大声一首小声（B 站上传的歌常常比较小声）') }}</small>
+        </span>
+        <input
+          v-model="audioEffects.settings.leveler"
+          type="checkbox"
+          role="switch"
+          class="switch"
+        />
+      </div>
+    </div>
+
     <div class="group">
       <h2>{{ $t('外观') }}</h2>
       <div class="row">
@@ -891,7 +921,9 @@ button {
   color: var(--text);
   font-weight: 700;
 }
-.row + .row {
+.row + .row,
+.eq-panel,
+.eq-panel + .row {
   margin-top: 8px;
 }
 .label small {

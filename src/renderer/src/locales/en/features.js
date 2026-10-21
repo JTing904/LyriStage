@@ -132,6 +132,27 @@ export default {
   锁屏歌词: 'Lock screen lyrics',
   锁屏和通知栏显示歌词: 'Show lyrics on the lock screen',
   '正在唱的那句会出现在锁屏、通知栏，连车上的蓝牙屏幕也看得到': 'The line being sung shows on the lock screen and in notifications, even on your car’s Bluetooth display',
+  // ---- 均衡器（设置 → 音效） ----
+  音效: 'Sound',
+  均衡器: 'Equalizer',
+  '调整低音、人声、高音。只存在这台设备上，因为每个人的耳机、喇叭都不一样':
+    'Adjust bass, vocals and treble. Saved on this device only, since everyone’s headphones and speakers are different',
+  音量平衡: 'Volume leveling',
+  '每首歌的音量拉到差不多大，不会一首大声一首小声（B 站上传的歌常常比较小声）':
+    'Keeps every song at about the same volume (songs from Bilibili are often quieter)',
+  均衡器预设: 'Equalizer presets',
+  原声: 'Flat',
+  流行: 'Pop',
+  摇滚: 'Rock',
+  低音增强: 'Bass boost',
+  人声: 'Vocal',
+  古典: 'Classical',
+  电子: 'Electronic',
+  深夜: 'Late night',
+  自定义: 'Custom',
+  '{hz} Hz': '{hz} Hz',
+  '往上是加大、往下是减小（dB）。双击一条滑杆回到 0':
+    'Up to boost, down to cut (dB). Double-click a slider to reset it to 0',
   '开始《{name}》的电台：接下来是相似的歌': 'Starting “{name}” radio: similar songs up next',
   '电台会一首一首挑相似的歌，没有固定的播放队列。': 'Radio picks similar songs one at a time, so there is no fixed queue.',
   '下一首播放：{name}': 'Playing next: {name}',
