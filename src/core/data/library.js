@@ -1,4 +1,5 @@
 // 我喜欢的音乐 + 自己的歌单
+import { getCurrentUser } from './auth';
 import { requireSupabase, unwrap } from './supabase';
 import { DEFAULT_SOURCE, fromRow, toRow } from './track';
 
@@ -49,42 +50,115 @@ export async function unlikeTrack(trackId, source = DEFAULT_SOURCE) {
 // 歌单 ---------------------------------------------------------------------------
 
 /**
- * 所有歌单；covers 是前 4 首歌的封面（没有自己封面的歌单用来拼一张）
+ * 共同歌单的栏位（share_code、added_by）是 2026-10-25 的迁移加的：
+ * 还没执行那份 SQL 的数据库读不到，就退回旧的读法，不要让整个歌单坏掉
+ * @param {(withShared: boolean) => PromiseLike<{ data: any, error: any }>} query
+ */
+async function withSharedColumns(query) {
+  const result = await query(true);
+  if (result.error?.code === '42703') return unwrap(await query(false)); // 栏位不存在
+  return unwrap(result);
+}
+
+/**
+ * 所有歌单（自己的 + 加入的共同歌单）；covers 是前 4 首歌的封面（没有自己封面的歌单用来拼一张）。
+ * userId 是歌单主人，shareCode 有值 = 开放共同编辑中
  */
 export async function listPlaylists() {
-  return unwrap(
-    await requireSupabase()
-      .from('playlists')
-      .select(
-        'id, name, description, cover_url, created_at, updated_at, playlist_tracks(count), preview:playlist_tracks(cover:track->al->>picUrl, position)'
-      )
-      .order('created_at', { ascending: false })
-      .order('position', { referencedTable: 'preview' })
-      .limit(4, { referencedTable: 'preview' })
-  ).map(({ playlist_tracks, preview, ...p }) => ({
+  return (
+    await withSharedColumns(shared =>
+      requireSupabase()
+        .from('playlists')
+        .select(
+          `id, user_id, ${shared ? 'share_code, ' : ''}name, description, cover_url, created_at, updated_at, playlist_tracks(count), preview:playlist_tracks(cover:track->al->>picUrl, position)`
+        )
+        .order('created_at', { ascending: false })
+        .order('position', { referencedTable: 'preview' })
+        .limit(4, { referencedTable: 'preview' })
+    )
+  ).map(({ playlist_tracks, preview, user_id, share_code, ...p }) => ({
+    userId: user_id,
+    shareCode: share_code ?? null,
     ...p,
     trackCount: playlist_tracks[0]?.count ?? 0,
     covers: (preview ?? []).map(t => t.cover).filter(Boolean),
   }));
 }
 
-/** 歌单详情 + 歌曲（按 position 排序） */
+/**
+ * 歌单详情 + 歌曲（按 position 排序）。
+ * 共同歌单：userId 是主人；每首歌的 addedBy 是谁加的（用户 ID）
+ */
 export async function getPlaylist(id) {
-  const playlist = unwrap(
-    await requireSupabase()
+  const { user_id, share_code, ...playlist } = await withSharedColumns(shared =>
+    requireSupabase()
       .from('playlists')
-      .select('id, name, description, cover_url, created_at, updated_at')
+      .select(`id, user_id, ${shared ? 'share_code, ' : ''}name, description, cover_url, created_at, updated_at`)
       .eq('id', id)
       .single()
   );
-  const rows = unwrap(
-    await requireSupabase()
+  const rows = await withSharedColumns(shared =>
+    requireSupabase()
       .from('playlist_tracks')
-      .select('track, position')
+      .select(`track, position${shared ? ', added_by' : ''}`)
       .eq('playlist_id', id)
       .order('position')
   );
-  return { ...playlist, tracks: rows.map(fromRow) };
+  return {
+    ...playlist,
+    userId: user_id,
+    shareCode: share_code ?? null,
+    tracks: rows.map(row => ({ ...fromRow(row), addedBy: row.added_by ?? null })),
+  };
+}
+
+// ---- 共同歌单 --------------------------------------------------------------------
+
+/** 主人：开始共享，回传邀请码 */
+export async function sharePlaylist(id) {
+  return unwrap(await requireSupabase().rpc('share_playlist', { pid: id }));
+}
+
+/** 主人：停止共享（邀请码作废，加入的人也移除） */
+export async function unsharePlaylist(id) {
+  unwrap(await requireSupabase().rpc('unshare_playlist', { pid: id }));
+}
+
+/** 用邀请码加入，回传歌单 ID（码不对是 null） */
+export async function joinSharedPlaylist(code) {
+  return unwrap(await requireSupabase().rpc('join_shared_playlist', { code }));
+}
+
+/** 退出别人的共同歌单 */
+export async function leaveSharedPlaylist(id) {
+  const user = await getCurrentUser();
+  unwrap(
+    await requireSupabase()
+      .from('playlist_editors')
+      .delete()
+      .eq('playlist_id', id)
+      .eq('user_id', user.id)
+  );
+}
+
+/**
+ * 一起编辑的人（主人 + 加入的），附名字和头像（没加好友也看得到：同一张歌单的人）
+ * @returns {Promise<Array<{ id: string, name: string, avatar: string | null, owner: boolean }>>}
+ */
+export async function listPlaylistPeople(playlist) {
+  const db = requireSupabase();
+  const editors = unwrap(await db.from('playlist_editors').select('user_id').eq('playlist_id', playlist.id));
+  const ids = [playlist.userId, ...editors.map(e => e.user_id)];
+  const profiles = unwrap(
+    await db.from('member_profiles').select('user_id, display_name, avatar_url').in('user_id', ids)
+  );
+  const byId = new Map(profiles.map(p => [p.user_id, p]));
+  return ids.map(id => ({
+    id,
+    name: byId.get(id)?.display_name || '?',
+    avatar: byId.get(id)?.avatar_url ?? null,
+    owner: id === playlist.userId,
+  }));
 }
 
 export async function createPlaylist({ name, description = null }) {

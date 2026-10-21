@@ -21,6 +21,7 @@ import { t } from './i18n';
 import { useThemeStore } from './stores/theme';
 import { useAuthStore } from './stores/auth';
 import { useRecentStore } from './stores/recent';
+import { useFriendsStore } from './stores/friends';
 import { useNoticeStore } from './stores/notice';
 import AddToPlaylistDialog from './components/AddToPlaylistDialog.vue';
 import LoginPrompt from './components/LoginPrompt.vue';
@@ -37,6 +38,8 @@ const { state, player } = usePlayer();
 useThemeStore();
 const auth = useAuthStore();
 useRecentStore();
+// 好友：一打开就要开始告诉好友在听什么、收到好友换歌的通知
+useFriendsStore();
 const notice = useNoticeStore();
 
 const stageOpen = ref(false);

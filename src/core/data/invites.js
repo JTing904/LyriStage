@@ -33,3 +33,16 @@ export async function listInvites(maxRows = 30) {
     createdAt: r.created_at,
   }));
 }
+
+/**
+ * 管理员：数据库用了多少空间（整个数据库 + 最大的几张表），单位 byte
+ * @returns {Promise<{ total: number, tables: Array<{ name: string, bytes: number }> }>}
+ */
+export async function adminStorageUsage() {
+  const rows = unwrap(await requireSupabase().rpc('admin_storage_usage'));
+  const total = rows.find(r => r.name === 'database')?.bytes ?? 0;
+  return {
+    total: Number(total),
+    tables: rows.filter(r => r.name !== 'database').map(r => ({ name: r.name, bytes: Number(r.bytes) })),
+  };
+}

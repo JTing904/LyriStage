@@ -28,6 +28,8 @@ const props = defineProps({
   showHeader: { type: Boolean, default: true },
   /** 自己的歌单：每首多一个「从歌单移除」 */
   removable: { type: Boolean, default: false },
+  /** 共同歌单：用户 ID → { name, avatar }，每首歌下面显示是谁加的（参考 Spotify） */
+  adders: { type: Map, default: null },
   /** 可以多选（搜索综合页那种只显示几首的就不用） */
   selectable: { type: Boolean, default: true },
 });
@@ -188,6 +190,10 @@ onBeforeUnmount(() => {
             </template>
             <template v-if="!t.ar?.length">{{ artistNames(t) }}</template>
           </span>
+          <span v-if="adders && t.addedBy && adders.get(t.addedBy)" class="added-by">
+            <Cover :url="adders.get(t.addedBy).avatar" :size="16" round class="adder-avatar" />
+            {{ $t('{name} 加的', { name: adders.get(t.addedBy).name }) }}
+          </span>
           <!-- 用歌词搜到的：显示搜到的那一句 -->
           <span v-if="t.lyricMatch?.length" class="lyric-match">
             <template v-for="(seg, k) in t.lyricMatch" :key="k">
@@ -283,6 +289,19 @@ onBeforeUnmount(() => {
 </style>
 
 <style scoped>
+/* 共同歌单：谁加的 */
+.added-by {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.adder-avatar {
+  flex: none;
+  width: 16px;
+}
 .track-list {
   display: flex;
   flex-direction: column;

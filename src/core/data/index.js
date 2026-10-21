@@ -7,3 +7,4 @@ export * from './invites';
 export * from './profile';
 export * from './account';
 export * from './bilibiliPicks';
+export * from './friends';

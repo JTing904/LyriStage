@@ -7,6 +7,7 @@ import { usePlayer } from '../composables/usePlayer';
 import { useAuthStore } from '../stores/auth';
 import { useRecentStore } from '../stores/recent';
 import { useAvatarStore } from '../stores/avatar';
+import { useFriendsStore } from '../stores/friends';
 import { t, locale } from '../i18n';
 import AvatarFigure from '../components/AvatarFigure.vue';
 import Cover from '../components/Cover.vue';
@@ -17,6 +18,7 @@ const { state, player } = usePlayer();
 const auth = useAuthStore();
 const avatar = useAvatarStore();
 const recent = useRecentStore();
+const friendsStore = useFriendsStore();
 
 const now = new Date();
 const greeting = computed(() => {
@@ -150,6 +152,34 @@ const clock = ms => {
             <strong>{{ track.name }}</strong>
             <span>{{ artists(track) }}</span>
           </span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 朋友正在听（参考 Spotify 的好友动态）：好友同意、而且对方开着分享才看得到 -->
+    <section v-if="friendsStore.available && (friendsStore.activity.length || friendsStore.incoming.length)" class="friends">
+      <div class="section-head">
+        <h2 class="display">{{ $t('朋友正在听') }}</h2>
+        <RouterLink to="/friends" class="see-all">
+          <template v-if="friendsStore.incoming.length">{{ $t('{n} 个好友邀请', { n: friendsStore.incoming.length }) }}</template>
+          <template v-else>{{ $t('全部') }}</template>
+        </RouterLink>
+      </div>
+      <div class="friend-row">
+        <button
+          v-for="f in friendsStore.activity"
+          :key="f.id"
+          class="friend"
+          :aria-label="$t('播放 {name}', { name: f.track.name })"
+          @click="player.playList([f.track], 0, `friend:${f.id}`)"
+        >
+          <span class="friend-cover">
+            <Cover :url="f.track.al?.picUrl" :size="120" radius="14px" />
+            <Cover :url="f.avatar" :size="36" round class="friend-avatar" />
+            <span v-if="f.live" class="live" :aria-label="$t('正在听')" />
+          </span>
+          <strong>{{ f.name }}</strong>
+          <span>{{ f.track.name }}</span>
         </button>
       </div>
     </section>
@@ -635,5 +665,77 @@ h2 {
     width: 42px;
     height: 42px;
   }
+}
+
+/* 朋友正在听：一排可以左右滑的小卡片 */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.see-all {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.friend-row {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+}
+.friend-row::-webkit-scrollbar {
+  display: none;
+}
+.friend {
+  display: grid;
+  flex: none;
+  gap: 4px;
+  width: 120px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.friend-cover {
+  position: relative;
+  width: 120px;
+}
+.friend-avatar {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 36px;
+  border: 3px solid var(--bg);
+  border-radius: 50%;
+}
+.live {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #2fa463;
+}
+.friend strong,
+.friend span:not(.friend-cover, .live) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.friend strong {
+  margin-top: 6px;
+  font-size: 14px;
+}
+.friend > span:last-child {
+  font-size: 12px;
+  color: var(--text-dim);
 }
 </style>

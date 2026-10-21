@@ -2,7 +2,7 @@
 // 设置：账号（编辑头像和名字、退出登录）、邀请朋友（管理员才有）、我的公仔（换衣服）、外观（深色 / 浅色 / 跟随系统）、
 // 桌面歌词（电脑版才有）
 import { computed, ref, watch } from 'vue';
-import { NAME_MAX, clearHistory, createInvite, deleteMyAccount, exportMyData, listInvites } from '@core/data';
+import { NAME_MAX, adminStorageUsage, clearHistory, createInvite, deleteMyAccount, exportMyData, listInvites } from '@core/data';
 import { useAuthStore } from '../stores/auth';
 import { useLibraryStore } from '../stores/library';
 import { useThemeStore, THEME_OPTIONS } from '../stores/theme';
@@ -80,6 +80,29 @@ async function checkSources() {
 const SOURCE_LABEL = { bilibili: 'B 站' };
 /** 测的是这个 App 走的那条路：电脑版是自己电脑的网络，手机和网页是 Vercel 的服务器（香港） */
 const sourceRoute = isElectron ? '这台电脑' : '服务器（香港）';
+
+// ---- 存储空间（管理员）：Supabase 免费方案的数据库是 500 MB ----
+const FREE_DB_BYTES = 500 * 1024 * 1024;
+const storage = ref(null);
+const storageError = ref('');
+const TABLE_LABEL = {
+  play_history: '听歌记录',
+  liked_tracks: '我喜欢',
+  playlist_tracks: '歌单里的歌',
+  daily_recommendations: '每日推荐',
+  room_messages: '一起听的聊天',
+  now_playing: '好友正在听',
+  bilibili_picks: 'B 站视频记录',
+};
+async function checkStorage() {
+  storageError.value = '';
+  try {
+    storage.value = await adminStorageUsage();
+  } catch (err) {
+    storageError.value = err.message;
+  }
+}
+const mb = bytes => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
 // ---- 邀请朋友（管理员）----
 const invites = ref([]);
@@ -422,6 +445,29 @@ async function logout() {
             </span>
           </li>
         </ul>
+      </div>
+    </div>
+
+    <div v-if="auth.admin" class="group">
+      <h2>{{ $t('存储空间') }}</h2>
+      <div class="row source-row">
+        <div class="invite-top">
+          <p class="hint">{{ $t('Supabase 免费方案的数据库是 500 MB。听歌记录会慢慢变多，快满时就要整理。') }}</p>
+          <button class="ghost" @click="checkStorage">{{ $t('查看') }}</button>
+        </div>
+        <p v-if="storageError" class="invite-error" role="alert">{{ storageError }}</p>
+        <template v-if="storage">
+          <div class="usage" role="meter" :aria-valuenow="storage.total" aria-valuemin="0" :aria-valuemax="FREE_DB_BYTES">
+            <span :style="{ width: `${Math.min(100, (storage.total / FREE_DB_BYTES) * 100)}%` }" />
+          </div>
+          <p class="hint">{{ $t('用了 {used} / 500 MB', { used: mb(storage.total) }) }}</p>
+          <ul class="source-list">
+            <li v-for="table in storage.tables" :key="table.name">
+              <span class="source-name">{{ $t(TABLE_LABEL[table.name] ?? table.name) }}</span>
+              <span class="date">{{ mb(table.bytes) }}</span>
+            </li>
+          </ul>
+        </template>
       </div>
     </div>
 
@@ -943,6 +989,19 @@ code {
   margin: 0;
   font-size: 13px;
   color: var(--accent);
+}
+/* 存储空间的用量条 */
+.usage {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+.usage span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
 }
 /* 音源状态：绿点可以用，红点不能用 */
 .source-row {

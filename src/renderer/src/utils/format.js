@@ -34,3 +34,17 @@ export function count(n) {
   if (n >= 1e4) return `${(n / 1e4).toFixed(1)} 万`;
   return String(n);
 }
+
+/**
+ * 多久以前：刚刚 / 5 分钟前 / 3 小时前 / 2 天前
+ * @param {string | number | Date} time
+ * @param {(key: string, params?: object) => string} t 翻译函数
+ */
+export function timeAgo(time, t) {
+  const minutes = Math.floor((Date.now() - new Date(time).getTime()) / 60000);
+  if (minutes < 1) return t('刚刚');
+  if (minutes < 60) return t('{n} 分钟前', { n: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return t('{n} 小时前', { n: hours });
+  return t('{n} 天前', { n: Math.floor(hours / 24) });
+}

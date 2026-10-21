@@ -22,6 +22,8 @@ export const router = createRouter({
       meta: { bare: true },
     },
     { path: '/report', name: 'report', component: () => import('./views/ReportView.vue'), meta: { member: true } },
+    { path: '/join/:code', name: 'join-playlist', component: () => import('./views/JoinPlaylistView.vue'), meta: { member: true } },
+    { path: '/friends', name: 'friends', component: () => import('./views/FriendsView.vue'), meta: { member: true } },
     { path: '/room', name: 'room', component: () => import('./views/RoomView.vue'), meta: { member: true } },
     {
       path: '/settings',

@@ -1,8 +1,11 @@
 <script setup>
 // 我的音乐库：我喜欢的音乐（大卡片）、听歌排行（本周 / 全部）、我的歌单
 import { computed, ref, watch } from 'vue';
-import { listLikedTracks, playRanking } from '@core/data';
+import { joinSharedPlaylist, listLikedTracks, playRanking } from '@core/data';
+import { useRouter } from 'vue-router';
 import { useLibraryStore } from '../stores/library';
+import { useFriendsStore } from '../stores/friends';
+import { useAuthStore } from '../stores/auth';
 import { usePlayer } from '../composables/usePlayer';
 import { usePlayCollection } from '../composables/usePlayCollection';
 import { artistNames } from '../utils/format';
@@ -12,6 +15,8 @@ import Icon from '../components/Icon.vue';
 import TileGrid from '../components/TileGrid.vue';
 
 const library = useLibraryStore();
+const friendsStore = useFriendsStore();
+const auth = useAuthStore();
 const { state, player } = usePlayer();
 const { playAll } = usePlayCollection();
 
@@ -65,9 +70,35 @@ const tiles = computed(() =>
       cover: p.cover_url,
       covers: p.covers ?? [],
       title: p.name,
-      sub: t('{n} 首', { n: p.trackCount }),
+      // 共同歌单：自己开放共享的、或加入别人的
+      sub:
+        p.shareCode || (p.userId && p.userId !== auth.user?.id)
+          ? t('共同歌单 · {n} 首', { n: p.trackCount })
+          : t('{n} 首', { n: p.trackCount }),
     }))
 );
+
+// 用邀请码加入别人的共同歌单
+const router = useRouter();
+const joining = ref(false);
+const joinCode = ref('');
+async function join() {
+  const code = joinCode.value.trim();
+  if (!code) return;
+  try {
+    const id = await joinSharedPlaylist(code);
+    if (!id) {
+      library.say(t('找不到这个邀请码，检查一下有没有打错'));
+      return;
+    }
+    joinCode.value = '';
+    joining.value = false;
+    await library.refreshPlaylists();
+    router.push(`/my/${id}`);
+  } catch (err) {
+    library.say(t('加入失败：{error}', { error: err.message || err }));
+  }
+}
 
 // 新建歌单
 const creating = ref(false);
@@ -89,9 +120,15 @@ async function create() {
   <div class="page">
     <div class="title-row">
       <h1 class="display title">{{ $t('我的音乐库') }}</h1>
-      <RouterLink to="/report" class="report-link">
-        <Icon name="chart" :size="18" />{{ $t('听歌报告') }}
-      </RouterLink>
+      <span class="title-links">
+        <RouterLink v-if="friendsStore.available" to="/friends" class="report-link">
+          <Icon name="friends" :size="18" />{{ $t('好友') }}
+          <span v-if="friendsStore.incoming.length" class="badge">{{ friendsStore.incoming.length }}</span>
+        </RouterLink>
+        <RouterLink to="/report" class="report-link">
+          <Icon name="chart" :size="18" />{{ $t('听歌报告') }}
+        </RouterLink>
+      </span>
     </div>
 
     <div class="top">
@@ -159,10 +196,18 @@ async function create() {
           <button role="radio" :aria-checked="sort === 'updated'" :class="{ on: sort === 'updated' }" @click="sort = 'updated'">{{ $t('最近更新') }}</button>
           <button role="radio" :aria-checked="sort === 'name'" :class="{ on: sort === 'name' }" @click="sort = 'name'">{{ $t('名称') }}</button>
         </div>
+        <button v-if="friendsStore.available" class="new-btn" @click="joining = !joining">
+          <Icon name="friends" :size="18" />{{ $t('加入共同歌单') }}
+        </button>
         <button class="new-btn" @click="creating = !creating">
           <Icon name="plus" :size="18" />{{ $t('新建歌单') }}
         </button>
       </div>
+      <form v-if="joining" class="create" @submit.prevent="join">
+        <input v-model="joinCode" :placeholder="$t('朋友给你的邀请码')" maxlength="12" required autofocus />
+        <button class="primary" :disabled="!joinCode.trim()">{{ $t('加入') }}</button>
+        <button type="button" class="ghost" @click="joining = false">{{ $t('取消') }}</button>
+      </form>
       <form v-if="creating" class="create" @submit.prevent="create">
         <input v-model="newName" :placeholder="$t('歌单名字')" maxlength="60" required autofocus />
         <button class="primary" :disabled="!newName.trim()">{{ $t('新建') }}</button>
@@ -192,6 +237,23 @@ async function create() {
   border-radius: 999px;
   font-size: 14px;
   font-weight: 700;
+}
+.title-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* 收到几个好友邀请 */
+.badge {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
 }
 .report-link:hover {
   border-color: var(--accent);
@@ -285,6 +347,8 @@ async function create() {
 .lists-head .section-title {
   margin: 0;
   flex: 1;
+  /* 中文可以一个字一个字换行：右边按钮一多，标题会被挤成竖排 */
+  white-space: nowrap;
 }
 .segmented {
   display: flex;
@@ -442,6 +506,10 @@ async function create() {
   }
   .lists-head {
     flex-wrap: wrap;
+  }
+  /* 手机：「我的歌单」自己一排，排序和按钮放下一排 */
+  .lists-head .section-title {
+    flex-basis: 100%;
   }
 }
 
