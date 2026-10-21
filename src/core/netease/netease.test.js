@@ -158,3 +158,17 @@ it('lyricMatch：切出歌词搜索命中的那一句，<b> 的字标成 hit，�
   expect(lyricMatch(['没有命中'])).toBeNull();
   expect(lyricMatch(undefined)).toBeNull();
 });
+
+it('originalArtistIn：从翻唱歌名认出原唱（各种括号、冒号写法），取最常出现的', async () => {
+  const { originalArtistIn } = await import('./index');
+  expect(
+    originalArtistIn([
+      { name: '告白气球 (原唱：周杰伦)' },
+      { name: '告白气球 [原唱: 周杰伦]' },
+      { name: '告白气球（钢琴版）' },
+      { name: '晴天 (原唱 周杰伦)' },
+      { name: '某首歌 (原唱：别人)' },
+    ])
+  ).toBe('周杰伦');
+  expect(originalArtistIn([{ name: '告白气球' }, {}])).toBeNull();
+});

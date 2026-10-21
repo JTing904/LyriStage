@@ -182,7 +182,7 @@ onBeforeUnmount(() => {
             {{ t.name }}
           </button>
           <span class="artists">
-            <span v-if="isUnavailable(t)" class="tag">{{ $t('已下架') }}</span>
+            <span v-if="isUnavailable(t)" class="tag" :title="$t('网易云没有这首歌的版权，播放时会改用其他音源（例如 B 站）')">{{ $t('其他音源') }}</span>
             <template v-for="(a, j) in t.ar ?? []" :key="a.id || j">
               <template v-if="j"> / </template>
               <RouterLink v-if="a.id" :to="`/artist/${a.id}`" @click.stop>{{ a.name }}</RouterLink>
@@ -516,13 +516,7 @@ onBeforeUnmount(() => {
 }
 
 /* 网易云已经下架的歌 */
-.unavailable .cover,
-.unavailable .name,
-.unavailable .artists,
-.unavailable .album,
-.unavailable .time {
-  opacity: 0.45;
-}
+/* 网易云没版权的歌：以前整行变淡，现在会改用其他音源播，所以照常显示，只加一个小标签 */
 .tag {
   display: inline-block;
   margin-right: 6px;

@@ -24,6 +24,24 @@ export function normalizeSong(song) {
 }
 
 /**
+ * 翻唱的歌名常常写着原唱是谁（「告白气球 (原唱：周杰伦)」「晴天 [原唱: 周杰伦]」），
+ * 从搜索结果里找出最常被写到的原唱，用来找回网易云没版权、搜不到的原曲
+ * @param {Array<{ name?: string }>} songs
+ * @returns {string | null}
+ */
+export function originalArtistIn(songs) {
+  const counts = new Map();
+  for (const song of songs) {
+    const m = String(song.name ?? '').match(/原唱\s*[:：]?\s*([^)）\]】/,，]+)/);
+    const name = m?.[1]?.trim();
+    if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  let best = null;
+  for (const [name, n] of counts) if (!best || n > best[1]) best = [name, n];
+  return best?.[0] ?? null;
+}
+
+/**
  * 歌在网易云已经下架（没有版权）：privilege.st 小于 0，谁去拿都没有音频。
  * VIP 歌曲不算（st 是 0，只是要会员）
  * @param {Record<string, any> | null | undefined} track
@@ -204,6 +222,49 @@ export function createNetease(http) {
     async artist(id) {
       const data = await http.get('/artists', { id });
       return { artist: data.artist, hotSongs: data.hotSongs ?? [] };
+    },
+
+    /**
+     * 歌手的所有歌曲（按热度）。和「热门 50 首」不同：网易云没有版权的歌（例如周杰伦自己的歌）
+     * 在这里还查得到（只是标成没版权），播放时会改用其他音源
+     */
+    async artistSongs(id, { limit = 100, offset = 0 } = {}) {
+      const data = await http.get('/artist/songs', { id, limit, offset, order: 'hot' });
+      return withPrivileges((data.songs ?? []).map(normalizeSong), data.privileges);
+    },
+
+    /**
+     * 被搜索藏起来的歌：网易云没有版权的歌不会出现在搜索结果里（搜「晴天 周杰伦」只找得到翻唱）。
+     * 关键词里有歌手名时，去他的所有歌曲里找名字对得上的、没版权的，补回搜索结果。
+     * 只搜歌名（「告白气球」）时，用搜索结果里翻唱写的「原唱：xxx」认出歌手（originalArtist）
+     * @param {string} keyword
+     * @param {{ limit?: number, originalArtist?: string | null }} [options]
+     * @returns {Promise<object[]>}
+     */
+    async hiddenSongs(keyword, { limit = 10, originalArtist = null } = {}) {
+      const norm = text => String(text).toLowerCase().replace(/[\s\p{P}]/gu, '');
+      const k = norm(keyword);
+      if (!k) return [];
+      const lookup = async name =>
+        (await http.get('/cloudsearch', { keywords: name, type: 100, limit: 3 })).result?.artists ?? [];
+      // 要试的歌手：关键词里的歌手（「晴天 周杰伦」），再来是翻唱写的原唱（「稻香」→ 周杰伦）。
+      // 两个都要试：搜「稻香」时网易云可能刚好有歌手名字里有这两个字
+      const candidates = [];
+      const fromKeyword = (await lookup(keyword)).find(a => a.name && k.includes(norm(a.name)));
+      if (fromKeyword) candidates.push({ artist: fromKeyword, rest: k.replace(norm(fromKeyword.name), '') });
+      if (originalArtist && norm(originalArtist) !== norm(fromKeyword?.name ?? '')) {
+        const artist = (await lookup(originalArtist)).find(a => norm(a.name) === norm(originalArtist));
+        if (artist) candidates.push({ artist, rest: k.replace(norm(artist.name), '') });
+      }
+      for (const { artist, rest } of candidates) {
+        const songs = await this.artistSongs(artist.id, { limit: rest ? 300 : 50 });
+        const found = songs
+          .filter(song => isUnavailable(song))
+          .filter(song => !rest || norm(song.name).includes(rest) || rest.includes(norm(song.name)))
+          .slice(0, limit);
+        if (found.length) return found;
+      }
+      return [];
     },
 
     async artistAlbums(id, { limit = 30, offset = 0 } = {}) {

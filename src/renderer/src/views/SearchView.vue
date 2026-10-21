@@ -4,6 +4,7 @@
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { netease } from '../services';
+import { originalArtistIn } from '@core/netease';
 import { usePlayer } from '../composables/usePlayer';
 import { artistNames, year } from '../utils/format';
 import { t } from '../i18n';
@@ -48,6 +49,24 @@ const loading = ref(false);
 const loadingMore = ref(false);
 const error = ref('');
 
+/**
+ * 网易云没有版权的歌（例如周杰伦自己的歌）搜不到：关键词里有歌手名时，
+ * 去他的所有歌曲里找回来，放在搜索结果最前面（播放时会改用 B 站等其他音源）
+ */
+const withHidden = (songs, hidden) => {
+  const ids = new Set(hidden.map(s => s.id));
+  return [...hidden, ...songs.filter(s => !ids.has(s.id))];
+};
+/** 先显示一般结果，找回来的歌之后再补上（要多问几次网易云，最慢要几秒，不要拖慢整个搜索） */
+function addHidden(id, songs, limit, apply) {
+  netease
+    .hiddenSongs(q.value, { limit, originalArtist: originalArtistIn(songs) })
+    .then(hidden => {
+      if (id === requestId && hidden.length) apply(hidden);
+    })
+    .catch(() => {});
+}
+
 let requestId = 0;
 async function load() {
   const id = ++requestId;
@@ -75,11 +94,17 @@ async function load() {
       if ([song, artist, album, playlist].every(r => r.status === 'rejected')) {
         throw song.reason;
       }
+      addHidden(id, overview.value.song, 5, hidden => {
+        overview.value = { ...overview.value, song: withHidden(overview.value.song, hidden) };
+      });
     } else {
       const list = await netease.search(q.value, { type: tab.value, limit: PAGE });
       if (id !== requestId) return;
       items.value = list;
       hasMore.value = list.length === PAGE;
+      if (tab.value === 'song') {
+        addHidden(id, list, 20, hidden => (items.value = withHidden(items.value, hidden)));
+      }
     }
   } catch (err) {
     if (id === requestId) error.value = err.message || String(err);

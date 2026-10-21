@@ -28,13 +28,15 @@ async function load(id) {
   albums.value = [];
   showAll.value = false;
   try {
-    const [info, list] = await Promise.all([
+    const [info, list, all] = await Promise.all([
       netease.artist(id),
       netease.artistAlbums(id, { limit: 50 }).catch(() => []),
+      // 「所有歌曲」：网易云没有版权的歌（例如周杰伦自己的歌）热门 50 首里没有，这里才有
+      netease.artistSongs(id, { limit: 100 }).catch(() => []),
     ]);
     if (String(id) !== String(route.params.id)) return;
     artist.value = info.artist;
-    hotSongs.value = info.hotSongs;
+    hotSongs.value = all.length ? all : info.hotSongs;
     albums.value = list;
   } catch (err) {
     error.value = err.message || String(err);

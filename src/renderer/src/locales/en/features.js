@@ -18,6 +18,8 @@ export default {
   下一首播放: 'Play next',
   加入播放队列: 'Add to queue',
   相似歌曲电台: 'Song radio',
+  其他音源: 'Other source',
+  '网易云没有这首歌的版权，播放时会改用其他音源（例如 B 站）': 'NetEase doesn’t have the rights to this song, so it plays from another source (like Bilibili)',
   // 好友、朋友正在听
   '{name} 加的': 'Added by {name}',
   '刚刚': 'just now',
