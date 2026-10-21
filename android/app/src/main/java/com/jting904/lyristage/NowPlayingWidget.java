@@ -28,8 +28,8 @@ public class NowPlayingWidget extends AppWidgetProvider {
     static final String COVER_FILE = "widget_cover.png";
     static final String EXTRA_ACTION = "lyristage.widget.action";
     private static final String ACTION_PREFIX = "com.jting904.lyristage.widget.";
-    /** 高度到这么多（dp）就用有歌词的大版面 */
-    private static final int LARGE_MIN_HEIGHT_DP = 100;
+    /** 高度到这么多（dp）才用有歌词的大版面（大封面 + 歌词放得下）；矮的用一排的版面 */
+    private static final int LARGE_MIN_HEIGHT_DP = 150;
 
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
