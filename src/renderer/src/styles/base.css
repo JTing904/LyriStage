@@ -131,7 +131,13 @@ img {
   font-size: 22px;
 }
 
-/* 手机 App：内容避开顶部状态栏和底部导航条（电脑版和一般网页这些值是 0） */
+/*
+  手机版的排版条件（各组件的 @media 都用这一组，不能用变量所以照抄）：
+    @media (max-width: 899px), (pointer: coarse) and (max-height: 600px)
+  后半段是手机横屏：宽度会超过 900px，只看宽度会被当成电脑版
+*/
+
+/* 手机 App：内容避开顶部状态栏、底部导航条和横屏时的挖孔（电脑版和一般网页这些值是 0） */
 #app {
   box-sizing: border-box;
   padding: env(safe-area-inset-top) env(safe-area-inset-right)

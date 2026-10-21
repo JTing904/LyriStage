@@ -4,7 +4,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { provideStage } from './useStage';
 import { findStyle } from './styles';
-import { isElectron } from '../platform';
+import { isElectron, PHONE_LANDSCAPE_QUERY, setSystemBarsHidden } from '../platform';
 import PlayerBar from '../components/PlayerBar.vue';
 import StylePicker from './StylePicker.vue';
 import ShareLyricsDialog from './ShareLyricsDialog.vue';
@@ -47,6 +47,41 @@ function wake() {
   }, 3000);
 }
 
+// 手机横屏：藏起状态栏和导航列，整个画面都给歌词（转回竖屏、关掉舞台时叫回来）
+const phoneLandscape = window.matchMedia(PHONE_LANDSCAPE_QUERY);
+const syncSystemBars = () => setSystemBarsHidden(phoneLandscape.matches);
+
+// 往下滑关闭（手机）：手指往下拉，舞台跟着往下移；拉超过 1/4 画面或甩得够快就关。
+// 只认明显往下的手势，左右滑、点歌词跳转都不受影响
+const dragY = ref(0);
+let drag = null;
+function onDragStart(event) {
+  wake();
+  if (event.pointerType !== 'touch' || pickerOpen.value || shareOpen.value) return;
+  if (event.target.closest('.controls, .topbar button, .picker')) return;
+  drag = { id: event.pointerId, x: event.clientX, y: event.clientY, at: performance.now(), active: false };
+}
+function onDragMove(event) {
+  wake();
+  if (!drag || event.pointerId !== drag.id) return;
+  const dx = event.clientX - drag.x;
+  const dy = event.clientY - drag.y;
+  if (!drag.active) {
+    if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) drag = null;
+    else if (dy > 12 && dy > Math.abs(dx) * 1.7) drag.active = true;
+    return;
+  }
+  dragY.value = Math.max(0, dy);
+}
+function onDragEnd(event) {
+  if (!drag || event.pointerId !== drag.id) return;
+  const { active, at } = drag;
+  drag = null;
+  const speed = dragY.value / (performance.now() - at); // px / ms
+  if (active && (dragY.value > window.innerHeight / 4 || speed > 0.8)) emit('close');
+  else dragY.value = 0;
+}
+
 function onKey(event) {
   // 上面开着对话框（分享、播放队列…）：Esc 只关对话框，空格不要暂停
   if (document.querySelector('dialog[open]')) return;
@@ -61,10 +96,14 @@ function onKey(event) {
 onMounted(() => {
   wake();
   window.addEventListener('keydown', onKey);
+  phoneLandscape.addEventListener('change', syncSystemBars);
+  syncSystemBars();
 });
 onBeforeUnmount(() => {
   clearTimeout(hideTimer);
   window.removeEventListener('keydown', onKey);
+  phoneLandscape.removeEventListener('change', syncSystemBars);
+  setSystemBarsHidden(false);
 });
 </script>
 
@@ -75,10 +114,16 @@ onBeforeUnmount(() => {
       'controls-hidden': !controlsVisible,
       electron: isElectron,
       light: lightStyle,
+      dragging: dragY > 0,
     }"
-    @pointermove="wake"
-    @pointerdown="wake"
+    :style="dragY ? { transform: `translateY(${dragY}px)`, transition: 'none' } : null"
+    @pointerdown="onDragStart"
+    @pointermove="onDragMove"
+    @pointerup="onDragEnd"
+    @pointercancel="onDragEnd"
   >
+    <!-- 手机：提示可以往下拉关闭 -->
+    <span class="grabber" aria-hidden="true" />
     <component
       :is="style.component"
       v-if="status === 'ready'"
@@ -150,6 +195,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .stage {
+  /* 底部播放条占的高度：风格组件排版时让出这块（手机横屏是单行，比较矮） */
+  --controls-space: calc(170px + env(safe-area-inset-bottom));
   position: fixed;
   inset: 0;
   z-index: 100;
@@ -157,10 +204,46 @@ onBeforeUnmount(() => {
   background: #0b0d0d;
   color: #f2f2f2;
   font-family: 'Noto Sans SC', system-ui, sans-serif;
+  transition: transform 0.25s ease-out, border-radius 0.25s;
+}
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
+  .stage {
+    --controls-space: calc(92px + env(safe-area-inset-bottom));
+  }
+}
+.stage.dragging {
+  border-radius: 20px 20px 0 0;
+}
+.grabber {
+  display: none;
+}
+@media (pointer: coarse) {
+  .grabber {
+    position: absolute;
+    z-index: 10;
+    top: calc(env(safe-area-inset-top) + 6px);
+    left: 50%;
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgb(255 255 255 / 0.45);
+    transform: translateX(-50%);
+    transition: opacity 0.4s;
+  }
+  .controls-hidden .grabber {
+    opacity: 0;
+  }
 }
 .style-layer {
   position: absolute;
   inset: 0;
+}
+/* 歌词画面上的手势自己处理（往下滑关闭），不要让浏览器拿去滚动。
+   只设在这里：设在整个舞台的话，风格列表、分享对话框里就滑不动了 */
+.style-layer,
+.placeholder {
+  touch-action: none;
 }
 
 .placeholder {
@@ -217,7 +300,8 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   height: var(--titlebar-height);
-  padding: 0 12px;
+  /* 横屏时避开挖孔 */
+  padding: 0 calc(12px + env(safe-area-inset-right)) 0 calc(12px + env(safe-area-inset-left));
 }
 /* 电脑版：顶部可以拖动窗口；右边留给系统的最小化 / 关闭按钮 */
 .electron .topbar {
@@ -275,8 +359,8 @@ button:focus-visible {
 .picker {
   position: absolute;
   z-index: 11;
-  top: calc(var(--titlebar-height) + 8px);
-  right: 12px;
+  top: calc(env(safe-area-inset-top) + var(--titlebar-height) + 8px);
+  right: calc(12px + env(safe-area-inset-right));
 }
 
 /* PlayerBar 自己有 position: relative（给进度条定位用），

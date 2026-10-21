@@ -433,7 +433,7 @@ async function create() {
   color: var(--text);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
   .top {
     grid-template-columns: minmax(0, 1fr);
   }

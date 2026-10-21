@@ -281,7 +281,7 @@ const clock = ms => {
   background: var(--surface-2);
   color: var(--text-dim);
 }
-@media (max-width: 899px) {
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
   .mobile-settings {
     display: grid;
   }

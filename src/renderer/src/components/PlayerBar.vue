@@ -686,6 +686,49 @@ button.icon.toggle.on {
   justify-content: flex-start;
 }
 
+/* 手机、平板：用实体音量键，不需要音量按钮 */
+@media (pointer: coarse) {
+  .volume {
+    display: none;
+  }
+}
+
+/* 手机横屏的歌词舞台：画面很矮，播放条压成一行（歌名在左、按钮在中间），
+   把高度留给歌词；左右避开挖孔 */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
+  .player-bar.compact {
+    width: auto;
+    margin: 0 calc(20px + env(safe-area-inset-right)) 6px calc(20px + env(safe-area-inset-left));
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas:
+      'progress progress progress'
+      'meta row .';
+    column-gap: 16px;
+    row-gap: 2px;
+  }
+  .compact .progress {
+    grid-area: progress;
+  }
+  .compact-meta {
+    grid-area: meta;
+    justify-content: flex-start;
+    margin: 0;
+  }
+  .compact-meta .cover {
+    width: 40px;
+    height: 40px;
+  }
+  .compact-meta .meta strong {
+    font-size: 15px;
+  }
+  .compact .row {
+    grid-area: row;
+    grid-template-columns: auto auto auto;
+    gap: 12px;
+    height: 52px;
+  }
+}
+
 /* 窄屏（手机）的完整模式：只留播放控制和歌名，循环 / 随机 / 音量收起来 */
 @media (max-width: 760px) {
   .player-bar:not(.compact) .row {

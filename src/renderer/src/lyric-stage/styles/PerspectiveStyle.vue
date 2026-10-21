@@ -15,7 +15,7 @@ const art = computed(
   () => coverUrl.value && `${coverUrl.value}?param=1024y1024`
 );
 const { viewport, lineRef, offset } = useCenteredList(lineIndex, {
-  anchor: 0.56, // 歌词区底部让出了播放条，0.56 大约是整个画面的 45%
+  anchor: 0.56, // 歌词区底部让出了播放条（--controls-space），0.56 让当前行比歌词区中间稍低
 });
 
 const shownLines = computed(() =>
@@ -184,7 +184,7 @@ const petals = Array.from({ length: 12 }, (_, i) => ({
 
 .viewport {
   position: absolute;
-  inset: 0 0 160px 0;
+  inset: 0 0 var(--controls-space, 170px) 0;
   overflow: hidden;
   /* 透视：离得越远越小 */
   perspective: 1200px;

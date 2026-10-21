@@ -268,8 +268,8 @@ const particles = Array.from({ length: 18 }, (_, i) => ({
   z-index: 2;
   left: 0;
   right: 0;
-  /* 在底部播放条（封面 + 进度条 + 按钮，约 150px）的上方 */
-  bottom: 180px;
+  /* 在底部播放条的上方（--controls-space 由 LyricStage 按版面给；手机横屏比较矮） */
+  bottom: calc(var(--controls-space, 170px) + 10px);
   margin: 0;
   text-align: center;
   font: 500 13px/1.4 'Noto Serif SC', serif;

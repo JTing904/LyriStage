@@ -26,6 +26,20 @@ export const apiBase = isElectron
 export const localApiHeaders = bridge?.apiHeaders ?? {};
 
 /**
+ * 手机横屏：宽度可能超过 900px（会被当成电脑），但矮、用手指点。
+ * CSS 里对应的写法见 styles/base.css 的说明
+ */
+export const PHONE_LANDSCAPE_QUERY =
+  '(pointer: coarse) and (orientation: landscape) and (max-height: 600px)';
+
+/** 手机 App：藏起 / 叫回状态栏和导航列（横屏看歌词时全屏）。其他平台什么都不做 */
+export async function setSystemBarsHidden(hidden) {
+  if (!isNativeApp) return;
+  const { SystemBars } = await import('@capacitor/core');
+  await (hidden ? SystemBars.hide() : SystemBars.show()).catch(() => {});
+}
+
+/**
  * 电脑版：让窗口（系统按钮颜色、窗口底色）跟着 App 的主题切换；网页版不需要
  * @param {'system' | 'dark' | 'light'} mode
  */

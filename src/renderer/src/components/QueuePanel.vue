@@ -481,7 +481,7 @@ h3 {
 }
 
 /* 手机：从下面拉上来 */
-@media (max-width: 899px) {
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
   .queue-panel {
     inset: auto 0 0 0;
     width: 100%;

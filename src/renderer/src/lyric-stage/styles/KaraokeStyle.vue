@@ -99,7 +99,8 @@ const progressOf = (line, word) =>
   position: absolute;
   left: 6vw;
   right: 6vw;
-  bottom: 190px;
+  /* 底部播放条的上方（--controls-space 由 LyricStage 按版面给） */
+  bottom: calc(var(--controls-space, 170px) + 20px);
   display: grid;
   gap: 2.5vh;
 }

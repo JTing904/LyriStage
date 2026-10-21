@@ -108,7 +108,7 @@ const command = computed(
   left: 8vw;
   right: 8vw;
   top: 10vh;
-  bottom: 200px;
+  bottom: calc(var(--controls-space, 170px) + 30px);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;

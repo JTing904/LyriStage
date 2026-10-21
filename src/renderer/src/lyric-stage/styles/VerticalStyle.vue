@@ -86,22 +86,26 @@ const seal = computed(() =>
 .columns {
   position: absolute;
   top: 10vh;
-  bottom: 22vh;
+  bottom: max(22vh, calc(var(--controls-space, 170px) + 8px));
   left: 12vw;
   right: 12vw;
   display: flex;
   flex-direction: row-reverse;
   justify-content: center;
   gap: 3.5vw;
+  /* 字号按这块的实际高度算（cqh）：手机横屏比电脑矮很多 */
+  container-type: size;
+  overflow: hidden;
 }
 .column {
   margin: 0;
   writing-mode: vertical-rl;
   text-orientation: upright;
   font-family: 'Ma Shan Zheng', 'KaiTi', 'STKaiti', serif;
-  /* 一句只占一列：可用高度约 68vh，每个字连间距约 1.12 个字高，字多就缩小 */
-  font-size: clamp(16px, min(7vh, 6vw, 60vh / var(--chars)), 72px);
-  white-space: nowrap;
+  /* 一句尽量只占一列：每个字连间距约 1.12 个字高，字多就缩小（按可用高度 100cqh 算） */
+  font-size: clamp(16px, min(7vh, 6vw, 88cqh / var(--chars)), 72px);
+  /* 太长（英文歌词、手机横屏）缩到最小还放不下：折到旁边一列，不要冲出去盖住播放条 */
+  max-height: 100%;
   line-height: 1.1;
   letter-spacing: 0.12em;
   /* 越旧的列越淡 */
@@ -124,7 +128,7 @@ const seal = computed(() =>
 .seal {
   position: absolute;
   left: 7vw;
-  bottom: 24vh;
+  bottom: max(24vh, calc(var(--controls-space, 170px) + 40px));
   padding: 10px 8px;
   background: #b3261e;
   color: #f8efe2;
@@ -139,7 +143,7 @@ const seal = computed(() =>
 .artist {
   position: absolute;
   left: 7vw;
-  bottom: 18vh;
+  bottom: max(18vh, calc(var(--controls-space, 170px) + 8px));
   margin: 0;
   font: 500 14px/1.4 'Noto Serif SC', serif;
   color: rgba(29, 26, 22, 0.6);

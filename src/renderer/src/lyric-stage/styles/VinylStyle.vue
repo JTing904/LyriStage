@@ -90,7 +90,7 @@ const window5 = computed(() => {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
   align-items: center;
   gap: 4vw;
-  padding: 6vh 6vw 200px;
+  padding: 6vh 6vw calc(var(--controls-space, 170px) + 30px);
 }
 
 .turntable {

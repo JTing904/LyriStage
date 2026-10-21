@@ -123,6 +123,13 @@ const blobs = computed(() => ({
   overflow: hidden;
   mask-image: linear-gradient(transparent, #000 18%, #000 72%, transparent 92%);
 }
+/* 手机横屏：画面很矮，歌词区停在播放条上方，上下边缘淡出（不然歌词会跑到播放条底下） */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
+  .viewport {
+    inset: var(--titlebar-height, 44px) 0 var(--controls-space, 92px) 0;
+    mask-image: linear-gradient(transparent, #000 14%, #000 82%, transparent);
+  }
+}
 .list {
   position: relative;
   padding: 0 8vw;

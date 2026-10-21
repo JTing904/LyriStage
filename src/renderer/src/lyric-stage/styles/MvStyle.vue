@@ -132,7 +132,7 @@ const colors = computed(() => ({
 
 .stage-center {
   position: absolute;
-  inset: 8vh 8vw 200px;
+  inset: 8vh 8vw calc(var(--controls-space, 170px) + 30px);
   display: flex;
   flex-wrap: wrap;
   align-content: center;

@@ -491,7 +491,7 @@ button:disabled {
 }
 
 /* 手机 / 窄窗口：只留表单 */
-@media (max-width: 899px) {
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
   .login {
     grid-template-columns: minmax(0, 1fr);
   }
