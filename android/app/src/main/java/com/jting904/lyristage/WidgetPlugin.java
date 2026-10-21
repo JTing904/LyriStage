@@ -144,12 +144,12 @@ public class WidgetPlugin extends Plugin {
             prefs.edit().putInt("color", 0xFF1C1C21).apply();
             return;
         }
-        int size = 240;
+        int size = 360; // 拉大的版面封面也清楚
         Bitmap scaled = Bitmap.createScaledBitmap(source, size, size, true);
         Bitmap rounded = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setShader(new BitmapShader(scaled, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP));
-        new Canvas(rounded).drawRoundRect(new RectF(0, 0, size, size), 24, 24, paint);
+        new Canvas(rounded).drawRoundRect(new RectF(0, 0, size, size), 32, 32, paint);
         try (FileOutputStream out = new FileOutputStream(file)) {
             rounded.compress(Bitmap.CompressFormat.PNG, 100, out);
         } catch (Exception ignored) {

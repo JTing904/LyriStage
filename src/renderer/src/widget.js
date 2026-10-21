@@ -52,7 +52,7 @@ export function connectWidget(player, { getLyrics }) {
       artist: artistNames(track),
       lyric: '',
       lyricNext: '',
-      cover: cover ? `${cover}?param=240y240` : '',
+      cover: cover ? `${cover}?param=360y360` : '',
     });
     if (!track) return;
     try {

@@ -28,8 +28,10 @@ public class NowPlayingWidget extends AppWidgetProvider {
     static final String COVER_FILE = "widget_cover.png";
     static final String EXTRA_ACTION = "lyristage.widget.action";
     private static final String ACTION_PREFIX = "com.jting904.lyristage.widget.";
-    /** 高度到这么多（dp）才用有歌词的大版面（大封面 + 歌词放得下）；矮的用一排的版面 */
+    /** 高度到这么多（dp）才用有歌词的版面（大封面 + 歌词放得下）；矮的用一排的版面 */
     private static final int LARGE_MIN_HEIGHT_DP = 150;
+    /** 拉得更高：封面、字跟着放大的版面 */
+    private static final int XL_MIN_HEIGHT_DP = 260;
 
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
@@ -76,17 +78,30 @@ public class NowPlayingWidget extends AppWidgetProvider {
     private static RemoteViews build(Context context, AppWidgetManager manager, int id) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             // Android 12 起：系统按实际大小自动挑版面
+            // 三个版面用同一张封面（同一个 Bitmap 只传一次）
+            Bitmap cover = loadCover(context);
             Map<SizeF, RemoteViews> layouts = new HashMap<>();
-            layouts.put(new SizeF(180f, 40f), views(context, false));
-            layouts.put(new SizeF(180f, LARGE_MIN_HEIGHT_DP), views(context, true));
+            layouts.put(new SizeF(180f, 40f), views(context, R.layout.widget_now_playing, cover));
+            layouts.put(new SizeF(180f, LARGE_MIN_HEIGHT_DP), views(context, R.layout.widget_now_playing_large, cover));
+            layouts.put(new SizeF(180f, XL_MIN_HEIGHT_DP), views(context, R.layout.widget_now_playing_xl, cover));
             return new RemoteViews(layouts);
         }
         Bundle options = manager.getAppWidgetOptions(id);
         int height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0);
-        return views(context, height >= LARGE_MIN_HEIGHT_DP);
+        int layout = height >= XL_MIN_HEIGHT_DP
+            ? R.layout.widget_now_playing_xl
+            : height >= LARGE_MIN_HEIGHT_DP ? R.layout.widget_now_playing_large : R.layout.widget_now_playing;
+        return views(context, layout, loadCover(context));
     }
 
-    private static RemoteViews views(Context context, boolean large) {
+    private static Bitmap loadCover(Context context) {
+        File file = new File(context.getFilesDir(), COVER_FILE);
+        boolean hasSong = !context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("title", "").isEmpty();
+        return file.exists() && hasSong ? BitmapFactory.decodeFile(file.getPath()) : null;
+    }
+
+    private static RemoteViews views(Context context, int layout, Bitmap bitmap) {
+        boolean large = layout != R.layout.widget_now_playing;
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String title = prefs.getString("title", "");
         String artist = prefs.getString("artist", "");
@@ -95,10 +110,7 @@ public class NowPlayingWidget extends AppWidgetProvider {
         boolean playing = prefs.getBoolean("playing", false) && WidgetPlugin.instance != null;
         int color = prefs.getInt("color", 0xFF1C1C21);
 
-        RemoteViews v = new RemoteViews(
-            context.getPackageName(),
-            large ? R.layout.widget_now_playing_large : R.layout.widget_now_playing
-        );
+        RemoteViews v = new RemoteViews(context.getPackageName(), layout);
         v.setInt(R.id.widget_bg, "setColorFilter", color);
 
         if (title.isEmpty()) {
@@ -114,8 +126,6 @@ public class NowPlayingWidget extends AppWidgetProvider {
             v.setTextViewText(R.id.widget_lyric_next, lyricNext);
         }
 
-        File cover = new File(context.getFilesDir(), COVER_FILE);
-        Bitmap bitmap = cover.exists() && !title.isEmpty() ? BitmapFactory.decodeFile(cover.getPath()) : null;
         if (bitmap != null) v.setImageViewBitmap(R.id.widget_cover, bitmap);
         else v.setImageViewResource(R.id.widget_cover, R.mipmap.ic_launcher);
 
