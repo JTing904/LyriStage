@@ -4,6 +4,8 @@ import { requireSupabase, unwrap } from './supabase';
 import { listLikedTracks, listPlaylists, getPlaylist } from './library';
 import { listDislikedTrackIds, listHistoryBetween, listMonthlyHistory } from './history';
 import { removeMyAvatars } from './profile';
+import { removeMyPlaylistCovers } from './playlistCovers';
+import { downloadMyArchives, removeMyArchives } from './archive';
 
 const PAGE = 1000;
 
@@ -34,6 +36,8 @@ export async function exportMyData() {
   ]);
   // 一年多以前的听歌记录已经整理成每月小结
   const monthlyHistory = await listMonthlyHistory(new Date(0), new Date(Date.now() + 86400 * 1000));
+  // 两年以前的已经搬去 File storage（每人每年一个文件）
+  const archivedHistory = await downloadMyArchives(user.id);
   const fullPlaylists = [];
   for (const p of playlists) fullPlaylists.push(await getPlaylist(p.id));
   return {
@@ -51,6 +55,7 @@ export async function exportMyData() {
     dislikedTrackIds: disliked,
     playHistory: history,
     playHistoryMonthly: monthlyHistory,
+    playHistoryArchived: archivedHistory,
   };
 }
 
@@ -64,6 +69,8 @@ export async function deleteMyAccount() {
   const uid = data.user?.id;
   if (!uid) throw new Error('请先登录');
   await removeMyAvatars(uid);
+  await removeMyPlaylistCovers(uid);
+  await removeMyArchives(uid).catch(() => {});
   unwrap(await supabase.rpc('delete_my_account'));
   await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
 }

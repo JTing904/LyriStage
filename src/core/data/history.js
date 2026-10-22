@@ -1,6 +1,7 @@
 // 听歌记录 + 不喜欢（FM 垃圾桶）
 import { requireSupabase, unwrap } from './supabase';
 import { DEFAULT_SOURCE, fromRow, toRow } from './track';
+import { removeMyArchives } from './archive';
 
 /**
  * 听了不到 30 秒、而且不到一半就切走，算"跳过"。
@@ -99,6 +100,11 @@ export async function clearHistory() {
     const { error } = await db.from(table).delete().gte('month', '1970-01-01');
     if (error && !isMissingTable(error)) throw error;
   }
+  // 两年以前搬去 File storage 的：累计次数和文件（2026-10-28 那份 SQL）
+  const { error } = await db.from('play_archive_totals').delete().gte('plays', 0);
+  if (error && !isMissingTable(error)) throw error;
+  const { data } = await db.auth.getUser();
+  if (data.user) await removeMyArchives(data.user.id);
 }
 
 /** 表还不存在（数据库还没执行对应的 SQL） */

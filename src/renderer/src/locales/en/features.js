@@ -132,8 +132,10 @@ export default {
   '你的年度歌曲、最常听到的一句歌词，一页一页看，每页都能分享': 'Your song of the year, the lyric you heard most, and more. Share any page',
   // 存储空间（管理员）
   '存储空间': 'Storage',
-  'Supabase 免费方案的数据库是 500 MB。听歌记录会慢慢变多，快满时就要整理。':
-    'The free Supabase database holds 500 MB. Listening history keeps growing, so tidy it up when it gets close.',
+  '数据库 500 MB、文件 1 GB（Supabase 免费方案）': 'Database 500 MB, files 1 GB (Supabase free plan)',
+  '文件（头像、歌单封面、旧听歌记录）：{used} / 1 GB': 'Files (photos, playlist covers, old history): {used} of 1 GB',
+  '歌曲资料': 'Song details',
+  '较早的听歌小结': 'Older listening summaries',
   '查看': 'Check',
   '用了 {used} / 500 MB': '{used} of 500 MB used',
   '数据库已经用了 {p}%，快满了': 'The database is {p}% full',

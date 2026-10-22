@@ -5,7 +5,7 @@ import { alias } from './electron.vite.config.mjs';
 export default defineConfig({
   resolve: { alias },
   test: {
-    include: ['src/core/**/*.test.js', 'server/lib/**/*.test.js'],
+    include: ['src/core/**/*.test.js', 'server/lib/**/*.test.js', 'supabase/functions/**/*.test.js'],
     environment: 'node',
   },
 });

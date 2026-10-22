@@ -117,6 +117,8 @@ export default {
     'Only the playlist is deleted; the songs aren\'t affected. This can\'t be undone.',
   删除: 'Delete',
   编辑歌单: 'Edit playlist',
+  换照片: 'Choose photo',
+  用歌曲封面: 'Use song covers',
   名字: 'Name',
   介绍: 'Description',
   '写点什么（可以不写）': 'Add an optional description',

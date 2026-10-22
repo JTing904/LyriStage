@@ -12,6 +12,8 @@ import {
   removeTracksFromPlaylist,
   unlikeTrack,
   updatePlaylist,
+  uploadPlaylistCover,
+  removePlaylistCovers,
 } from '@core/data';
 import { useAuthStore } from './auth';
 import { useNoticeStore } from './notice';
@@ -93,8 +95,23 @@ export const useLibraryStore = defineStore('library', () => {
     version.value++;
   }
 
+  /**
+   * 换歌单封面：image 是裁好的图片；null = 换回用歌曲封面拼的
+   * @param {string} id
+   * @param {Blob | null} image
+   */
+  async function setPlaylistCover(id, image) {
+    const url = image ? await uploadPlaylistCover(id, image) : null;
+    await updatePlaylist(id, { cover_url: url });
+    if (!image) await removePlaylistCovers(id);
+    await refreshPlaylists();
+    version.value++;
+    return url;
+  }
+
   async function deletePlaylist(id) {
     await deletePlaylistRow(id);
+    removePlaylistCovers(id);
     playlists.value = playlists.value.filter(p => p.id !== id);
     version.value++;
   }
@@ -143,6 +160,7 @@ export const useLibraryStore = defineStore('library', () => {
     refreshPlaylists,
     createPlaylist,
     renamePlaylist,
+    setPlaylistCover,
     deletePlaylist,
     addToPlaylist,
     addToPlaylists,

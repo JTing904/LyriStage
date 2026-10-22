@@ -41,8 +41,13 @@ export async function listInvites(maxRows = 30) {
 export async function adminStorageUsage() {
   const rows = unwrap(await requireSupabase().rpc('admin_storage_usage'));
   const total = rows.find(r => r.name === 'database')?.bytes ?? 0;
+  // files：File storage 用了多少（还没执行 2026-10-28 那份 SQL 时没有这一行）
+  const files = rows.find(r => r.name === 'files')?.bytes;
   return {
     total: Number(total),
-    tables: rows.filter(r => r.name !== 'database').map(r => ({ name: r.name, bytes: Number(r.bytes) })),
+    files: files == null ? null : Number(files),
+    tables: rows
+      .filter(r => r.name !== 'database' && r.name !== 'files')
+      .map(r => ({ name: r.name, bytes: Number(r.bytes) })),
   };
 }

@@ -93,6 +93,9 @@ const storage = ref(null);
 const storageError = ref('');
 const TABLE_LABEL = {
   play_history: '听歌记录',
+  plays: '听歌记录',
+  tracks: '歌曲资料',
+  play_history_monthly: '较早的听歌小结',
   liked_tracks: '我喜欢',
   playlist_tracks: '歌单里的歌',
   daily_recommendations: '每日推荐',
@@ -458,7 +461,7 @@ async function logout() {
       <h2>{{ $t('存储空间') }}</h2>
       <div class="row source-row">
         <div class="invite-top">
-          <p class="hint">{{ $t('Supabase 免费方案的数据库是 500 MB。听歌记录会慢慢变多，快满时就要整理。') }}</p>
+          <p class="hint">{{ $t('数据库 500 MB、文件 1 GB（Supabase 免费方案）') }}</p>
           <button class="ghost" @click="checkStorage">{{ $t('查看') }}</button>
         </div>
         <p v-if="storageError" class="invite-error" role="alert">{{ storageError }}</p>
@@ -467,6 +470,9 @@ async function logout() {
             <span :style="{ width: `${Math.min(100, (storage.total / FREE_DB_BYTES) * 100)}%` }" />
           </div>
           <p class="hint">{{ $t('用了 {used} / 500 MB', { used: mb(storage.total) }) }}</p>
+          <p v-if="storage.files != null" class="hint">
+            {{ $t('文件（头像、歌单封面、旧听歌记录）：{used} / 1 GB', { used: mb(storage.files) }) }}
+          </p>
           <ul class="source-list">
             <li v-for="table in storage.tables" :key="table.name">
               <span class="source-name">{{ $t(TABLE_LABEL[table.name] ?? table.name) }}</span>

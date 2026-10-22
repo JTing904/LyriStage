@@ -14,6 +14,8 @@ import Icon from '../components/Icon.vue';
 import TrackList from '../components/TrackList.vue';
 import SongPicker from '../components/SongPicker.vue';
 import Cover from '../components/Cover.vue';
+import PlaylistCover from '../components/PlaylistCover.vue';
+import { squareCover } from '../utils/image';
 
 const route = useRoute();
 const router = useRouter();
@@ -155,24 +157,60 @@ async function addSongs(list) {
   }
 }
 
-// 改名
+// 编辑：封面、名字、介绍（参考 Spotify 的「编辑详细信息」：封面在上面，点了换照片）
 const editor = ref(null);
 const name = ref('');
 const description = ref('');
+/** 换封面：选了新照片（File）、要换回歌曲封面（null）、没动（undefined） */
+const newCover = ref(undefined);
+const newCoverPreview = ref('');
+const saving = ref(false);
+const coverInput = ref(null);
+const songCovers = computed(() => tracks.value.slice(0, 4).map(track => track.al?.picUrl).filter(Boolean));
+/** 对话框里预览的封面网址（空的 = 用歌曲封面拼） */
+const previewCover = computed(() =>
+  newCover.value === undefined ? playlist.value?.cover_url ?? '' : newCoverPreview.value
+);
+function resetCoverChoice() {
+  if (newCoverPreview.value) URL.revokeObjectURL(newCoverPreview.value);
+  newCover.value = undefined;
+  newCoverPreview.value = '';
+}
 function openEditor() {
   name.value = playlist.value.name;
   description.value = playlist.value.description ?? '';
+  resetCoverChoice();
   editor.value.showModal();
 }
+function pickCover(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  resetCoverChoice();
+  newCover.value = file;
+  newCoverPreview.value = URL.createObjectURL(file);
+}
+function useSongCovers() {
+  resetCoverChoice();
+  newCover.value = null;
+}
 async function save() {
-  if (!name.value.trim()) return;
+  if (!name.value.trim() || saving.value) return;
+  saving.value = true;
   try {
+    if (newCover.value !== undefined) {
+      const image = newCover.value ? await squareCover(newCover.value) : null;
+      playlist.value.cover_url = await library.setPlaylistCover(playlist.value.id, image);
+    }
     await library.renamePlaylist(playlist.value.id, name.value, description.value.trim() || null);
     playlist.value.name = name.value.trim();
     playlist.value.description = description.value.trim() || null;
+    resetCoverChoice();
     editor.value.close();
   } catch (err) {
     library.say(t('保存失败：{error}', { error: err.message || err }));
+  } finally {
+    saving.value = false;
   }
 }
 
@@ -285,6 +323,17 @@ async function removePlaylist() {
     <dialog ref="editor" class="editor" @click.self="editor.close()">
       <form class="box" @submit.prevent="save">
         <h2>{{ $t('编辑歌单') }}</h2>
+        <div class="cover-edit">
+          <button type="button" class="cover-pick" :aria-label="$t('换照片')" @click="coverInput.click()">
+            <PlaylistCover :cover="previewCover" :covers="songCovers" :name="name" :size="120" radius="12px" />
+            <span class="cover-hover"><Icon name="camera" :size="22" /></span>
+          </button>
+          <div class="cover-actions">
+            <button type="button" class="ghost" @click="coverInput.click()">{{ $t('换照片') }}</button>
+            <button v-if="previewCover" type="button" class="ghost" @click="useSongCovers">{{ $t('用歌曲封面') }}</button>
+          </div>
+          <input ref="coverInput" type="file" accept="image/*" hidden @change="pickCover" />
+        </div>
         <label>
           {{ $t('名字') }}
           <input v-model="name" maxlength="60" required />
@@ -295,7 +344,7 @@ async function removePlaylist() {
         </label>
         <div class="buttons">
           <button type="button" class="ghost" @click="editor.close()">{{ $t('取消') }}</button>
-          <button class="primary" :disabled="!name.trim()">{{ $t('保存') }}</button>
+          <button class="primary" :disabled="!name.trim() || saving">{{ saving ? $t('保存中…') : $t('保存') }}</button>
         </div>
       </form>
     </dialog>
@@ -378,6 +427,52 @@ textarea:focus {
   border: 1px solid var(--line-strong);
   background: none;
   color: var(--text);
+}
+
+/* 编辑：封面 */
+.cover-edit {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.cover-pick {
+  position: relative;
+  flex: none;
+  width: 120px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  cursor: pointer;
+}
+.cover-hover {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgb(0 0 0 / 0.45);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.cover-pick:hover .cover-hover,
+.cover-pick:focus-visible .cover-hover {
+  opacity: 1;
+}
+.cover-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.cover-actions button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 /* 一起编辑 */
