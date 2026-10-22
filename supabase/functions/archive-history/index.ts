@@ -140,8 +140,12 @@ async function handle(req) {
     auth: { persistSession: false },
   });
 
-  const { data: ok } = await db.rpc('archive_secret_ok', { secret: req.headers.get('x-archive-secret') ?? '' });
-  if (!ok) return json({ error: 'forbidden' }, 403);
+  const secret = req.headers.get('x-archive-secret') ?? '';
+  if (!secret) return json({ error: 'forbidden', reason: 'no secret' }, 403);
+  // 检查失败时说明是哪一步（不会透露密码本身），方便看是数据库还是密码的问题
+  const { data: ok, error: checkError } = await db.rpc('archive_secret_ok', { secret });
+  if (checkError) return json({ error: 'forbidden', reason: `check failed: ${checkError.message}` }, 403);
+  if (!ok) return json({ error: 'forbidden', reason: 'wrong secret' }, 403);
 
   const body = await req.json().catch(() => ({}));
   const dryRun = body?.dryRun === true;
