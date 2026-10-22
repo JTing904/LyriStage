@@ -145,7 +145,8 @@ export default {
   '关闭（Esc）': 'Close (Esc)',
   '风格：{name}': 'Style: {name}',
   歌词风格: 'Lyric style',
-  '显示翻译 / 罗马音': 'Show translation / romanization',
+  显示翻译: 'Show translation',
+  显示罗马音: 'Show romanization',
   歌名: 'Song title',
 
   // 歌词风格名称、说明（lyric-stage/styles.js）

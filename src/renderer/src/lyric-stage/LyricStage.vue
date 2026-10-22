@@ -14,6 +14,7 @@ const props = defineProps({
   state: { type: Object, required: true },
   player: { type: Object, required: true },
   getLyrics: { type: Function, required: true },
+  getTranslation: { type: Function, default: null },
 });
 const emit = defineEmits(['close']);
 
@@ -178,8 +179,10 @@ onBeforeUnmount(() => {
       class="picker"
       :current="style.id"
       :show-translation="settings.showTranslation"
+      :show-romaji="settings.showRomaji"
       @select="settings.style = $event"
       @update:show-translation="settings.showTranslation = $event"
+      @update:show-romaji="settings.showRomaji = $event"
       @pointerdown.stop
     />
 

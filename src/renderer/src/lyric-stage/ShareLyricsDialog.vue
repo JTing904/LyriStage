@@ -9,7 +9,7 @@ import { t } from '../i18n';
 import Icon from '../components/Icon.vue';
 
 const emit = defineEmits(['close']);
-const { lines, lineIndex, track, palette, settings } = useStage();
+const { lines, lineIndex, track, palette, subText } = useStage();
 const notice = useNoticeStore();
 
 const MAX_LINES = 4;
@@ -19,7 +19,7 @@ const textOf = line => displayWords(line.words).map(w => w.text).join('').trim()
 const choices = computed(() => {
   const center = Math.max(0, lineIndex.value);
   return lines.value
-    .map((line, index) => ({ index, text: textOf(line), sub: line.translation || line.romaji || '' }))
+    .map((line, index) => ({ index, text: textOf(line), sub: subText(line) }))
     .filter(c => c.text && Math.abs(c.index - center) <= 8);
 });
 const selected = ref(new Set([Math.max(0, lineIndex.value)]));
@@ -48,7 +48,7 @@ async function render() {
   const token = ++renderToken;
   const picked = choices.value
     .filter(c => selected.value.has(c.index))
-    .map(c => ({ text: c.text, sub: settings.showTranslation ? c.sub : '' }));
+    .map(c => ({ text: c.text, sub: c.sub }));
   const result = await renderLyricCard({ lines: picked, track: track.value, palette: palette.value });
   if (token !== renderToken) return;
   canvas = result;

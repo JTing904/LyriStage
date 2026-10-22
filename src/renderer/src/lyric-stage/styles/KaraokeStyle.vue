@@ -6,7 +6,8 @@ import { wordProgress } from '@core/lyrics';
 import { useStage, displayWords } from '../useStage';
 import CoverBackdrop from '../CoverBackdrop.vue';
 
-const { lines, lineIndex, now, track, settings } = useStage();
+const { lines, lineIndex, now, track, subText } =
+  useStage();
 
 /**
  * 两个位置：上面靠左（双数行）、下面靠右（单数行）。
@@ -58,11 +59,11 @@ const progressOf = (line, word) =>
             </p>
             <p
               v-if="
-                settings.showTranslation && (line.translation || line.romaji)
+                subText(line)
               "
               class="sub"
             >
-              {{ line.translation || line.romaji }}
+              {{ subText(line) }}
             </p>
           </div>
         </Transition>
@@ -140,6 +141,7 @@ const progressOf = (line, word) =>
   clip-path: inset(-20% calc((1 - var(--p)) * 100%) -20% -5%);
 }
 .sub {
+  white-space: pre-line;
   margin: 0.3em 0 0;
   font: 700 clamp(14px, 1.8vw, 24px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
   color: rgba(255, 255, 255, 0.85);

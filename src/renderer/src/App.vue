@@ -8,7 +8,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ApiError } from '@core/http/client';
 import { adminStorageUsage } from '@core/data';
 import { isUnavailable, isUnblockRateLimited } from '@core/netease';
-import { createFmSource, getLyrics } from './services';
+import { createFmSource, getEnglishTranslation, getLyrics } from './services';
 import { usePlayer } from './composables/usePlayer';
 import {
   findAndroidUpdate,
@@ -286,6 +286,7 @@ function onContentScroll() {
       :state="state"
       :player="player"
       :get-lyrics="getLyrics"
+      :get-translation="getEnglishTranslation"
       @close="stageOpen = false"
     />
   </div>

@@ -10,17 +10,20 @@ import {
   shallowRef,
   watch,
 } from 'vue';
-import { findLineIndex } from '@core/lyrics';
+import { findLineIndex, needsEnglish, withTranslation } from '@core/lyrics';
 import { getPalette, FALLBACK_PALETTE } from './palette';
 import { report, trackContext } from '../errorReporter';
+import { locale } from '../i18n';
 
 const STAGE_KEY = Symbol('lyric-stage');
 const SETTINGS_KEY = 'lyristage:stage';
 
 // 设置尽量少：歌词时间、字号都由系统自动处理，不让用户操心
+// 翻译跟着 App 的语言：中文用网易云的中文翻译，English 用 LyriStage 服务器的英文翻译
 const DEFAULT_SETTINGS = {
   style: 'kinetic',
   showTranslation: true,
+  showRomaji: false,
 };
 
 // 全角标点在字体里只占半边，另外半边是空白（"）"的空白在右边），
@@ -100,8 +103,9 @@ function loadSettings() {
  * @param {{ track: object | null, playing: boolean }} deps.state 播放器的响应式状态
  * @param {{ currentTime: () => number, seek: (s: number) => void }} deps.player
  * @param {(track: object) => Promise<import('@core/lyrics').Lyrics>} deps.getLyrics
+ * @param {(track: object) => Promise<string>} [deps.getTranslation] 英文翻译（LRC）
  */
-export function provideStage({ state, player, getLyrics }) {
+export function provideStage({ state, player, getLyrics, getTranslation }) {
   const settings = reactive(loadSettings());
   watch(
     settings,
@@ -143,8 +147,42 @@ export function provideStage({ state, player, getLyrics }) {
       });
     }
     if (colors.status === 'fulfilled') palette.value = colors.value;
+    loadEnglish();
   }
   watch(() => state.track?.id, loadLyrics, { immediate: true });
+
+  /** English 界面、开着翻译、歌词有中日韩文字：去拿英文翻译挂上去（拿不到就不显示翻译） */
+  async function loadEnglish() {
+    const current = lyrics.value;
+    const song = state.track;
+    if (!getTranslation || !current || !song || locale.value !== 'en' || !settings.showTranslation) return;
+    if (current.lines.some(l => l.translationEn !== undefined) || !needsEnglish(current)) return;
+    try {
+      const lrc = await getTranslation(song);
+      if (lyrics.value === current && state.track?.id === song.id) {
+        lyrics.value = withTranslation(current, lrc, 'translationEn');
+      }
+    } catch {
+      // 没有英文翻译就算了，不影响歌词
+    }
+  }
+  watch([locale, () => settings.showTranslation], loadEnglish);
+
+  /**
+   * 一行下面的小字：罗马音一行、翻译一行（各自开关），用 \n 隔开；
+   * 风格组件的 .sub 用 white-space: pre-line 显示
+   * @param {import('@core/lyrics').LyricLine | null | undefined} line
+   */
+  function subText(line) {
+    if (!line) return '';
+    const parts = [];
+    if (settings.showRomaji && line.romaji) parts.push(line.romaji);
+    if (settings.showTranslation) {
+      const translation = locale.value === 'en' ? line.translationEn : line.translation;
+      if (translation) parts.push(translation);
+    }
+    return parts.join('\n');
+  }
 
   // 每一帧读精确的播放时间（毫秒），逐字动画靠它
   const now = ref(0);
@@ -192,6 +230,7 @@ export function provideStage({ state, player, getLyrics }) {
     lineProgress,
     inInterlude,
     playing: computed(() => state.playing),
+    subText,
     /** 歌词载入失败时再试一次（例如刚才断网） */
     retryLyrics: () => loadLyrics(state.track?.id),
     /** 点歌词跳到那一行 */

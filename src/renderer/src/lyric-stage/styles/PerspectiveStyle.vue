@@ -7,7 +7,8 @@ import { useStage, displayWords } from '../useStage';
 import { useCenteredList } from '../useCenteredList';
 import CoverBackdrop from '../CoverBackdrop.vue';
 
-const { lines, lineIndex, settings, seekToLine, coverUrl } = useStage();
+const { lines, lineIndex, seekToLine, coverUrl, subText } =
+  useStage();
 
 // 封面是正方形：宽屏时铺满会被放大裁切（只看到局部），
 // 所以宽屏用模糊封面铺底，完整的清晰封面放在右边；竖屏（手机）才整张铺满
@@ -89,13 +90,11 @@ const petals = Array.from({ length: 12 }, (_, i) => ({
             <p class="text">{{ line.text }}</p>
             <p
               v-if="
-                settings.showTranslation &&
-                i === lineIndex &&
-                (line.translation || line.romaji)
+                i === lineIndex && subText(line)
               "
               class="sub"
             >
-              {{ line.translation || line.romaji }}
+              {{ subText(line) }}
             </p>
           </div>
         </div>
@@ -227,6 +226,7 @@ const petals = Array.from({ length: 12 }, (_, i) => ({
   font-weight: 900;
 }
 .sub {
+  white-space: pre-line;
   margin: 0.25em 0 0;
   font: 500 clamp(13px, 1.4vw, 20px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
   color: rgba(255, 255, 255, 0.85);

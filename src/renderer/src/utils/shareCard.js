@@ -135,7 +135,8 @@ export async function renderLyricCard({ lines, track, palette }) {
       ctx.font = `900 ${size}px ${SERIF}`;
       const main = wrapText(ctx, line.text, width);
       ctx.font = `400 ${subSize}px ${SANS}`;
-      const sub = line.sub ? wrapText(ctx, line.sub, width) : [];
+      // 罗马音、翻译各一行（用换行隔开），各自断行
+      const sub = line.sub ? line.sub.split('\n').flatMap(part => wrapText(ctx, part, width)) : [];
       layout.push({ main, sub });
       h += main.length * size * 1.28 + sub.length * subSize * 1.5 + size * 0.45;
     }

@@ -5,7 +5,7 @@ import { computed } from 'vue';
 import { useStage, displayWords } from '../useStage';
 import CoverBackdrop from '../CoverBackdrop.vue';
 
-const { lines, lineIndex, coverUrl, playing, settings, seekToLine } =
+const { lines, lineIndex, coverUrl, playing, seekToLine, subText } =
   useStage();
 
 const label = computed(
@@ -26,7 +26,7 @@ const window5 = computed(() => {
             .map(w => w.text)
             .join('')
         : '',
-      sub: line ? line.translation || line.romaji : null,
+      sub: subText(line),
     };
   });
 });
@@ -73,7 +73,7 @@ const window5 = computed(() => {
       >
         <p class="text">{{ item.text || ' ' }}</p>
         <p
-          v-if="settings.showTranslation && item.sub && item.offset === 0"
+          v-if="item.sub && item.offset === 0"
           class="sub"
         >
           {{ item.sub }}
@@ -190,6 +190,7 @@ const window5 = computed(() => {
   font-weight: 900;
 }
 .sub {
+  white-space: pre-line;
   margin: 0.3em 0 0;
   font-size: clamp(14px, 1.5vw, 20px);
   color: rgba(255, 255, 255, 0.75);

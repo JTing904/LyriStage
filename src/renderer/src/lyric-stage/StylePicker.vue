@@ -5,8 +5,9 @@ import { LYRIC_STYLES } from './styles';
 defineProps({
   current: { type: String, required: true },
   showTranslation: { type: Boolean, required: true },
+  showRomaji: { type: Boolean, required: true },
 });
-const emit = defineEmits(['select', 'update:showTranslation']);
+const emit = defineEmits(['select', 'update:showTranslation', 'update:showRomaji']);
 </script>
 
 <template>
@@ -54,12 +55,22 @@ const emit = defineEmits(['select', 'update:showTranslation']);
     </div>
 
     <label class="switch-row">
-      <span>{{ $t('显示翻译 / 罗马音') }}</span>
+      <span>{{ $t('显示翻译') }}</span>
       <input
         type="checkbox"
         role="switch"
         :checked="showTranslation"
         @change="emit('update:showTranslation', $event.target.checked)"
+      />
+      <span class="switch" aria-hidden="true" />
+    </label>
+    <label class="switch-row">
+      <span>{{ $t('显示罗马音') }}</span>
+      <input
+        type="checkbox"
+        role="switch"
+        :checked="showRomaji"
+        @change="emit('update:showRomaji', $event.target.checked)"
       />
       <span class="switch" aria-hidden="true" />
     </label>

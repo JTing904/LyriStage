@@ -7,6 +7,8 @@ import {
   buildLyrics,
   findLineIndex,
   wordProgress,
+  needsEnglish,
+  withTranslation,
 } from './index';
 import { classifyInfoLine, parseJsonCredits } from './credits';
 
@@ -239,5 +241,36 @@ describe('findLineIndex / wordProgress', () => {
     expect(wordProgress(word, 500)).toBe(0);
     expect(wordProgress(word, 1200)).toBe(0.5);
     expect(wordProgress(word, 9999)).toBe(1);
+  });
+});
+
+describe('罗马音、英文翻译', () => {
+  it('韩文：不用网易云的怪罗马音，改用标准罗马字', () => {
+    const lyrics = buildLyrics({
+      lrc: '[00:01.00]밤편지\n[00:05.00]Hello',
+      romaji: '[00:01.00]bam pyeon ji (weird)',
+    });
+    expect(lyrics.lines[0].romaji).toBe('bampyeonji');
+    expect(lyrics.lines[1].romaji).toBeNull();
+    expect(lyrics.hasRomaji).toBe(true);
+  });
+
+  it('日文：用网易云的罗马音', () => {
+    const lyrics = buildLyrics({ lrc: '[00:01.00]夢ならば', romaji: '[00:01.00]yu me na ra ba' });
+    expect(lyrics.lines[0].romaji).toBe('yu me na ra ba');
+  });
+
+  it('needsEnglish：有中日韩文字才要翻', () => {
+    expect(needsEnglish(buildLyrics({ lrc: '[00:01.00]晴天' }))).toBe(true);
+    expect(needsEnglish(buildLyrics({ lrc: '[00:01.00]Shape of you' }))).toBe(false);
+  });
+
+  it('withTranslation：挂上英文翻译，回传新的（原本的不动）', () => {
+    const lyrics = buildLyrics({ lrc: '[00:01.00]故事的小黄花\n[00:05.00]从出生那年就飘着' });
+    const next = withTranslation(lyrics, '[00:01.00]The little yellow flower\n[00:05.10]Floating since birth', 'translationEn');
+    expect(next).not.toBe(lyrics);
+    expect(next.lines.map(l => l.translationEn)).toEqual(['The little yellow flower', 'Floating since birth']);
+    expect(lyrics.lines[0].translationEn).toBeUndefined();
+    expect(next.lines[0].translation).toBeNull(); // 中文翻译不受影响
   });
 });

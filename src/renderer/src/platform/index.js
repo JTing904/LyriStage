@@ -22,6 +22,12 @@ export const apiBase = isElectron
   ? bridge.apiBase
   : import.meta.env.VITE_API_BASE || '/api';
 
+/**
+ * 歌词英文翻译的 API（server/lib/translate.js）：翻译的密钥只在 Vercel 上，
+ * 电脑版本机的 API 没有，所以电脑版也直接连 Vercel
+ */
+export const translateApiBase = isElectron ? 'https://lyristage-api.vercel.app' : apiBase;
+
 /** 电脑版请求本机 API 要带的通行证 header（其他平台是空的） */
 export const localApiHeaders = bridge?.apiHeaders ?? {};
 

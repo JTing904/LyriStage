@@ -5,9 +5,13 @@
 import { computed } from 'vue';
 import { useStage, displayWords } from '../useStage';
 
-const { lines, lineIndex, line, now, track, settings } = useStage();
+const { lines, lineIndex, line, now, track, subText } =
+  useStage();
 
 const HISTORY = 9; // 上面保留几句
+
+/** 翻译、罗马音当成程序注释：每一行前面加 // */
+const comment = text => text.replace(/^/gm, '// ');
 
 const history = computed(() => {
   const end = Math.max(0, lineIndex.value);
@@ -15,7 +19,7 @@ const history = computed(() => {
     text: displayWords(l.words)
       .map(w => w.text)
       .join(''),
-    sub: l.translation || l.romaji,
+    sub: subText(l),
   }));
 });
 
@@ -58,26 +62,14 @@ const command = computed(
         class="entry"
       >
         <p class="out">{{ item.text }}</p>
-        <p v-if="settings.showTranslation && item.sub" class="comment"
-          >// {{ item.sub }}</p
-        >
+        <p v-if="item.sub" class="comment">{{ comment(item.sub) }}</p>
       </div>
       <div class="entry current">
         <p class="out">
           <span class="marker">&gt;</span> {{ typed
           }}<span class="cursor" aria-hidden="true" />
         </p>
-        <p
-          v-if="
-            settings.showTranslation &&
-            line &&
-            (line.translation || line.romaji) &&
-            typed
-          "
-          class="comment"
-        >
-          // {{ line.translation || line.romaji }}
-        </p>
+        <p v-if="subText(line) && typed" class="comment">{{ comment(subText(line)) }}</p>
       </div>
     </div>
   </div>
@@ -147,6 +139,7 @@ const command = computed(
   color: var(--green);
 }
 .comment {
+  white-space: pre-line;
   color: var(--green);
   opacity: 0.7;
   font-size: 0.8em;

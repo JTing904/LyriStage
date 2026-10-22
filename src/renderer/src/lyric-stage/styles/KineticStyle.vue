@@ -4,7 +4,7 @@
 import { computed } from 'vue';
 import { useStage, splitPhrases, displayWords, displayText } from '../useStage';
 
-const { track, coverUrl, line, lineIndex, now, inInterlude, settings } =
+const { track, coverUrl, line, lineIndex, now, inInterlude, subText } =
   useStage();
 
 // 背景：小尺寸封面放大，浏览器插值后自然变模糊，比实时 blur 滤镜省电
@@ -78,10 +78,10 @@ const particles = Array.from({ length: 18 }, (_, i) => ({
           </template>
         </p>
         <p
-          v-if="settings.showTranslation && (line.translation || line.romaji)"
+          v-if="subText(line)"
           class="sub"
         >
-          {{ line.translation || line.romaji }}
+          {{ subText(line) }}
         </p>
       </div>
     </Transition>
@@ -256,6 +256,7 @@ const particles = Array.from({ length: 18 }, (_, i) => ({
 }
 
 .sub {
+  white-space: pre-line;
   margin: 0;
   font: 500 calc(clamp(14px, 2.2vw, 22px)) / 1.5 'Noto Sans SC', system-ui,
     sans-serif;

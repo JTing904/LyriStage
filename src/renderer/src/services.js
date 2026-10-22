@@ -17,7 +17,7 @@ import {
   saveBilibiliPick,
 } from '@core/data';
 import { PersonalFM, SongRadio } from '@core/recommend';
-import { apiBase, isElectron, localApiHeaders } from './platform';
+import { apiBase, isElectron, localApiHeaders, translateApiBase } from './platform';
 import { connectMediaSession } from './mediaSession';
 
 configureSupabase({
@@ -125,6 +125,21 @@ export async function getLyrics(track) {
   // v2：加了 LRCLIB 以后换 key，以前存的"没有歌词"不要再用 7 天
   const raw = await lyricCache.getOrLoad(`lyric:v2:${track.id}`, () => loadLyrics(track));
   return buildLyrics(raw, { durationMs: track.dt });
+}
+
+const translateHttp = createHttp({ baseURL: translateApiBase, getHeaders: authHeaders });
+
+/**
+ * 歌词的英文翻译（LRC）：LyriStage 服务器用微软翻译翻好、大家共用；本来就是英文的回传空的。
+ * 出错（没登录、这个月的免费额度用完）会丢出错误，不存进缓存，下次再试
+ * @param {{ id: number | string }} track
+ * @returns {Promise<string>}
+ */
+export function getEnglishTranslation(track) {
+  return lyricCache.getOrLoad(`lyric-en:v1:${track.id}`, async () => {
+    const data = await translateHttp.get('/lyric/translate', { id: track.id, to: 'en' });
+    return data?.lyric ?? '';
+  });
 }
 
 /**

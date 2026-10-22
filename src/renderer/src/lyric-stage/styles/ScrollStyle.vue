@@ -9,7 +9,8 @@ import { rgb } from '../palette';
 import CoverBackdrop from '../CoverBackdrop.vue';
 
 // 这里不读 now（每一帧都在变）：正在唱的那行交给 LitWords，整页歌词才不会每帧重画
-const { lines, lineIndex, palette, settings, seekToLine } = useStage();
+const { lines, lineIndex, palette, seekToLine, subText } =
+  useStage();
 const { viewport, lineRef, offset } = useCenteredList(lineIndex, {
   anchor: 0.42,
 });
@@ -54,10 +55,10 @@ const blobs = computed(() => ({
             }}</template>
           </p>
           <p
-            v-if="settings.showTranslation && (line.translation || line.romaji)"
+            v-if="subText(line)"
             class="sub"
           >
-            {{ line.translation || line.romaji }}
+            {{ subText(line) }}
           </p>
         </div>
       </div>
@@ -176,6 +177,7 @@ const blobs = computed(() => ({
   white-space: pre-wrap;
 }
 .sub {
+  white-space: pre-line;
   margin: 0.4em 0 0;
   font: 600 clamp(14px, 1.6vw, 22px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
   color: rgba(255, 255, 255, 0.7);

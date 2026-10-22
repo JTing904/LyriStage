@@ -4,8 +4,9 @@ import { parseLrc } from './lrc';
 import { parseYrc } from './yrc';
 import { parseJsonCredits, classifyInfoLine, splitCredit } from './credits';
 import { estimateWords } from './words';
+import { romanizeKorean } from './korean';
 
-export { parseLrc, parseYrc, estimateWords };
+export { parseLrc, parseYrc, estimateWords, romanizeKorean };
 export { splitWords } from './words';
 export { findLrclibLyrics, hasTimedLyrics } from './lrclib';
 
@@ -18,8 +19,9 @@ export { findLrclibLyrics, hasTimedLyrics } from './lrclib';
  * @property {string} text
  * @property {Word[]} words 逐字时间
  * @property {'word' | 'estimated'} timing word：网易云的逐字歌词；estimated：按字数估算
- * @property {string | null} translation
- * @property {string | null} romaji
+ * @property {string | null} translation 网易云的中文翻译
+ * @property {string | null} [translationEn] 英文翻译（LyriStage 服务器机器翻译，见 withTranslation）
+ * @property {string | null} romaji 罗马音（日文用网易云的；韩文自己转，见 korean.js）
  *
  * @typedef {object} Lyrics
  * @property {LyricLine[]} lines
@@ -82,6 +84,11 @@ export function buildLyrics(raw, { durationMs } = {}) {
 
   attach(lines, parseLrc(translation), 'translation');
   attach(lines, parseLrc(romaji), 'romaji');
+  // 韩文：网易云的罗马音写法很怪，改用标准罗马字
+  for (const line of lines) {
+    const korean = romanizeKorean(line.text);
+    if (korean) line.romaji = korean;
+  }
 
   return {
     lines,
@@ -121,11 +128,35 @@ function fromLrc(lrcLines, durationMs) {
   return lines;
 }
 
+// 中日韩文字：歌词里一句都没有就是英文（等拉丁字母）歌，不用翻成英文
+const CJK = /[぀-ヿ㐀-鿿가-힯豈-﫿]/;
+
+/**
+ * 需不需要英文翻译：有中日韩文字的歌
+ * @param {Lyrics} lyrics
+ */
+export function needsEnglish(lyrics) {
+  return lyrics.lines.some(l => CJK.test(l.text));
+}
+
+/**
+ * 另外拿到的翻译（LRC）挂上去，回传新的 Lyrics（原本的不动，界面才会更新）
+ * @param {Lyrics} lyrics
+ * @param {string} lrc
+ * @param {'translationEn'} key
+ * @returns {Lyrics}
+ */
+export function withTranslation(lyrics, lrc, key) {
+  const lines = lyrics.lines.map(l => ({ ...l, [key]: null }));
+  attach(lines, parseLrc(lrc), key);
+  return { ...lyrics, lines };
+}
+
 /**
  * 按时间把翻译 / 罗马音挂到最接近的原文行上
  * @param {LyricLine[]} lines
  * @param {import('./lrc').LrcLine[]} extra
- * @param {'translation' | 'romaji'} key
+ * @param {'translation' | 'translationEn' | 'romaji'} key
  */
 function attach(lines, extra, key) {
   const candidates = extra.filter(l => l.text);

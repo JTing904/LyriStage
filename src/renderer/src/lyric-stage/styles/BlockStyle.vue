@@ -6,7 +6,8 @@ import { useStage, displayWords } from '../useStage';
 import { useCenteredList } from '../useCenteredList';
 import { rgb, withLightness } from '../palette';
 
-const { lines, lineIndex, palette, settings, seekToLine } = useStage();
+const { lines, lineIndex, palette, seekToLine, subText } =
+  useStage();
 const { viewport, lineRef, offset } = useCenteredList(lineIndex, {
   anchor: 0.4,
 });
@@ -43,10 +44,10 @@ const background = computed(() =>
         >
           <p class="text">{{ line.text }}</p>
           <p
-            v-if="settings.showTranslation && (line.translation || line.romaji)"
+            v-if="subText(line)"
             class="sub"
           >
-            {{ line.translation || line.romaji }}
+            {{ subText(line) }}
           </p>
         </div>
       </div>
@@ -100,6 +101,7 @@ const background = computed(() =>
   letter-spacing: -0.015em;
 }
 .sub {
+  white-space: pre-line;
   margin: 0.3em 0 0;
   font: 700 clamp(14px, 1.7vw, 24px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
   opacity: 0.8;

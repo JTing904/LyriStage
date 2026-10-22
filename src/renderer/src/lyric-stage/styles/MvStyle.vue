@@ -8,7 +8,8 @@ import { createRng } from '@core/recommend/engine';
 import { useStage, displayWords, splitPhrases } from '../useStage';
 import { rgb, withLightness } from '../palette';
 
-const { line, lineIndex, now, palette, track, settings } = useStage();
+const { line, lineIndex, now, palette, track, subText } =
+  useStage();
 
 const PHRASE_LEAD_MS = 120;
 
@@ -75,10 +76,10 @@ const colors = computed(() => ({
           >{{ piece.text }}</span
         >
         <p
-          v-if="settings.showTranslation && (line.translation || line.romaji)"
+          v-if="subText(line)"
           class="sub"
         >
-          {{ line.translation || line.romaji }}
+          {{ subText(line) }}
         </p>
       </div>
     </Transition>
@@ -170,6 +171,7 @@ const colors = computed(() => ({
   padding: 0 0.15em;
 }
 .sub {
+  white-space: pre-line;
   flex-basis: 100%;
   margin: 0.8em 0 0;
   text-align: center;
