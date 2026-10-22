@@ -11,7 +11,7 @@
 
 [官网](https://jting904.github.io/LyriStage/) · [下载](https://github.com/JTing904/LyriStage/releases/latest) · [网页版](https://lyristage.vercel.app) · [English](README.md)
 
-![版本](https://img.shields.io/badge/version-2.1.3-ff3b5c) ![许可证](https://img.shields.io/badge/code-MIT-blue) ![平台](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
+![版本](https://img.shields.io/badge/version-2.1.4-ff3b5c) ![许可证](https://img.shields.io/badge/code-MIT-blue) ![平台](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
 <a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage 宣传片：到官网观看"></a>
 
@@ -27,12 +27,12 @@
 - **相似歌曲电台**：从任何一首歌开始，接着播相似的歌，按你的口味排。
 - **一起听**：开一个房间，把六位房间码发给朋友，大家同一时间听同一首。可以聊天、送表情，房主也能把房间交给别人。
 - **好友**：用好友码加好友（要对方同意），看得到好友在听什么；好友周榜比一比这周谁听最久、各自最常听的歌手。随时可以关掉分享或开私人模式。
-- **共同歌单**：邀请朋友一起加歌，每首歌会显示是谁加的。
-- **播放队列、睡眠定时**：下一首播放、加入队列、拖动排序，也能把整个队列看成一面封面海报墙；15 / 30 / 60 分钟后或这首播完就停。
+- **共同歌单**：邀请朋友一起加歌，每首歌会显示是谁加的。歌单可以换成自己的封面照片，也能做成海报分享。
+- **播放队列、睡眠定时**：下一首播放、加入队列、拖动排序，也能把整个队列看成一面封面海报墙，还能做成图片分享；15 / 30 / 60 分钟后或这首播完就停。
 - **均衡器**：10 段均衡器和预设，还有音量平衡，每首歌差不多一样大声。
 - **自己的音乐库**：我喜欢、歌单、听歌记录、个人名字和头像，电脑和手机同步。在设置页可以导出资料、删除账号。
 - **Windows**：托盘、最小化时的桌面歌词、全局快捷键、自动更新、首页的 3D 公仔。
-- **Android**：后台播放、锁屏和通知栏控制、锁屏歌词、显示正在唱那句的桌面小组件、横屏全屏看歌词。
+- **Android**：后台播放、锁屏和通知栏控制、锁屏歌词、显示正在唱那句的桌面小组件、横屏全屏看歌词、在 App 里直接更新。
 - **iPhone**：网页版，可以加到主屏幕。
 - **中文 / English**，深色、浅色主题。
 
