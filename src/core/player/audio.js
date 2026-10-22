@@ -49,7 +49,8 @@ export function createHtmlAudio(element = new Audio(), { createFallback = () => 
 
   /** @param {HTMLAudioElement} el */
   function prepare(el) {
-    el.preload = 'auto';
+    // 一开始只载入时长：打开 App 恢复上次的歌时不会整首下载（用手机流量很浪费）；按播放后改成整首
+    el.preload = 'metadata';
     el.addEventListener('loadedmetadata', applyPendingSeek);
   }
   prepare(element);
@@ -97,6 +98,7 @@ export function createHtmlAudio(element = new Audio(), { createFallback = () => 
       element.load();
     },
     async play() {
+      active.preload = 'auto';
       try {
         await active.play();
       } catch (err) {

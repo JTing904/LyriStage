@@ -43,6 +43,8 @@ export function redirectTarget(route) {
 
 // 没登录也能逛（首页、搜索、歌单、专辑、歌手），听歌和个人的页面（meta.member）要登录而且是成员
 router.beforeEach(async to => {
+  // 不用登录的页面（首页、搜索、歌单…）直接进去，不等登录状态和成员检查
+  if (!to.meta.member && to.name !== 'login') return true;
   const auth = useAuthStore();
   await auth.whenReady();
   if (to.name === 'login') return auth.allowed ? redirectTarget(to) : true;

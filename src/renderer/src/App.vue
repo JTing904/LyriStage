@@ -3,7 +3,7 @@
 // - 电脑（宽 ≥ 900px）：左边侧边栏 + 中间内容 + 底部完整播放条
 // - 手机（窄，或手机横过来：矮又是触控）：内容 + 迷你播放条 + 底部 Tab
 // 歌词舞台是盖在最上面的全屏层
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ApiError } from '@core/http/client';
 import { adminStorageUsage } from '@core/data';
@@ -32,10 +32,11 @@ import BottomTabs from './components/BottomTabs.vue';
 import MiniPlayer from './components/MiniPlayer.vue';
 import MobileBackBar from './components/MobileBackBar.vue';
 import PlayerBar from './components/PlayerBar.vue';
-import LyricStage from './lyric-stage/LyricStage.vue';
 import QueuePanel from './components/QueuePanel.vue';
-import QueueWall from './components/QueueWall.vue';
 import RoomReactions from './components/RoomReactions.vue';
+// 歌词舞台、海报墙：打开时才载入（App 打开时不用等）
+const LyricStage = defineAsyncComponent(() => import('./lyric-stage/LyricStage.vue'));
+const QueueWall = defineAsyncComponent(() => import('./components/QueueWall.vue'));
 
 const { state, player } = usePlayer();
 useThemeStore();

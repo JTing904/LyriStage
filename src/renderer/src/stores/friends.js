@@ -71,7 +71,14 @@ export const useFriendsStore = defineStore('friends', () => {
         // 表不存在：refresh 会把功能藏起来
       }
       await refresh();
-      if (available.value) stopWatching = watchFriends(() => refresh());
+      // 自己的「正在听」变了（我刚换歌）不用重新读好友资料
+      const me = auth.user?.id;
+      if (available.value) {
+        stopWatching = watchFriends(change => {
+          if (change?.table === 'now_playing' && (change.new?.user_id ?? change.old?.user_id) === me) return;
+          refresh();
+        });
+      }
     },
     { immediate: true }
   );

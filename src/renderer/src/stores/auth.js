@@ -70,13 +70,24 @@ export const useAuthStore = defineStore('auth', () => {
   const loginPrompt = ref('');
   const enabled = isSupabaseConfigured();
 
-  async function checkMember() {
+  // 同一个账号同时只查一次（登录状态读完、账号变了都会叫，打开 App 时两个会同时发生）
+  /** @type {{ userId: string, promise: Promise<void> } | null} */
+  let checking = null;
+  function checkMember() {
     if (!user.value) {
       member.value = null;
       admin.value = false;
-      return;
+      return Promise.resolve();
     }
     const userId = user.value.id;
+    if (checking?.userId === userId) return checking.promise;
+    const promise = queryMember(userId).finally(() => {
+      if (checking?.promise === promise) checking = null;
+    });
+    checking = { userId, promise };
+    return promise;
+  }
+  async function queryMember(userId) {
     try {
       const result = await getMembership();
       member.value = result.member;
@@ -112,7 +123,15 @@ export const useAuthStore = defineStore('auth', () => {
         history.replaceState(null, '', location.pathname + location.hash);
       }
       user.value = await getCurrentUser();
-      await checkMember();
+      // 上次查过这个账号：先用上次的答案，画面马上出来，背景再确认一次（不是成员了会被踢回首页）
+      const cached = user.value && cachedMembership(user.value.id);
+      if (cached) {
+        member.value = cached.member;
+        admin.value = cached.admin;
+        checkMember();
+      } else {
+        await checkMember();
+      }
     } finally {
       ready.value = true;
     }

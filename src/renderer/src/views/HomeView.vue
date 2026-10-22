@@ -47,15 +47,25 @@ function search() {
   if (q) router.push({ path: '/search', query: { q } });
 }
 
-const playlists = ref([]);
-const newSongs = ref([]);
-const charts = ref([]);
-const loading = ref(true);
+// 上次的推荐歌单、新歌、排行榜：打开 App 时先显示这份（马上有内容），背景再拿新的
+const HOME_KEY = 'lyristage:home';
+function cachedHome() {
+  try {
+    return JSON.parse(localStorage.getItem(HOME_KEY) || 'null');
+  } catch {
+    return null;
+  }
+}
+const cached = cachedHome();
+const playlists = ref(cached?.playlists ?? []);
+const newSongs = ref(cached?.newSongs ?? []);
+const charts = ref(cached?.charts ?? []);
+const loading = ref(!cached);
 const failed = ref(false);
 
 /** 推荐歌单、新歌、排行榜；哪一块失败就显示「重试」（Vercel 太久没用时第一次会比较慢） */
 async function load() {
-  loading.value = true;
+  loading.value = !playlists.value.length;
   failed.value = false;
   const [p, s, c] = await Promise.allSettled([
     netease.recommendedPlaylists(12),
@@ -65,8 +75,17 @@ async function load() {
   if (p.status === 'fulfilled') playlists.value = p.value.slice(0, 12);
   if (s.status === 'fulfilled') newSongs.value = s.value.slice(0, 8);
   if (c.status === 'fulfilled') charts.value = c.value.slice(0, 4);
-  failed.value = [p, s, c].some(r => r.status === 'rejected');
+  // 有拿到新的才算失败（有上次的内容就不用显示「重试」吓人）
+  failed.value = [p, s, c].some(r => r.status === 'rejected') && !cached;
   loading.value = false;
+  try {
+    localStorage.setItem(
+      HOME_KEY,
+      JSON.stringify({ playlists: playlists.value, newSongs: newSongs.value, charts: charts.value })
+    );
+  } catch {
+    // 存不了就下次再从网络拿
+  }
 }
 onMounted(load);
 
