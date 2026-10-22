@@ -426,7 +426,10 @@ header p {
   flex: 1;
 }
 /* 歌词框上面那条：房间码、谁在听（放在框外，不挡歌词，各种风格都看得清） */
+/* 要排在歌词框上面：「⋯」的选单会往下盖到歌词框（歌词框是独立的一层，不提高就会被它挡住） */
 .room-top {
+  position: relative;
+  z-index: 30;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -618,6 +621,7 @@ header p {
 }
 .menu {
   position: absolute;
+  z-index: 1;
   top: calc(100% + 6px);
   right: 0;
   min-width: 160px;
