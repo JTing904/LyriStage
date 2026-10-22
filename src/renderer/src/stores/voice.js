@@ -147,6 +147,8 @@ export const useVoiceStore = defineStore('voice', () => {
   /** 连线 ID → { userId, muted }（语音频道 presence 里的每台设备） */
   const sessions = new Map();
   function onPresence() {
+    // 离开语音后还可能慢一步收到通知，那时频道已经关了
+    if (!channel) return;
     sessions.clear();
     for (const p of Object.values(channel.presenceState()).flat()) {
       if (p.session && p.id) sessions.set(p.session, { userId: p.id, muted: Boolean(p.muted) });
