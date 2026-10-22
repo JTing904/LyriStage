@@ -18,6 +18,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(UpdatePlugin.class);
         // 看歌词时屏幕常亮
         registerPlugin(KeepAwakePlugin.class);
+        // 一起听的语音在背景继续
+        registerPlugin(VoicePlugin.class);
         super.onCreate(savedInstanceState);
         Window window = getWindow();
         // 画面铺到状态栏、导航列底下，两条都透明，透出页面自己的颜色

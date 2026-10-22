@@ -8,6 +8,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { isUnavailable } from '@core/netease';
 import { useNoticeStore } from '../stores/notice';
 import { useAuthStore } from '../stores/auth';
+import { useRoomStore } from '../stores/room';
 import { t as tr } from '../i18n';
 import { usePlayer } from '../composables/usePlayer';
 import { useLibraryStore } from '../stores/library';
@@ -84,25 +85,29 @@ function play(index) {
   player.playList(props.tracks, index, props.context);
 }
 
-// ---- 每首右边的「⋯」：下一首播放、加入播放队列、相似歌曲电台、加到歌单 ----
+// ---- 每首右边的「⋯」：下一首播放、加入播放队列、相似歌曲电台、加到歌单（在别人的房间里多一个「点歌给房主」）----
 const notice = useNoticeStore();
+const room = useRoomStore();
 /** @type {import('vue').Ref<{ track: any, x: number, y: number } | null>} */
 const menu = ref(null);
 function openMenu(event, track) {
   const r = event.currentTarget.getBoundingClientRect();
-  // 菜单宽 200、高约 200：靠右对齐按钮，下面放不下就往上开
+  // 菜单宽 200、每项约 50 高：靠右对齐按钮，下面放不下就往上开
+  const height = (room.role === 'guest' ? 5 : 4) * 50 + 10;
   const x = Math.max(8, Math.min(r.right - 200, window.innerWidth - 208));
-  const y = r.bottom + 210 > window.innerHeight ? r.top - 204 : r.bottom + 4;
+  const y = r.bottom + height + 6 > window.innerHeight ? r.top - height : r.bottom + 4;
   menu.value = { track, x, y };
 }
 const closeMenu = () => (menu.value = null);
-function menuAction(action) {
+async function menuAction(action) {
   const track = menu.value?.track;
   closeMenu();
   if (!track) return;
   // 没登录时 player 会弹出登录提示，就不要再说"已加入"
   const allowed = useAuthStore().allowed;
-  if (action === 'next') {
+  if (action === 'request') {
+    if (await room.sendRequest(track)) notice.show(tr('点了《{name}》，等房主加进队列', { name: track.name }));
+  } else if (action === 'next') {
     player.playNext(track);
     if (allowed) notice.show(tr('下一首播放：{name}', { name: track.name }));
   } else if (action === 'queue') {
@@ -239,6 +244,9 @@ onBeforeUnmount(() => {
         role="menu"
         :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
       >
+        <button v-if="room.role === 'guest'" role="menuitem" @click="menuAction('request')">
+          <Icon name="users" :size="18" />{{ $t('点歌给房主') }}
+        </button>
         <button role="menuitem" @click="menuAction('next')">
           <Icon name="play-next" :size="18" />{{ $t('下一首播放') }}
         </button>

@@ -7,12 +7,14 @@
 // - 连不上时经过 Cloudflare 的中转（TURN）：短期帐密跟我们的服务器拿（server/lib/voice.js）
 // - presence 记谁在语音里、有没有静音；谁在讲话是每个人自己听声音大小判断的
 // - 有人讲话时把音乐调小（duckMusic）；默认关麦克风，要按「加入语音」才会开
+// - Android：语音中开一个前台服务（VoiceCallService.java），关掉屏幕、切到别的 App 时麦克风和连线继续
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
+import { registerPlugin } from '@capacitor/core';
 import { createHttp } from '@core/http/client';
 import { getAccessToken, getSupabase } from '@core/data';
 import { duckMusic } from '../services';
-import { translateApiBase } from '../platform';
+import { isNativeApp, translateApiBase } from '../platform';
 import { useAuthStore } from './auth';
 import { useRoomStore } from './room';
 import { t } from '../i18n';
@@ -21,6 +23,10 @@ import { t } from '../i18n';
 const SPEAKING_LEVEL = 0.035;
 /** 停下来多久才算讲完（不然一个字一个字闪） */
 const SPEAKING_HOLD_MS = 450;
+
+const NativeVoice = isNativeApp ? registerPlugin('Voice') : null;
+// 页面重新载入时语音已经断了：上次开着的前台服务也关掉
+NativeVoice?.stop().catch(() => {});
 
 const api = createHttp({
   baseURL: translateApiBase,
@@ -210,6 +216,8 @@ export const useVoiceStore = defineStore('voice', () => {
       } catch {
         throw new Error(t('没有麦克风权限，到系统设置里允许 LyriStage 使用麦克风'));
       }
+      // 拿到麦克风了（App 正显示着）：开前台服务。开不了（旧版 App）语音照样能用，只是关屏幕会断
+      NativeVoice?.start().catch(() => {});
       muted.value = false;
       session = crypto.randomUUID();
       audioCtx = new AudioContext();
@@ -251,6 +259,7 @@ export const useVoiceStore = defineStore('voice', () => {
     clearInterval(meterTimer);
     meterTimer = 0;
     for (const id of [...peers.keys()]) closePeer(id);
+    if (localStream) NativeVoice?.stop().catch(() => {});
     localStream?.getTracks().forEach(track => track.stop());
     localStream = null;
     if (channel) {

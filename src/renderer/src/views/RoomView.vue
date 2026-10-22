@@ -1,6 +1,7 @@
 <script setup>
 // 一起听：开房间 / 用房间码加入
 // 房间里：左边是歌词（直接用歌词舞台的风格，大家同步），上面一条是房间码和谁在听；右边是聊天、成员
+// 成员可以「点歌」，房主在聊天里按「下一首播放 / 加入队列」；好友敲门时房主上面会出现「同意 / 拒绝」
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useRoomStore, normalizeCode, REACTIONS } from '../stores/room';
@@ -8,9 +9,11 @@ import { useUiStore } from '../stores/ui';
 import { useVoiceStore } from '../stores/voice';
 import { usePlayer } from '../composables/usePlayer';
 import { getEnglishTranslation, getLyrics } from '../services';
+import { artistNames } from '../utils/format';
 import { t } from '../i18n';
 import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
+import SongPicker from '../components/SongPicker.vue';
 import LyricStage from '../lyric-stage/LyricStage.vue';
 
 const room = useRoomStore();
@@ -48,6 +51,18 @@ async function sendChat() {
 const scrollChat = () => nextTick(() => chatList.value && (chatList.value.scrollTop = chatList.value.scrollHeight));
 watch(() => room.messages.length, scrollChat);
 watch(tab, value => value === 'chat' && scrollChat());
+
+// ---- 点歌 ----
+const picker = ref(null);
+const requesting = ref(false);
+async function sendRequests(tracks) {
+  requesting.value = true;
+  for (const track of tracks.slice(0, 10)) {
+    if (!(await room.sendRequest(track))) break;
+  }
+  requesting.value = false;
+  tab.value = 'chat';
+}
 
 function handOver(member) {
   if (window.confirm(t('把房主交给 {name}？之后由 {name} 决定播什么，你会变成普通成员继续听。', { name: member.name }))) {
@@ -192,6 +207,16 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
           </span>
         </div>
 
+        <!-- 好友敲门（只有房主看得到） -->
+        <div v-for="k in room.knocks" :key="k.id" class="knock" role="alert">
+          <Cover :url="k.avatar" :size="32" round class="knock-avatar">
+            <span class="initial">{{ initial(k.name) }}</span>
+          </Cover>
+          <span class="knock-text">{{ $t('{name} 想加入你的房间', { name: k.name }) }}</span>
+          <button class="knock-no" @click="room.answerKnock(k.id, false)">{{ $t('拒绝') }}</button>
+          <button class="knock-yes" @click="room.answerKnock(k.id, true)">{{ $t('同意') }}</button>
+        </div>
+
         <p v-if="voice.error" class="voice-error" role="alert">{{ voice.error }}</p>
       <section class="stage-panel">
           <LyricStage
@@ -237,7 +262,26 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
                 <span class="who">
                   <b v-if="m.userId !== room.selfId">{{ room.nameOf(m.userId) }} · </b>{{ timeOf(m.at) }}
                 </span>
-                <span class="bubble">{{ m.body }}</span>
+                <span v-if="!m.track" class="bubble">{{ m.body }}</span>
+                <!-- 点歌 -->
+                <div v-else class="request">
+                  <span class="request-label"><Icon name="queue" :size="14" />{{ $t('点歌') }}</span>
+                  <span class="request-song">
+                    <Cover :url="m.track.al?.picUrl" :size="44" radius="8px" class="request-cover" />
+                    <span class="request-meta">
+                      <strong>{{ m.track.name }}</strong>
+                      <span>{{ artistNames(m.track) }}</span>
+                    </span>
+                  </span>
+                  <span v-if="room.accepted.has(m.id)" class="request-done">
+                    <Icon name="check" :size="14" />{{ $t('已加进队列') }}
+                  </span>
+                  <span v-else-if="room.role === 'host'" class="request-actions">
+                    <button @click="room.acceptRequest(m, 'next')">{{ $t('下一首播放') }}</button>
+                    <button @click="room.acceptRequest(m, 'queue')">{{ $t('加入队列') }}</button>
+                  </span>
+                  <span v-else class="request-wait">{{ $t('等房主加进队列') }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -253,6 +297,17 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
             </button>
           </div>
           <form class="composer" @submit.prevent="sendChat">
+            <!-- 成员点歌（房主自己播就好） -->
+            <button
+              v-if="room.role === 'guest'"
+              type="button"
+              class="pick-btn"
+              :aria-label="$t('点歌')"
+              :title="$t('点歌')"
+              @click="picker.open()"
+            >
+              <Icon name="plus" :size="18" />
+            </button>
             <input
               v-model="draft"
               maxlength="200"
@@ -286,6 +341,15 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
           </li>
         </ul>
       </aside>
+
+      <SongPicker
+        ref="picker"
+        :busy="requesting"
+        title="点歌"
+        confirm-label="点给房主"
+        busy-label="送出中…"
+        @add="sendRequests"
+      />
     </div>
   </div>
 </template>
@@ -758,6 +822,138 @@ header p {
   background: var(--accent);
   color: var(--on-accent);
 }
+/* 点歌卡片 */
+.request {
+  display: grid;
+  gap: 8px;
+  width: 230px;
+  max-width: 100%;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.request-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.request-song {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.request-cover {
+  flex: none;
+  width: 44px;
+}
+.request-meta {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.request-meta strong,
+.request-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.request-meta strong {
+  font-size: 14px;
+}
+.request-meta span,
+.request-wait {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.request-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #30a46c;
+}
+.request-actions {
+  display: flex;
+  gap: 6px;
+}
+.request-actions button {
+  flex: 1;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.request-actions button:last-child {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+/* 「点歌」按钮（盖过下面 .composer button 的红底） */
+.composer .pick-btn {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--text);
+}
+/* 好友敲门 */
+.knock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+.knock-avatar {
+  flex: none;
+  width: 32px;
+}
+.knock-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 700;
+}
+.knock-yes,
+.knock-no {
+  flex: none;
+  min-height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.knock-no {
+  border: 1px solid var(--line-strong);
+  background: none;
+  color: var(--text);
+}
+.knock-yes {
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+}
 .reaction-bar {
   display: flex;
   justify-content: space-between;
@@ -885,6 +1081,9 @@ header p {
   }
   .voice-error {
     padding: 0 12px 6px;
+  }
+  .knock {
+    margin: 0 12px 10px;
   }
   .chip code {
     font-size: 15px;

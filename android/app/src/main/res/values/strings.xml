@@ -14,4 +14,9 @@
     <string name="widget_pause">暂停</string>
     <string name="widget_prev">上一首</string>
     <string name="widget_next">下一首</string>
+
+    <!-- 一起听的语音（关屏幕时继续） -->
+    <string name="voice_channel_name">一起听的语音</string>
+    <string name="voice_notification_title">LyriStage 语音中</string>
+    <string name="voice_notification_text">点一下回到房间</string>
 </resources>

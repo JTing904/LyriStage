@@ -7,6 +7,7 @@ import {
   answerFriendRequest,
   clearNowPlaying,
   getMyProfile,
+  getSupabase,
   listFriends,
   listFriendsNowPlaying,
   removeFriend,
@@ -38,6 +39,20 @@ export const useFriendsStore = defineStore('friends', () => {
   const outgoing = ref([]);
   /** userId → { track, playing, updatedAt } */
   const listening = ref(new Map());
+  /** 开着「一起听」房间的好友：[{ id, name, avatar, startedAt }]（不会拿到房间码，要敲门） */
+  const rooms = ref([]);
+
+  async function loadRooms() {
+    const { data, error } = (await getSupabase()?.rpc('friends_rooms')) ?? {};
+    // 还没执行 2026-11-01 的 SQL（没有这个函数）就当没有
+    if (error || !data) return;
+    rooms.value = data
+      .map(r => {
+        const friend = friends.value.find(f => f.id === r.host_id);
+        return friend && { ...friend, startedAt: r.started_at };
+      })
+      .filter(Boolean);
+  }
 
   async function refresh() {
     try {
@@ -47,6 +62,7 @@ export const useFriendsStore = defineStore('friends', () => {
       outgoing.value = list.outgoing;
       listening.value = new Map(now.map(n => [n.userId, n]));
       available.value = true;
+      await loadRooms();
     } catch (err) {
       // 42P01：表不存在（还没执行 SQL）
       if (err?.code === '42P01' || /does not exist|schema cache/.test(err?.message ?? '')) available.value = false;
@@ -116,6 +132,10 @@ export const useFriendsStore = defineStore('friends', () => {
   // "正在听"会随时间过期：每 30 秒重新算一次（不然好友关掉 App 后会一直显示正在听）
   const now = ref(Date.now());
   setInterval(() => (now.value = Date.now()), 30 * 1000);
+  // 好友开房间、关房间不会推过来：App 在前面时每分钟看一次
+  setInterval(() => {
+    if (available.value && friends.value.length && document.visibilityState === 'visible') loadRooms();
+  }, 60 * 1000);
 
   async function setShareListening(on) {
     await updateSharing({ shareListening: on });
@@ -169,6 +189,7 @@ export const useFriendsStore = defineStore('friends', () => {
     incoming,
     outgoing,
     activity,
+    rooms,
     sharing,
     inPrivateMode,
     privateUntil,

@@ -45,6 +45,13 @@
                 android:resource="@xml/now_playing_widget_info" />
         </receiver>
 
+        <!-- 一起听的语音：关掉屏幕、切到别的 App 时继续（VoiceCallService.java） -->
+        <service
+            android:name=".VoiceCallService"
+            android:exported="false"
+            android:foregroundServiceType="microphone"
+            android:stopWithTask="true" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -66,6 +73,9 @@
     <!-- 一起听的语音：麦克风（按「加入语音」时才会问） -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- 语音在背景继续：麦克风类型的前台服务，通知栏显示「语音中」 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- App 里直接更新：下载新版 APK 后打开系统的安装画面（第一次要用户允许） -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 </manifest>

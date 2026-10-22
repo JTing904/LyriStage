@@ -7,6 +7,9 @@
 //   等 HOST_GONE_MS 还没回来，成员也离开（交给别人当房主的话房间照样继续）
 // - 谁是房主记在数据库的 rooms 表（开房间时写入）；Realtime 的权限只让房主广播，
 //   成员改了 App 也没办法控制别人的播放
+// - 点歌：成员点的歌写进聊天（kind = 'request'），房主按「下一首播放 / 加入队列」后发一则 'accept'
+// - 房主每分钟更新 rooms.last_seen_at：好友首页靠它知道你还在房间；超过一小时没更新的房间每小时清一次
+// - 敲门：好友在首页按「请求加入」，房主同意后对方才拿得到房间码（20261101000000_room_requests_and_listing.sql）
 // 每个人自己拿音频（手机 App 也会自己解灰），不占房主的流量
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
@@ -14,6 +17,7 @@ import { getSupabase, toSnapshot } from '@core/data';
 import { player, sharedSources } from '../services';
 import { useAuthStore } from './auth';
 import { useNoticeStore } from './notice';
+import { useFriendsStore } from './friends';
 import { t } from '../i18n';
 
 /** 可以点的表情（数据库也只接受这几个） */
@@ -26,6 +30,10 @@ const newCode = () =>
 export const normalizeCode = code => String(code ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 const HEARTBEAT_MS = 3000;
+/** 房主多久告诉数据库一次"我还在"（好友首页超过两分钟没更新就不显示） */
+const SEEN_MS = 60 * 1000;
+/** 敲门后最多等多久 */
+const KNOCK_WAIT_MS = 2 * 60 * 1000;
 /** 房主不见了多久就把房间当成关了（网络闪断、换房主重连都比这个快很多） */
 const HOST_GONE_MS = 45000;
 
@@ -76,6 +84,12 @@ export const useRoomStore = defineStore('room', () => {
   const names = new Map();
   /** 成员收到的提示（例如房主离开了） */
   const notice = ref('');
+  /** 房主已经加进队列的点歌（点歌那则消息的 id） */
+  const accepted = ref(new Set());
+  /** 房主：在门外等的好友 [{ id, userId, name, avatar }] */
+  const knocks = ref([]);
+  /** 我在敲谁的门（房主的账号 id；没在敲就是 null） */
+  const knocking = ref(null);
 
   const inRoom = computed(() => status.value === 'joined');
   const host = computed(() => members.value.find(m => m.id === hostId.value) ?? null);
@@ -84,6 +98,7 @@ export const useRoomStore = defineStore('room', () => {
   let heartbeat = 0;
   let offPlayer = [];
   let hostGoneTimer = 0;
+  let seenTimer = 0;
 
   function me() {
     return {
@@ -218,6 +233,12 @@ export const useRoomStore = defineStore('room', () => {
         { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `code=eq.${roomCode}` },
         ({ new: row }) => onHostChanged(row)
       )
+      // 有好友敲门（只有房主看得到这个房间的敲门）
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'room_knocks', filter: `room_code=eq.${roomCode}` },
+        ({ new: row }) => onKnock(row)
+      )
       // 房主按了「关闭房间」
       .on('broadcast', { event: 'closed' }, () => closedByHost(t('房主关闭了房间')))
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
@@ -245,7 +266,23 @@ export const useRoomStore = defineStore('room', () => {
       offPlayer = [player.on('change', broadcast), player.on('track', broadcast)];
       heartbeat = setInterval(broadcast, HEARTBEAT_MS);
       broadcast();
+      markSeen();
+      seenTimer = setInterval(markSeen, SEEN_MS);
+      loadKnocks(roomCode);
     }
+  }
+
+  /** 房主：告诉数据库"我还在"（还没执行 2026-11-01 的 SQL 时没有这个栏位，就不管它） */
+  function markSeen() {
+    if (role.value !== 'host' || !code.value) return;
+    getSupabase()
+      ?.from('rooms')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('code', code.value)
+      .then(
+        () => {},
+        () => {}
+      );
   }
 
   async function createRoom() {
@@ -355,6 +392,8 @@ export const useRoomStore = defineStore('room', () => {
 
   async function leave() {
     clearInterval(heartbeat);
+    clearInterval(seenTimer);
+    seenTimer = 0;
     clearTimeout(hostGoneTimer);
     hostGoneTimer = 0;
     // 房主关房间：数据库里的房间也删掉
@@ -378,6 +417,8 @@ export const useRoomStore = defineStore('room', () => {
     hostId.value = null;
     messages.value = [];
     floating.value = [];
+    accepted.value = new Set();
+    knocks.value = [];
   }
 
   // ---- 聊天、表情 ----
@@ -398,14 +439,42 @@ export const useRoomStore = defineStore('room', () => {
       setTimeout(() => (floating.value = floating.value.filter(f => f.id !== item.id)), 2600);
       return;
     }
+    if (row.kind === 'accept') {
+      const requestId = Number(row.body);
+      if (accepted.value.has(requestId)) return;
+      accepted.value = new Set(accepted.value).add(requestId);
+      // 我点的歌被房主加进去了
+      const request = messages.value.find(m => m.id === requestId);
+      if (request?.userId === auth.user?.id && row.user_id !== auth.user?.id) {
+        useNoticeStore().show(t('房主把《{name}》加进队列了', { name: request.track.name }));
+      }
+      return;
+    }
     if (messages.value.some(m => m.id === row.id)) return;
-    messages.value = [
-      ...messages.value.slice(-99),
-      { id: row.id, userId: row.user_id, body: row.body, at: row.created_at },
-    ];
-    // 不在一起听页面时，别人说话就提示一下
-    if (row.user_id !== auth.user?.id && !location.hash.startsWith('#/room')) {
+    const message = toMessage(row);
+    if (!message) return;
+    messages.value = [...messages.value.slice(-99), message];
+    // 不在一起听页面时，别人说话、点歌就提示一下
+    if (row.user_id === auth.user?.id || location.hash.startsWith('#/room')) return;
+    if (message.track) {
+      useNoticeStore().show(t('{name} 点了《{song}》', { name: nameOf(row.user_id), song: message.track.name }), {
+        action: role.value === 'host' ? { label: t('加入队列'), run: () => acceptRequest(message, 'queue') } : undefined,
+        duration: 8000,
+      });
+    } else {
       useNoticeStore().show(`${nameOf(row.user_id)}：${row.body}`);
+    }
+  }
+
+  /** 数据库的一行 → 画面上的一则消息；点歌的 body 是歌曲 JSON（坏掉的就不显示） */
+  function toMessage(row) {
+    const message = { id: row.id, userId: row.user_id, kind: row.kind, body: row.body, at: row.created_at };
+    if (row.kind !== 'request') return message;
+    try {
+      const track = JSON.parse(row.body);
+      return track?.id && track.name ? { ...message, body: '', track } : null;
+    } catch {
+      return null;
     }
   }
 
@@ -414,11 +483,13 @@ export const useRoomStore = defineStore('room', () => {
       .from('room_messages')
       .select('id, room_code, user_id, kind, body, created_at')
       .eq('room_code', roomCode)
-      .eq('kind', 'chat')
+      .in('kind', ['chat', 'request', 'accept'])
       .order('created_at', { ascending: false })
-      .limit(30);
+      .limit(40);
     if (code.value !== roomCode || !data) return;
-    const older = data.reverse().map(row => ({ id: row.id, userId: row.user_id, body: row.body, at: row.created_at }));
+    const rows = data.reverse();
+    accepted.value = new Set([...accepted.value, ...rows.filter(r => r.kind === 'accept').map(r => Number(r.body))]);
+    const older = rows.filter(r => r.kind !== 'accept').map(toMessage).filter(Boolean);
     const known = new Set(older.map(m => m.id));
     messages.value = [...older, ...messages.value.filter(m => !known.has(m.id))];
   }
@@ -453,6 +524,114 @@ export const useRoomStore = defineStore('room', () => {
   /** @param {string} emoji */
   const sendReaction = emoji => (REACTIONS.includes(emoji) ? send('react', emoji) : Promise.resolve(false));
 
+  // ---- 点歌 ----
+  /** 成员点歌：歌曲资料放进消息里（数据库最多 1500 字，太长就去掉别名、少放几个歌手） */
+  function sendRequest(track) {
+    const snapshot = toSnapshot(track);
+    let body = JSON.stringify(snapshot);
+    if (body.length > 1500) body = JSON.stringify({ ...snapshot, alia: [], ar: snapshot.ar.slice(0, 2) });
+    if (body.length > 1500) return Promise.resolve(false);
+    return send('request', body);
+  }
+  /** 房主把点的歌加进队列（'next' 下一首播放 | 'queue' 排到最后），再告诉大家 */
+  async function acceptRequest(message, mode) {
+    if (role.value !== 'host' || !message?.track || accepted.value.has(message.id)) return;
+    if (mode === 'next') player.playNext(message.track);
+    else player.addToQueue(message.track);
+    accepted.value = new Set(accepted.value).add(message.id);
+    await send('accept', String(message.id));
+  }
+
+  // ---- 敲门（房主这边）----
+  /** 敲门的人不在房间里，名字头像从好友名单拿 */
+  function knocker(userId) {
+    const friend = useFriendsStore().friends.find(f => f.id === userId);
+    return { name: friend?.name || t('朋友'), avatar: safeAvatar(friend?.avatar ?? '') };
+  }
+  function onKnock(row) {
+    if (role.value !== 'host' || !row || row.room_code !== code.value) return;
+    knocks.value = knocks.value.filter(k => k.id !== row.id);
+    if (row.status !== 'pending') return;
+    const who = knocker(row.user_id);
+    knocks.value = [...knocks.value, { id: row.id, userId: row.user_id, ...who }];
+    if (!location.hash.startsWith('#/room')) {
+      useNoticeStore().show(t('{name} 想加入你的房间', { name: who.name }), {
+        action: { label: t('同意'), run: () => answerKnock(row.id, true) },
+        duration: 15000,
+      });
+    }
+  }
+  /** 房主连进房间时：几分钟内还在等的敲门 */
+  async function loadKnocks(roomCode) {
+    const since = new Date(Date.now() - KNOCK_WAIT_MS).toISOString();
+    const { data } = await getSupabase()
+      .from('room_knocks')
+      .select('id, room_code, user_id, status')
+      .eq('room_code', roomCode)
+      .eq('status', 'pending')
+      .gt('created_at', since);
+    for (const row of data ?? []) onKnock(row);
+  }
+  async function answerKnock(id, accept) {
+    knocks.value = knocks.value.filter(k => k.id !== id);
+    const { error: err } = await getSupabase().rpc('answer_knock', { knock_id: id, accept });
+    if (err) useNoticeStore().show(t('操作失败：{error}', { error: err.message }));
+  }
+
+  // ---- 敲门（好友这边）----
+  let knockChannel = null;
+  let knockPoll = 0;
+  let knockTimeout = 0;
+  function stopKnocking() {
+    clearInterval(knockPoll);
+    clearTimeout(knockTimeout);
+    if (knockChannel) getSupabase()?.removeChannel(knockChannel);
+    knockChannel = null;
+    knocking.value = null;
+  }
+  /** 请求加入好友的房间：房主同意就自动进去；拒绝或两分钟没回应就说一声 */
+  async function knock(hostUserId, hostName) {
+    if (knocking.value) return;
+    const supabase = getSupabase();
+    const { data: id, error: err } = await supabase.rpc('knock_room', { host: hostUserId });
+    if (err) {
+      useNoticeStore().show(
+        err.code === 'P0002' ? t('{name} 已经关掉房间了', { name: hostName }) : t('现在没办法请求加入')
+      );
+      useFriendsStore().refresh();
+      return;
+    }
+    knocking.value = hostUserId;
+    let done = false;
+    const check = async () => {
+      if (done) return;
+      const { data: row } = await supabase.from('room_knocks').select('status').eq('id', id).maybeSingle();
+      if (done || !row || row.status === 'pending') return;
+      done = true;
+      stopKnocking();
+      if (row.status === 'declined') {
+        useNoticeStore().show(t('{name} 没有让你进房间', { name: hostName }));
+        return;
+      }
+      const { data: roomCode } = await supabase.rpc('knock_room_code', { knock_id: id });
+      if (!roomCode) return;
+      location.hash = '#/room';
+      await joinRoom(roomCode);
+    };
+    // 房主一按就会推过来；Realtime 没推到的话每 4 秒自己查一次
+    knockChannel = supabase
+      .channel(`knock:${id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'room_knocks', filter: `id=eq.${id}` }, check)
+      .subscribe();
+    knockPoll = setInterval(check, 4000);
+    knockTimeout = setTimeout(() => {
+      if (done) return;
+      done = true;
+      stopKnocking();
+      useNoticeStore().show(t('{name} 没有回应，晚点再试试', { name: hostName }));
+    }, KNOCK_WAIT_MS);
+  }
+
   // 退出登录就离开房间
   watch(
     () => auth.allowed,
@@ -473,6 +652,14 @@ export const useRoomStore = defineStore('room', () => {
     nameOf,
     sendChat,
     sendReaction,
+    sendRequest,
+    acceptRequest,
+    accepted,
+    knocks,
+    answerKnock,
+    knocking,
+    knock,
+    stopKnocking,
     transferHost,
     host,
     inRoom,

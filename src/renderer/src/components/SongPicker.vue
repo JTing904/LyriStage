@@ -1,6 +1,6 @@
 <script setup>
-// 选歌对话框（自己的歌单里「添加歌曲」用）：
-// 从「搜索 / 我喜欢的 / 最近播放」里勾选好几首，一次加进歌单
+// 选歌对话框（自己的歌单里「添加歌曲」、一起听的「点歌」用）：
+// 从「搜索 / 我喜欢的 / 最近播放」里勾选好几首，一次加进去
 import { computed, nextTick, ref, watch } from 'vue';
 import { fromRow, listLikedTracks, listRecentHistory } from '@core/data';
 import { netease } from '../services';
@@ -10,9 +10,14 @@ import Icon from './Icon.vue';
 import { t } from '../i18n';
 
 const props = defineProps({
-  /** 已经在歌单里的歌（显示「已加入」，不能再选） */
+  /** 已经加过的歌（显示 existingLabel，不能再选） */
   existingIds: { type: Array, default: () => [] },
   busy: { type: Boolean, default: false },
+  /** 文字（还没翻译的中文，画面上会翻译） */
+  title: { type: String, default: '添加歌曲' },
+  confirmLabel: { type: String, default: '加入歌单' },
+  busyLabel: { type: String, default: '加入中…' },
+  existingLabel: { type: String, default: '已在歌单里' },
 });
 const emit = defineEmits(['add']);
 
@@ -116,7 +121,7 @@ const emptyText = computed(() =>
   <dialog ref="dialog" class="picker" @click.self="close">
     <div class="box">
       <header>
-        <h2>{{ $t('添加歌曲') }}</h2>
+        <h2>{{ $t(title) }}</h2>
         <button class="icon-btn" :aria-label="$t('关闭')" @click="close"><Icon name="x" :size="20" /></button>
       </header>
 
@@ -154,7 +159,7 @@ const emptyText = computed(() =>
           <Cover :url="t.al?.picUrl" :size="40" radius="6px" class="cover" />
           <span class="meta">
             <strong>{{ t.name }}</strong>
-            <span>{{ existing.has(Number(t.id)) ? $t('已在歌单里') : artistNames(t) }}</span>
+            <span>{{ existing.has(Number(t.id)) ? $t(existingLabel) : artistNames(t) }}</span>
           </span>
           <span class="time">{{ clock(t.dt) }}</span>
         </button>
@@ -163,7 +168,7 @@ const emptyText = computed(() =>
       <footer>
         <span>{{ $t('已选 {n} 首', { n: picked.size }) }}</span>
         <button class="primary" :disabled="!picked.size || busy" @click="confirm">
-          {{ busy ? $t('加入中…') : $t('加入歌单') }}
+          {{ busy ? $t(busyLabel) : $t(confirmLabel) }}
         </button>
       </footer>
     </div>
