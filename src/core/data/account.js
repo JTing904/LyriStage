@@ -6,6 +6,7 @@ import { listDislikedTrackIds, listHistoryBetween, listMonthlyHistory } from './
 import { removeMyAvatars } from './profile';
 import { removeMyPlaylistCovers } from './playlistCovers';
 import { downloadMyArchives, removeMyArchives } from './archive';
+import { removeMyStageBackgrounds } from './stageBackgrounds';
 
 const PAGE = 1000;
 
@@ -71,6 +72,7 @@ export async function deleteMyAccount() {
   await removeMyAvatars(uid);
   await removeMyPlaylistCovers(uid);
   await removeMyArchives(uid).catch(() => {});
+  await removeMyStageBackgrounds(uid);
   unwrap(await supabase.rpc('delete_my_account'));
   await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
 }

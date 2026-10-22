@@ -7,13 +7,11 @@ import { useStage, displayWords } from '../useStage';
 import { useCenteredList } from '../useCenteredList';
 import CoverBackdrop from '../CoverBackdrop.vue';
 
-const { lines, lineIndex, settings, seekToLine, coverUrl } = useStage();
+const { lines, lineIndex, settings, seekToLine, backdrop } = useStage();
 
 // 封面是正方形：宽屏时铺满会被放大裁切（只看到局部），
 // 所以宽屏用模糊封面铺底，完整的清晰封面放在右边；竖屏（手机）才整张铺满
-const art = computed(
-  () => coverUrl.value && `${coverUrl.value}?param=1024y1024`
-);
+const art = computed(() => backdrop.value.sharp);
 const { viewport, lineRef, offset } = useCenteredList(lineIndex, {
   anchor: 0.56, // 歌词区底部让出了播放条（--controls-space），0.56 让当前行比歌词区中间稍低
 });
@@ -46,7 +44,7 @@ const petals = Array.from({ length: 12 }, (_, i) => ({
 <template>
   <div class="perspective-style">
     <CoverBackdrop :dim="0.3" filter="saturate(1.2)" />
-    <img v-if="art" class="art" :src="art" alt="" />
+    <img v-if="art" class="art" :class="{ full: backdrop.custom }" :src="art" alt="" />
     <div class="legibility" />
 
     <span
@@ -126,6 +124,14 @@ const petals = Array.from({ length: 12 }, (_, i) => ({
     height: 100%;
     mask-image: none;
   }
+}
+/* 自己的照片（不一定是正方形）：整张铺满，不放在右边 */
+.art.full {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  mask-image: none;
 }
 /* 左边稍微压暗，白字才看得清；右边保留封面原样 */
 .legibility {

@@ -11,7 +11,8 @@ import {
   watch,
 } from 'vue';
 import { findLineIndex } from '@core/lyrics';
-import { getPalette, FALLBACK_PALETTE } from './palette';
+import { getPalette, paletteFromImage, FALLBACK_PALETTE } from './palette';
+import { useStageBackgroundsStore } from '../stores/stageBackgrounds';
 
 const STAGE_KEY = Symbol('lyric-stage');
 const SETTINGS_KEY = 'lyristage:stage';
@@ -140,6 +141,50 @@ export function provideStage({ state, player, getLyrics }) {
   }
   watch(() => state.track?.id, loadLyrics, { immediate: true });
 
+  // ---- 背景：自己的照片（这首专属 > 全部歌）或封面 ----
+  // 用封面当背景的风格（单行大字、3D、滚动、卡拉OK、黑胶）从这里拿；其他风格的背景是风格本身的一部分，不换
+  const backgrounds = useStageBackgroundsStore();
+  backgrounds.refresh(); // 打开舞台时对一下（在别的设备换过）
+  const customPath = computed(() => backgrounds.pathFor(state.track));
+  /** @type {import('vue').ShallowRef<{ full: string, blur: string } | null>} */
+  const customImage = shallowRef(null);
+  watch(
+    customPath,
+    async path => {
+      customImage.value = null;
+      if (!path) return;
+      try {
+        const image = await backgrounds.image(path);
+        if (customPath.value === path) customImage.value = image;
+      } catch {
+        // 下载不了就用封面
+      }
+    },
+    { immediate: true }
+  );
+  /** sharp：清晰的大图；blur：小图（放大后自然模糊） */
+  const backdrop = computed(() => {
+    if (customImage.value) {
+      return { sharp: customImage.value.full, blur: customImage.value.blur, custom: true };
+    }
+    const cover = coverUrl.value;
+    return {
+      sharp: cover ? `${cover}?param=1024y1024` : '',
+      blur: cover ? `${cover}?param=24y24` : '',
+      custom: false,
+    };
+  });
+  /** 背景的颜色（用照片时从照片取色；滚动歌词的流动色用这个） */
+  const backdropPalette = shallowRef(FALLBACK_PALETTE);
+  watch(
+    [() => customImage.value?.full, palette],
+    async ([full]) => {
+      const colors = full ? await paletteFromImage(full) : palette.value;
+      if ((customImage.value?.full ?? undefined) === full) backdropPalette.value = colors; // 中途换了就不用
+    },
+    { immediate: true }
+  );
+
   // 每一帧读精确的播放时间（毫秒），逐字动画靠它
   const now = ref(0);
   let frame = 0;
@@ -178,6 +223,8 @@ export function provideStage({ state, player, getLyrics }) {
     lyricsError,
     lines,
     palette,
+    backdrop,
+    backdropPalette,
     now,
     lineIndex,
     line,

@@ -9,7 +9,8 @@ import { rgb } from '../palette';
 import CoverBackdrop from '../CoverBackdrop.vue';
 
 // 这里不读 now（每一帧都在变）：正在唱的那行交给 LitWords，整页歌词才不会每帧重画
-const { lines, lineIndex, palette, settings, seekToLine } = useStage();
+// 流动色跟着背景（设了自己的照片就从照片取色）
+const { lines, lineIndex, backdropPalette: palette, settings, seekToLine } = useStage();
 const { viewport, lineRef, offset } = useCenteredList(lineIndex, {
   anchor: 0.42,
 });

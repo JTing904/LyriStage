@@ -1,7 +1,7 @@
 <script setup>
-// 封面背景：
-// - blur：用 24px 的小封面放大，浏览器插值后自然变模糊，比实时 blur 滤镜省电（手机上也流畅）
-// - sharp：清晰的大封面铺满（风格 I 用）
+// 封面背景（设了自己的照片就用照片，见 useStage 的 backdrop）：
+// - blur：用很小的图放大，浏览器插值后自然变模糊，比实时 blur 滤镜省电（手机上也流畅）
+// - sharp：清晰的大图铺满
 import { computed } from 'vue';
 import { useStage } from './useStage';
 
@@ -13,12 +13,8 @@ const props = defineProps({
   filter: { type: String, default: '' },
 });
 
-const { coverUrl } = useStage();
-const src = computed(() => {
-  if (!coverUrl.value) return null;
-  const size = props.mode === 'sharp' ? '1024y1024' : '24y24';
-  return `${coverUrl.value}?param=${size}`;
-});
+const { backdrop } = useStage();
+const src = computed(() => (props.mode === 'sharp' ? backdrop.value.sharp : backdrop.value.blur) || null);
 </script>
 
 <template>

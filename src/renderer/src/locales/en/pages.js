@@ -146,6 +146,16 @@ export default {
   '风格：{name}': 'Style: {name}',
   歌词风格: 'Lyric style',
   '显示翻译 / 罗马音': 'Show translation / romanization',
+  // 歌词舞台背景
+  背景: 'Background',
+  封面: 'Cover',
+  我的照片: 'My photo',
+  换这首的照片: 'Change photo for this song',
+  只换这首: 'Photo for this song only',
+  这首不用专属照片: 'Remove this song’s photo',
+  '上传中…': 'Uploading…',
+  这个风格不换背景: 'This style keeps its own background',
+  '没成功：{error}': 'Didn’t work: {error}',
   歌名: 'Song title',
 
   // 歌词风格名称、说明（lyric-stage/styles.js）

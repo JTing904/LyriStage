@@ -150,7 +150,15 @@ export function paletteFromPixels(data) {
  */
 export function getPalette(coverUrl) {
   if (!coverUrl) return Promise.resolve(FALLBACK_PALETTE);
-  const url = `${coverUrl.replace(/^http:/, 'https:')}?param=${SIZE}y${SIZE}`;
+  return paletteFromImage(`${coverUrl.replace(/^http:/, 'https:')}?param=${SIZE}y${SIZE}`);
+}
+
+/**
+ * 任何图片网址取色（自定义背景的照片用，blob: 网址也可以）
+ * @param {string} url
+ * @returns {Promise<Palette>}
+ */
+export function paletteFromImage(url) {
   if (!cache.has(url)) {
     const task = loadImage(url)
       .then(img => {
