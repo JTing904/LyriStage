@@ -1,5 +1,6 @@
-// 旧听歌记录搬去 File storage（Supabase Edge Function，排程每月叫一次）
-// 见 supabase/migrations/20261028020000_archive_old_history.sql。
+// 两件排程的工作（Supabase Edge Function；Supabase 上部署的名字是 smart-responder）：
+// - 每月：旧听歌记录搬去 File storage（见 supabase/migrations/20261028020000_archive_old_history.sql）
+// - 每周：备份重要资料（body 是 {"task": "backup"}，见 20261029020000_weekly_backup.sql）
 //
 // 每个人每一年：把两年以前的每月小结压缩成 <user id>/<年>.json.gz 放进 history-archive 桶，
 // 下载回来确认内容齐全了，才叫 finish_archive 从数据库删掉（行数对不上就整个取消）。
@@ -13,6 +14,26 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const BUCKET = 'history-archive';
+const BACKUP_BUCKET = 'backups';
+const KEEP_BACKUPS = 8; // 留最近 8 份（每周一份 = 两个月）
+/** 要备份的表：会自己重新产生的（每日推荐、一起听、正在听、错误回报）不备份 */
+const BACKUP_TABLES = [
+  'members',
+  'invite_codes',
+  'member_profiles',
+  'friendships',
+  'liked_tracks',
+  'disliked_tracks',
+  'playlists',
+  'playlist_tracks',
+  'playlist_editors',
+  'tracks',
+  'plays',
+  'play_history_monthly',
+  'play_hours_monthly',
+  'play_archive_totals',
+  'bilibili_picks',
+];
 const MIN_KEEP_MONTHS = 24; // 真的搬时至少留两年
 const PAGE = 1000;
 
@@ -69,6 +90,87 @@ export async function gzipJson(value) {
 export async function gunzipJson(blob) {
   const stream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
   return JSON.parse(await new Response(stream).text());
+}
+
+/**
+ * 留最近 keep 份备份，回传要删掉的（文件名是 YYYY-MM-DD.json.gz，照名字排就是照日期排）
+ * @param {string[]} names
+ * @param {number} keep
+ */
+export function backupsToRemove(names, keep = KEEP_BACKUPS) {
+  const backups = names.filter(n => /^\d{4}-\d{2}-\d{2}\.json\.gz$/.test(n)).sort();
+  return backups.slice(0, Math.max(0, backups.length - keep));
+}
+
+// ---- 每周备份 --------------------------------------------------------------------
+
+async function fetchTable(db, table) {
+  const rows = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await db.from(table).select('*').range(offset, offset + PAGE - 1);
+    if (error) {
+      // 这个数据库没有这张表（还没执行那份 SQL）：跳过
+      if (error.code === '42P01' || error.code === 'PGRST205') return null;
+      throw error;
+    }
+    rows.push(...data);
+    if (data.length < PAGE) return rows;
+  }
+}
+
+/** 账号：只留邮箱、注册时间、登录方式、自定义名字和头像（没有密码） */
+async function fetchUsers(db) {
+  const users = [];
+  for (let page = 1; ; page++) {
+    const { data, error } = await db.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw error;
+    for (const u of data.users) {
+      users.push({
+        id: u.id,
+        email: u.email ?? null,
+        created_at: u.created_at,
+        provider: u.app_metadata?.provider ?? null,
+        custom_name: u.user_metadata?.custom_name ?? null,
+        custom_avatar: u.user_metadata?.custom_avatar ?? null,
+      });
+    }
+    if (data.users.length < 1000) return users;
+  }
+}
+
+async function backup(db) {
+  const tables = {};
+  const counts = {};
+  for (const table of BACKUP_TABLES) {
+    const rows = await fetchTable(db, table);
+    if (rows === null) continue;
+    tables[table] = rows;
+    counts[table] = rows.length;
+  }
+  const users = await fetchUsers(db);
+  counts.users = users.length;
+  const now = new Date();
+  const name = `${now.toISOString().slice(0, 10)}.json.gz`;
+  const bytes = await gzipJson({ app: 'LyriStage', kind: 'backup', version: 1, createdAt: now.toISOString(), users, tables });
+  const { error: uploadError } = await db.storage
+    .from(BACKUP_BUCKET)
+    .upload(name, bytes, { contentType: 'application/gzip', upsert: true });
+  if (uploadError) throw uploadError;
+
+  // 下载回来核对每张表的行数
+  const { data: blob, error: downloadError } = await db.storage.from(BACKUP_BUCKET).download(name);
+  if (downloadError) throw downloadError;
+  const saved = await gunzipJson(blob);
+  const ok =
+    saved.users.length === users.length &&
+    Object.entries(tables).every(([t, rows]) => saved.tables[t]?.length === rows.length);
+  if (!ok) throw new Error(`${name} 存好后内容不齐`);
+
+  // 只留最近几份
+  const { data: files } = await db.storage.from(BACKUP_BUCKET).list('', { limit: 1000 });
+  const remove = backupsToRemove((files ?? []).map(f => f.name));
+  if (remove.length) await db.storage.from(BACKUP_BUCKET).remove(remove);
+  return { ok: true, task: 'backup', file: name, kb: Math.round(bytes.length / 1024), counts, removed: remove };
 }
 
 // ---- 搬家 ------------------------------------------------------------------------
@@ -148,6 +250,13 @@ async function handle(req) {
   if (!ok) return json({ error: 'forbidden', reason: 'wrong secret' }, 403);
 
   const body = await req.json().catch(() => ({}));
+  if (body?.task === 'backup') {
+    try {
+      return json(await backup(db));
+    } catch (err) {
+      return json({ ok: false, task: 'backup', error: err?.message ?? String(err) }, 500);
+    }
+  }
   const dryRun = body?.dryRun === true;
   // 只有试跑可以改「留几个月」（拿来测试）；真的搬至少留两年
   const keepMonths = dryRun && Number.isInteger(body?.keepMonths) ? Math.max(0, body.keepMonths) : MIN_KEEP_MONTHS;

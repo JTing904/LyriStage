@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildArchive, containsAll, gunzipJson, gzipJson } from './index.ts';
+import { backupsToRemove, buildArchive, containsAll, gunzipJson, gzipJson } from './index.ts';
 
 const month = (m, id, plays) => ({
   user_id: 'u1',
@@ -55,5 +55,15 @@ describe('gzip', () => {
     const bytes = await gzipJson(a);
     expect(bytes.length).toBeLessThan(JSON.stringify(a).length / 3);
     expect(await gunzipJson(new Blob([bytes]))).toEqual(a);
+  });
+});
+
+describe('backupsToRemove', () => {
+  it('留最近 8 份，删掉更早的；其他文件不动', () => {
+    const names = Array.from({ length: 10 }, (_, i) => `2026-${String(i + 1).padStart(2, '0')}-01.json.gz`);
+    expect(backupsToRemove([...names, 'readme.txt'])).toEqual(['2026-01-01.json.gz', '2026-02-01.json.gz']);
+  });
+  it('不到 8 份不删', () => {
+    expect(backupsToRemove(['2026-10-25.json.gz'])).toEqual([]);
   });
 });
