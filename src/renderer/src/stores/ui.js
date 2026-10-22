@@ -8,7 +8,9 @@ export const useUiStore = defineStore('ui', () => {
   const wallOpen = ref(false);
   /** 手机：子页面的名字（页头滑出画面后，顶部的返回列显示它） */
   const pageTitle = ref('');
-  return { queueOpen, wallOpen, pageTitle };
+  /** 全屏歌词（播放条、迷你播放条、一起听的房间都能打开） */
+  const stageOpen = ref(false);
+  return { queueOpen, wallOpen, pageTitle, stageOpen };
 });
 
 if (import.meta.hot) import.meta.hot.accept(acceptHMRUpdate(useUiStore, import.meta.hot));

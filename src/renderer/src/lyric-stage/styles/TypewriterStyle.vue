@@ -97,16 +97,16 @@ const command = computed(
 }
 .screen {
   position: absolute;
-  left: 8vw;
-  right: 8vw;
-  top: 10vh;
+  left: 8cqw;
+  right: 8cqw;
+  top: 10cqh;
   bottom: calc(var(--controls-space, 170px) + 30px);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   gap: 0.6em;
   overflow: hidden;
-  font-size: clamp(16px, 1.9vw, 28px);
+  font-size: clamp(16px, 1.9cqw, 28px);
   line-height: 1.45;
   text-shadow: 0 0 6px rgba(255, 181, 71, 0.55),
     0 0 18px rgba(255, 181, 71, 0.25);

@@ -74,8 +74,8 @@ const blobs = computed(() => ({
 /* 流动色块：三团封面颜色的光慢慢飘 */
 .blob {
   position: absolute;
-  width: 70vmax;
-  height: 70vmax;
+  width: 70cqmax;
+  height: 70cqmax;
   border-radius: 50%;
   filter: blur(80px);
   opacity: 0.7;
@@ -83,20 +83,20 @@ const blobs = computed(() => ({
 }
 .b1 {
   background: var(--c1);
-  left: -20vmax;
-  top: -25vmax;
+  left: -20cqmax;
+  top: -25cqmax;
 }
 .b2 {
   background: var(--c2);
-  right: -25vmax;
-  top: 10vmax;
+  right: -25cqmax;
+  top: 10cqmax;
   animation-duration: 32s;
   animation-delay: -8s;
 }
 .b3 {
   background: var(--c1);
-  left: 10vmax;
-  bottom: -35vmax;
+  left: 10cqmax;
+  bottom: -35cqmax;
   opacity: 0.45;
   animation-duration: 38s;
   animation-delay: -16s;
@@ -106,10 +106,10 @@ const blobs = computed(() => ({
     transform: translate(0, 0) scale(1);
   }
   50% {
-    transform: translate(8vmax, 6vmax) scale(1.15);
+    transform: translate(8cqmax, 6cqmax) scale(1.15);
   }
   100% {
-    transform: translate(-6vmax, 10vmax) scale(0.95);
+    transform: translate(-6cqmax, 10cqmax) scale(0.95);
   }
 }
 .shade {
@@ -133,13 +133,13 @@ const blobs = computed(() => ({
 }
 .list {
   position: relative;
-  padding: 0 8vw;
+  padding: 0 8cqw;
   max-width: 1100px;
   transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .line {
-  padding: 1.2vh 1vw;
-  margin: 0 -1vw;
+  padding: 1.2cqh 1cqw;
+  margin: 0 -1cqw;
   border-radius: 14px;
   cursor: pointer;
   opacity: 0.12;
@@ -159,7 +159,7 @@ const blobs = computed(() => ({
 }
 .text {
   margin: 0;
-  font: 900 clamp(26px, 3.6vw, 52px) / 1.25 'Noto Sans SC', system-ui,
+  font: 900 clamp(26px, 3.6cqw, 52px) / 1.25 'Noto Sans SC', system-ui,
     sans-serif;
   color: rgba(255, 255, 255, 0.95);
   letter-spacing: -0.01em;
@@ -179,7 +179,7 @@ const blobs = computed(() => ({
 .sub {
   white-space: pre-line;
   margin: 0.4em 0 0;
-  font: 600 clamp(14px, 1.6vw, 22px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
+  font: 600 clamp(14px, 1.6cqw, 22px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
   color: rgba(255, 255, 255, 0.7);
 }
 

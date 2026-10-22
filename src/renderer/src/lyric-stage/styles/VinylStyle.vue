@@ -89,14 +89,14 @@ const window5 = computed(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
   align-items: center;
-  gap: 4vw;
-  padding: 6vh 6vw calc(var(--controls-space, 170px) + 30px);
+  gap: 4cqw;
+  padding: 6cqh 6cqw calc(var(--controls-space, 170px) + 30px);
 }
 
 .turntable {
   position: relative;
   justify-self: center;
-  width: min(40vw, 56vh);
+  width: min(40cqw, 56cqh);
   aspect-ratio: 1;
 }
 .record {
@@ -159,7 +159,7 @@ const window5 = computed(() => {
 .lyrics {
   position: relative;
   display: grid;
-  gap: 2.4vh;
+  gap: 2.4cqh;
   font-family: 'Noto Sans SC', system-ui, sans-serif;
 }
 .line {
@@ -183,16 +183,16 @@ const window5 = computed(() => {
 .o4 .text,
 .o1 .text,
 .o3 .text {
-  font-size: clamp(16px, 1.8vw, 26px);
+  font-size: clamp(16px, 1.8cqw, 26px);
 }
 .o2 .text {
-  font-size: clamp(24px, 3.2vw, 48px);
+  font-size: clamp(24px, 3.2cqw, 48px);
   font-weight: 900;
 }
 .sub {
   white-space: pre-line;
   margin: 0.3em 0 0;
-  font-size: clamp(14px, 1.5vw, 20px);
+  font-size: clamp(14px, 1.5cqw, 20px);
   color: rgba(255, 255, 255, 0.75);
 }
 
@@ -201,11 +201,11 @@ const window5 = computed(() => {
   .vinyl-style {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
-    padding-top: 10vh;
+    padding-top: 10cqh;
     text-align: center;
   }
   .turntable {
-    width: min(64vw, 36vh);
+    width: min(64cqw, 36cqh);
   }
 }
 @media (prefers-reduced-motion: reduce) {

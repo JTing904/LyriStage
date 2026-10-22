@@ -5,6 +5,7 @@
 // 歌词舞台是盖在最上面的全屏层
 import { computed, onUnmounted, ref, watch, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { storeToRefs } from 'pinia';
 import { ApiError } from '@core/http/client';
 import { adminStorageUsage } from '@core/data';
 import { isUnavailable, isUnblockRateLimited } from '@core/netease';
@@ -78,8 +79,8 @@ watch(
 );
 const notice = useNoticeStore();
 
-const stageOpen = ref(false);
 const ui = useUiStore();
+const { stageOpen } = storeToRefs(ui);
 const route = useRoute();
 const router = useRouter();
 

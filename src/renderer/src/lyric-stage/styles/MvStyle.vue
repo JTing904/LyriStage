@@ -101,17 +101,17 @@ const colors = computed(() => ({
   opacity: 0.35;
 }
 .s1 {
-  width: 60vmin;
-  height: 60vmin;
-  left: -12vmin;
-  top: -18vmin;
+  width: 60cqmin;
+  height: 60cqmin;
+  left: -12cqmin;
+  top: -18cqmin;
   animation: bob 9s ease-in-out infinite alternate;
 }
 .s2 {
-  width: 40vmin;
-  height: 40vmin;
-  right: -8vmin;
-  bottom: -6vmin;
+  width: 40cqmin;
+  height: 40cqmin;
+  right: -8cqmin;
+  bottom: -6cqmin;
   background: #000;
   opacity: 0.25;
   animation: bob 11s ease-in-out infinite alternate-reverse;
@@ -127,20 +127,20 @@ const colors = computed(() => ({
 }
 @keyframes bob {
   to {
-    transform: translate(4vmin, 3vmin) scale(1.08);
+    transform: translate(4cqmin, 3cqmin) scale(1.08);
   }
 }
 
 .stage-center {
   position: absolute;
-  inset: 8vh 8vw calc(var(--controls-space, 170px) + 30px);
+  inset: 8cqh 8cqw calc(var(--controls-space, 170px) + 30px);
   display: flex;
   flex-wrap: wrap;
   align-content: center;
   justify-content: center;
   align-items: center;
   gap: 0.15em 0.35em;
-  font-size: clamp(26px, 4.2vw, 64px);
+  font-size: clamp(26px, 4.2cqw, 64px);
 }
 .piece {
   display: inline-block;
@@ -175,7 +175,7 @@ const colors = computed(() => ({
   flex-basis: 100%;
   margin: 0.8em 0 0;
   text-align: center;
-  font: 700 clamp(14px, 1.6vw, 22px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
+  font: 700 clamp(14px, 1.6cqw, 22px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
   color: rgba(255, 255, 255, 0.85);
 }
 

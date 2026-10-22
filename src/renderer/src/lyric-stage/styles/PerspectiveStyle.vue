@@ -174,10 +174,10 @@ const petals = Array.from({ length: 12 }, (_, i) => ({
     transform: translate(0, 0) rotate(0deg);
   }
   50% {
-    transform: translate(6vw, 55vh) rotate(200deg);
+    transform: translate(6cqw, 55cqh) rotate(200deg);
   }
   100% {
-    transform: translate(-2vw, 112vh) rotate(420deg);
+    transform: translate(-2cqw, 112cqh) rotate(420deg);
   }
 }
 
@@ -201,12 +201,12 @@ const petals = Array.from({ length: 12 }, (_, i) => ({
 .list {
   position: relative;
   /* 不要贴着左边：宽屏时大约在左半边的中间 */
-  padding: 0 4vw 0 13vw;
-  width: min(62vw, 980px);
+  padding: 0 4cqw 0 13cqw;
+  width: min(62cqw, 980px);
   transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .line {
-  padding: 1.1vh 0;
+  padding: 1.1cqh 0;
   cursor: pointer;
   opacity: calc(0.75 - var(--d) * 0.1);
   transform-origin: 0% 50%;
@@ -218,7 +218,7 @@ const petals = Array.from({ length: 12 }, (_, i) => ({
 }
 .text {
   margin: 0;
-  font: 700 clamp(18px, 2.4vw, 34px) / 1.3 'Noto Sans SC', system-ui, sans-serif;
+  font: 700 clamp(18px, 2.4cqw, 34px) / 1.3 'Noto Sans SC', system-ui, sans-serif;
   color: #fff;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
 }
@@ -228,15 +228,15 @@ const petals = Array.from({ length: 12 }, (_, i) => ({
 .sub {
   white-space: pre-line;
   margin: 0.25em 0 0;
-  font: 500 clamp(13px, 1.4vw, 20px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
+  font: 500 clamp(13px, 1.4cqw, 20px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
   color: rgba(255, 255, 255, 0.85);
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
 }
 
 @media (max-width: 760px) {
   .list {
-    width: 86vw;
-    padding-left: 6vw;
+    width: 86cqw;
+    padding-left: 6cqw;
   }
   .tilt {
     transform: rotateY(10deg) rotateX(2deg);

@@ -78,7 +78,7 @@ const progressOf = (line, word) =>
 }
 .title {
   position: absolute;
-  top: 12vh;
+  top: 12cqh;
   left: 0;
   right: 0;
   display: grid;
@@ -89,7 +89,7 @@ const progressOf = (line, word) =>
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 .title strong {
-  font-size: clamp(22px, 3vw, 40px);
+  font-size: clamp(22px, 3cqw, 40px);
   font-weight: 900;
 }
 .title span {
@@ -98,12 +98,12 @@ const progressOf = (line, word) =>
 
 .slots {
   position: absolute;
-  left: 6vw;
-  right: 6vw;
+  left: 6cqw;
+  right: 6cqw;
   /* 底部播放条的上方（--controls-space 由 LyricStage 按版面给） */
   bottom: calc(var(--controls-space, 170px) + 20px);
   display: grid;
-  gap: 2.5vh;
+  gap: 2.5cqh;
 }
 .slot.left {
   justify-self: start;
@@ -114,7 +114,7 @@ const progressOf = (line, word) =>
 }
 .text {
   margin: 0;
-  font: 900 clamp(28px, 4.4vw, 68px) / 1.2 'Noto Sans SC', system-ui, sans-serif;
+  font: 900 clamp(28px, 4.4cqw, 68px) / 1.2 'Noto Sans SC', system-ui, sans-serif;
   letter-spacing: 0.02em;
 }
 /*
@@ -143,7 +143,7 @@ const progressOf = (line, word) =>
 .sub {
   white-space: pre-line;
   margin: 0.3em 0 0;
-  font: 700 clamp(14px, 1.8vw, 24px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
+  font: 700 clamp(14px, 1.8cqw, 24px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
   color: rgba(255, 255, 255, 0.85);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
 }

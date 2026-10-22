@@ -74,12 +74,12 @@ const background = computed(() =>
 }
 .list {
   position: relative;
-  padding: 0 7vw;
+  padding: 0 7cqw;
   max-width: 1200px;
   transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .line {
-  padding: 1vh 0;
+  padding: 1cqh 0;
   cursor: pointer;
   /* 还没唱：深色 */
   color: rgba(0, 0, 0, 0.55);
@@ -96,14 +96,14 @@ const background = computed(() =>
 }
 .text {
   margin: 0;
-  font: 900 clamp(28px, 4.2vw, 64px) / 1.18 'Noto Sans SC', system-ui,
+  font: 900 clamp(28px, 4.2cqw, 64px) / 1.18 'Noto Sans SC', system-ui,
     sans-serif;
   letter-spacing: -0.015em;
 }
 .sub {
   white-space: pre-line;
   margin: 0.3em 0 0;
-  font: 700 clamp(14px, 1.7vw, 24px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
+  font: 700 clamp(14px, 1.7cqw, 24px) / 1.4 'Noto Sans SC', system-ui, sans-serif;
   opacity: 0.8;
 }
 </style>

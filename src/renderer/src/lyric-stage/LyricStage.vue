@@ -16,8 +16,10 @@ const props = defineProps({
   player: { type: Object, required: true },
   getLyrics: { type: Function, required: true },
   getTranslation: { type: Function, default: null },
+  /** 嵌在别的页面里（一起听的房间）：不盖满画面、没有关闭钮和播放条、不管状态栏和按键，多一个「全屏」 */
+  embedded: { type: Boolean, default: false },
 });
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'expand']);
 
 const stage = provideStage(props);
 const { settings, track, lyrics, lyricsError, lines, retryLyrics } = stage;
@@ -37,12 +39,15 @@ const lightStyle = computed(
   () => status.value === 'ready' && Boolean(style.value.light)
 );
 // 手机：舞台大多是深色画面，状态栏用白色图标；浅色风格用深色图标。关掉舞台时换回跟主题
-watch(lightStyle, light => setSystemBarsStyle(!light), { immediate: true });
-onBeforeUnmount(syncSystemBars);
+if (!props.embedded) {
+  watch(lightStyle, light => setSystemBarsStyle(!light), { immediate: true });
+  onBeforeUnmount(syncSystemBars);
+}
 
 // 看歌词时屏幕常亮：正在播放才亮着，暂停、关掉歌词就让它照常变暗
-watch(() => props.state.playing, playing => setKeepAwake(playing), { immediate: true });
-onBeforeUnmount(() => setKeepAwake(false));
+const awakeKey = {};
+watch(() => props.state.playing, playing => setKeepAwake(awakeKey, playing), { immediate: true });
+onBeforeUnmount(() => setKeepAwake(awakeKey, false));
 
 // 控制条：鼠标或手指一段时间不动就隐藏，沉浸看歌词
 const controlsVisible = ref(true);
@@ -67,7 +72,7 @@ const dragY = ref(0);
 let drag = null;
 function onDragStart(event) {
   wake();
-  if (event.pointerType !== 'touch' || pickerOpen.value || shareOpen.value) return;
+  if (props.embedded || event.pointerType !== 'touch' || pickerOpen.value || shareOpen.value) return;
   if (event.target.closest('.controls, .topbar button, .picker')) return;
   drag = { id: event.pointerId, x: event.clientX, y: event.clientY, at: performance.now(), active: false };
 }
@@ -105,12 +110,15 @@ function onKey(event) {
 }
 onMounted(() => {
   wake();
+  // 嵌在房间里：按键、状态栏交给外面的页面
+  if (props.embedded) return;
   window.addEventListener('keydown', onKey);
   phoneLandscape.addEventListener('change', syncBarsVisibility);
   syncBarsVisibility();
 });
 onBeforeUnmount(() => {
   clearTimeout(hideTimer);
+  if (props.embedded) return;
   window.removeEventListener('keydown', onKey);
   phoneLandscape.removeEventListener('change', syncBarsVisibility);
   setSystemBarsHidden(false);
@@ -125,6 +133,7 @@ onBeforeUnmount(() => {
       electron: isElectron,
       light: lightStyle,
       dragging: dragY > 0,
+      embedded,
     }"
     :style="dragY ? { transform: `translateY(${dragY}px)`, transition: 'none' } : null"
     @pointerdown="onDragStart"
@@ -133,7 +142,7 @@ onBeforeUnmount(() => {
     @pointercancel="onDragEnd"
   >
     <!-- 手机：提示可以往下拉关闭 -->
-    <span class="grabber" aria-hidden="true" />
+    <span v-if="!embedded" class="grabber" aria-hidden="true" />
     <component
       :is="style.component"
       v-if="status === 'ready'"
@@ -158,7 +167,7 @@ onBeforeUnmount(() => {
 
     <!-- 顶部：关闭、风格（电脑版这一条也是拖动窗口的地方） -->
     <header class="topbar">
-      <button class="icon-button" :title="$t('关闭（Esc）')" @click="emit('close')"
+      <button v-if="!embedded" class="icon-button" :title="$t('关闭（Esc）')" @click="emit('close')"
         >✕</button
       >
       <span class="spacer" />
@@ -176,6 +185,9 @@ onBeforeUnmount(() => {
         @click="pickerOpen = !pickerOpen"
       >
         {{ $t('风格：{name}', { name: $t(style.name) }) }}
+      </button>
+      <button v-if="embedded" class="pill" :title="$t('全屏歌词')" @click="emit('expand')">
+        {{ $t('全屏') }}
       </button>
     </header>
 
@@ -195,6 +207,7 @@ onBeforeUnmount(() => {
 
     <!-- 底部：播放条（YouTube Music 风格，精简、透明） -->
     <PlayerBar
+      v-if="!embedded"
       class="controls"
       transparent
       compact
@@ -213,6 +226,8 @@ onBeforeUnmount(() => {
   inset: 0;
   z-index: 100;
   overflow: hidden;
+  /* 风格组件的大小用 cqw / cqh（照这个框）：全屏时就是整个画面，嵌在房间里就照那一块 */
+  container-type: size;
   background: #0b0d0d;
   color: #f2f2f2;
   font-family: 'Noto Sans SC', system-ui, sans-serif;
@@ -325,6 +340,22 @@ onBeforeUnmount(() => {
   padding-right: 150px;
 }
 .topbar button {
+  -webkit-app-region: no-drag;
+}
+
+/* 嵌在别的页面里（一起听的房间）：铺满外框，按钮放右下角（上面留给房间自己的资料） */
+.stage.embedded {
+  --controls-space: 64px;
+  position: absolute;
+  z-index: auto;
+  border-radius: inherit;
+}
+.embedded .topbar {
+  top: auto;
+  bottom: 12px;
+  left: auto;
+  height: auto;
+  padding: 0 14px;
   -webkit-app-region: no-drag;
 }
 .spacer {

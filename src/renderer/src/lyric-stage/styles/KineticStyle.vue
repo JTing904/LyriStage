@@ -196,8 +196,8 @@ const particles = Array.from({ length: 18 }, (_, i) => ({
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: 1.2vh;
-  padding: 0 5vw;
+  gap: 1.2cqh;
+  padding: 0 5cqw;
   text-align: center;
   transition: opacity 0.8s;
 }
@@ -212,7 +212,7 @@ const particles = Array.from({ length: 18 }, (_, i) => ({
   font-weight: 900;
   line-height: 1.15;
   /* 字数多就缩小：最多占满 88% 宽，也不超过 20% 高 */
-  font-size: calc(clamp(28px, min(88vw / var(--chars), 20vh), 200px));
+  font-size: calc(clamp(28px, min(88cqw / var(--chars), 20cqh), 200px));
   text-wrap: balance;
   /* 再保险：支持的浏览器会自动去掉行首行尾全角标点的半边空白 */
   text-spacing-trim: trim-both;
@@ -224,7 +224,7 @@ const particles = Array.from({ length: 18 }, (_, i) => ({
   text-shadow: 0 0 24px rgba(0, 0, 0, 0.6);
 }
 .lead.intro {
-  font-size: calc(clamp(32px, 9vw, 120px));
+  font-size: calc(clamp(32px, 9cqw, 120px));
 }
 .ghost {
   position: absolute;
@@ -258,7 +258,7 @@ const particles = Array.from({ length: 18 }, (_, i) => ({
 .sub {
   white-space: pre-line;
   margin: 0;
-  font: 500 calc(clamp(14px, 2.2vw, 22px)) / 1.5 'Noto Sans SC', system-ui,
+  font: 500 calc(clamp(14px, 2.2cqw, 22px)) / 1.5 'Noto Sans SC', system-ui,
     sans-serif;
   color: rgba(227, 233, 229, 0.6);
   letter-spacing: 0.04em;

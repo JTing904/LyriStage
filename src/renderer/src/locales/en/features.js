@@ -240,6 +240,15 @@ export default {
   分享报告: 'Share report',
 
   // ---- 一起听聊天（RoomView.vue、stores/room.js） ----
+  房间: 'Room',
+  复制: 'Copy',
+  邀请链接: 'Invite link',
+  '{n} 人在听': '{n} listening',
+  '成员 {n}': 'People {n}',
+  '（我）': '(me)',
+  '你是房主：你播什么大家就听什么': 'You’re the host: everyone hears what you play',
+  全屏: 'Full screen',
+  全屏歌词: 'Full-screen lyrics',
   聊天: 'Chat',
   '说点什么，或按下面的表情': 'Say something, or tap a reaction below',
   '送出表情 {emoji}': 'Send {emoji}',
