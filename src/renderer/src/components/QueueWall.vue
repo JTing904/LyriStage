@@ -10,8 +10,10 @@ import { useAuthStore } from '../stores/auth';
 import { useLibraryStore } from '../stores/library';
 import { useNoticeStore } from '../stores/notice';
 import { createSongRadio, getLyrics } from '../services';
-import { isElectron } from '../platform';
+import { canShareImage, isElectron, saveImage, shareImage } from '../platform';
+import { getPalette } from '../lyric-stage/palette';
 import { artistNames } from '../utils/format';
+import { canvasToBlob, renderQueueWallCard } from '../utils/shareCard';
 import { t as tr } from '../i18n';
 import Cover from './Cover.vue';
 import Icon from './Icon.vue';
@@ -72,6 +74,37 @@ watch(
   () => nextTick(() => focusCurrent())
 );
 onMounted(() => nextTick(() => focusCurrent('instant')));
+
+// ---- 分享：把这面墙做成一张图（关灯时就是关灯版） ----
+const sharing = ref(false);
+async function share() {
+  const current = state.track;
+  if (sharing.value || !current) return;
+  sharing.value = true;
+  try {
+    const palette = await getPalette(current.al?.picUrl);
+    const canvas = await renderQueueWallCard({
+      tiles: tiles.value,
+      palette,
+      lightsOff: lightsOff.value,
+      labels: {
+        title: tr('我的播放队列'),
+        subtitle: `${tr('正在播《{name}》{artist}', { name: current.name, artist: artistNames(current) })} · ${tr('{n} 首', { n: tiles.value.length })}`,
+        now: tr('正在播'),
+      },
+    });
+    const blob = await canvasToBlob(canvas);
+    const fileName = 'LyriStage-queue.png';
+    if (canShareImage()) await shareImage(blob, fileName);
+    else await saveImage(blob, fileName);
+  } catch (err) {
+    if (err?.name !== 'AbortError' && !/cancel/i.test(err?.message ?? '')) {
+      notice.show(tr('操作失败：{error}', { error: err.message || err }));
+    }
+  } finally {
+    sharing.value = false;
+  }
+}
 
 // ---- 点一下：播那首（正在播的那张：暂停 / 继续） ----
 function play(tile) {
@@ -168,6 +201,15 @@ const backdrop = computed(() => {
         {{ $t('关灯') }}
       </button>
       <button class="pill" @click="focusCurrent()">{{ $t('正在播') }}</button>
+      <button
+        v-if="state.track && tiles.length"
+        class="icon-btn small"
+        :aria-label="$t('分享海报')"
+        :disabled="sharing"
+        @click="share"
+      >
+        <Icon name="share" :size="17" />
+      </button>
     </header>
 
     <div ref="wall" class="wall">
@@ -295,6 +337,14 @@ const backdrop = computed(() => {
   background: rgb(255 255 255 / 0.1);
   color: inherit;
   cursor: pointer;
+}
+.icon-btn.small {
+  flex: none;
+  width: 34px;
+  height: 34px;
+}
+.icon-btn:disabled {
+  opacity: 0.5;
 }
 .pill {
   flex: none;

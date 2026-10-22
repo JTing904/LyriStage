@@ -16,6 +16,9 @@ import SongPicker from '../components/SongPicker.vue';
 import Cover from '../components/Cover.vue';
 import PlaylistCover from '../components/PlaylistCover.vue';
 import { squareCover } from '../utils/image';
+import { getPalette } from '../lyric-stage/palette';
+import { canShareImage, saveImage, shareImage } from '../platform';
+import { canvasToBlob, renderPlaylistCard } from '../utils/shareCard';
 
 const route = useRoute();
 const router = useRouter();
@@ -142,6 +145,40 @@ async function leave() {
   }
 }
 
+// ---- 分享海报：封面 + 歌单名 + 前几首歌，做成一张图 ----
+const posterBusy = ref(false);
+async function sharePoster() {
+  if (posterBusy.value || !tracks.value.length) return;
+  posterBusy.value = true;
+  try {
+    const list = tracks.value;
+    const owner = people.value.find(p => p.owner)?.name ?? auth.displayName;
+    const cover = playlist.value.cover_url || null;
+    const palette = await getPalette(cover || list[0]?.al?.picUrl);
+    const canvas = await renderPlaylistCard({
+      name: playlist.value.name,
+      owner,
+      cover,
+      tracks: list,
+      palette,
+      labels: {
+        byline: `${t('{name} 的歌单', { name: owner })} · ${t('{n} 首', { n: list.length })}`,
+        more: n => t('还有 {n} 首', { n }),
+      },
+    });
+    const blob = await canvasToBlob(canvas);
+    const fileName = 'LyriStage-playlist.png';
+    if (canShareImage()) await shareImage(blob, fileName);
+    else await saveImage(blob, fileName);
+  } catch (err) {
+    if (err?.name !== 'AbortError' && !/cancel/i.test(err?.message ?? '')) {
+      library.say(t('操作失败：{error}', { error: err.message || err }));
+    }
+  } finally {
+    posterBusy.value = false;
+  }
+}
+
 // 添加歌曲（搜索 / 我喜欢的 / 最近播放里勾选好几首）
 const picker = ref(null);
 const adding = ref(false);
@@ -253,6 +290,15 @@ async function removePlaylist() {
             @click="shareBox.showModal()"
           >
             <Icon name="friends" :size="18" /><span class="label">{{ isShared ? $t('一起编辑的人') : $t('邀请一起编辑') }}</span>
+          </button>
+          <button
+            v-if="tracks.length"
+            class="icon-action"
+            :aria-label="$t('分享海报')"
+            :disabled="posterBusy"
+            @click="sharePoster"
+          >
+            <Icon name="share" :size="17" /><span class="label">{{ $t('分享海报') }}</span>
           </button>
           <button v-if="isOwner" class="icon-action" :aria-label="$t('编辑')" @click="openEditor">
             <Icon name="edit" :size="17" /><span class="label">{{ $t('编辑') }}</span>

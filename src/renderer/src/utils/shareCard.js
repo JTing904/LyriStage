@@ -268,6 +268,137 @@ export async function renderPlaylistCard({ name, owner, cover, tracks, palette, 
   return canvas;
 }
 
+/**
+ * 海报墙（播放队列）：一行 4 张封面，正在播的放大成 2×2、播过的稍暗；放正在播的前后十几首
+ * 关灯：底色变黑，只有正在播的那张亮着、周围透出它的颜色
+ * @param {{ tiles: { track: any, section: 'played' | 'current' | 'queued' | 'list' }[],
+ *   palette: any, lightsOff?: boolean, labels: { title: string, subtitle: string, now: string } }} options
+ * @returns {Promise<HTMLCanvasElement>}
+ */
+export async function renderQueueWallCard({ tiles, palette, lightsOff = false, labels }) {
+  await loadCardFonts();
+  const COLS = 4;
+  const ROWS = 6;
+  const left = 70;
+  const gap = 14;
+  const cell = (CARD_WIDTH - left * 2 - gap * (COLS - 1)) / COLS;
+
+  // 挑要放的：正在播的前面 3 首（播过的），后面接下来的，放满为止（正在播的占 4 格）
+  const at = Math.max(0, tiles.findIndex(t => t.section === 'current'));
+  const picked = tiles.slice(Math.max(0, at - 3), Math.max(0, at - 3) + COLS * ROWS - 3);
+
+  // 像 CSS grid 的 dense 排法：每张放进第一个空位，2×2 的找第一个放得下的位置
+  const used = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+  const placed = [];
+  for (const tile of picked) {
+    const span = tile.section === 'current' ? 2 : 1;
+    let spot = null;
+    for (let r = 0; r <= ROWS - span && !spot; r++) {
+      for (let c = 0; c <= COLS - span && !spot; c++) {
+        let free = true;
+        for (let dr = 0; dr < span; dr++) for (let dc = 0; dc < span; dc++) free &&= !used[r + dr][c + dc];
+        if (free) spot = { r, c };
+      }
+    }
+    if (!spot) continue;
+    for (let dr = 0; dr < span; dr++) for (let dc = 0; dc < span; dc++) used[spot.r + dr][spot.c + dc] = true;
+    placed.push({ ...tile, ...spot, span });
+  }
+  const images = await Promise.all(placed.map(p => loadCover(p.track.al?.picUrl, p.span === 2 ? 600 : 300)));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = CARD_WIDTH;
+  canvas.height = CARD_HEIGHT;
+  const ctx = canvas.getContext('2d');
+  const top = 300;
+  const current = placed.find(p => p.span === 2);
+  if (lightsOff) {
+    ctx.fillStyle = '#050507';
+    ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+    if (current) {
+      const cx = left + current.c * (cell + gap) + cell + gap / 2;
+      const cy = top + current.r * (cell + gap) + cell + gap / 2;
+      const glow = ctx.createRadialGradient(cx, cy, cell * 0.5, cx, cy, cell * 3.2);
+      glow.addColorStop(0, rgba(palette.vibrant, 0.55));
+      glow.addColorStop(1, rgba(palette.vibrant, 0));
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+    }
+  } else {
+    paintBackground(ctx, palette);
+  }
+
+  // 标题
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `900 76px ${SERIF}`;
+  ctx.fillStyle = '#fff';
+  ctx.fillText(labels.title, left, 190);
+  ctx.font = `400 32px ${SANS}`;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.fillText(wrapText(ctx, labels.subtitle, CARD_WIDTH - left * 2)[0] ?? '', left, 250);
+
+  // 封面墙
+  placed.forEach((p, i) => {
+    const x = left + p.c * (cell + gap);
+    const y = top + p.r * (cell + gap);
+    const size = p.span * cell + (p.span - 1) * gap;
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(x, y, size, size, p.span === 2 ? 22 : 12);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.fillRect(x, y, size, size);
+    if (lightsOff && p.span !== 2) ctx.filter = 'grayscale(0.6)';
+    if (images[i]) ctx.drawImage(images[i], x, y, size, size);
+    ctx.filter = 'none';
+    // 播过的稍暗；关灯时除了正在播的都几乎看不见
+    const shade = lightsOff ? (p.span === 2 ? 0 : 0.86) : p.section === 'played' ? 0.5 : 0;
+    if (shade) {
+      ctx.fillStyle = `rgba(0, 0, 0, ${shade})`;
+      ctx.fillRect(x, y, size, size);
+    }
+    if (p.span === 2) {
+      // 正在播：底部渐暗，放「正在播」和歌名
+      const g = ctx.createLinearGradient(0, y + size * 0.45, 0, y + size);
+      g.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      g.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x, y, size, size);
+      ctx.font = `700 26px ${SANS}`;
+      const tag = labels.now;
+      const tagW = ctx.measureText(tag).width + 36;
+      ctx.beginPath();
+      ctx.roundRect(x + 24, y + size - 150, tagW, 46, 23);
+      ctx.fillStyle = ACCENT;
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tag, x + 42, y + size - 127);
+      ctx.textBaseline = 'alphabetic';
+      ctx.font = `700 40px ${SANS}`;
+      ctx.fillText(wrapText(ctx, p.track.name ?? '', size - 48)[0] ?? '', x + 24, y + size - 58);
+      ctx.font = `400 28px ${SANS}`;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+      const artists = (p.track.ar ?? []).map(a => a.name).join(' / ');
+      ctx.fillText(wrapText(ctx, artists, size - 48)[0] ?? '', x + 24, y + size - 20);
+    }
+    ctx.restore();
+    if (p.span === 2) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(x, y, size, size, 22);
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#fff';
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  paintBrand(ctx);
+  return canvas;
+}
+
 /** canvas → PNG */
 export const canvasToBlob = canvas =>
   new Promise((resolve, reject) =>
