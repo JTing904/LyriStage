@@ -309,6 +309,8 @@ export default {
   现在没办法请求加入: "Can't ask to join right now",
   '{name} 没有让你进房间': "{name} didn't let you in",
   '{name} 没有回应，晚点再试试': "{name} didn't answer. Try again later",
+  '找不到这个房间，可能已经关了': "Couldn't find that room. It may have closed",
+  '房间码试太多次了，一小时后再试': 'Too many room codes tried. Try again in an hour',
   '转让失败：{error}': "Couldn't hand over: {error}",
   没有权限: 'not allowed',
 

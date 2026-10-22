@@ -312,11 +312,25 @@ export const useRoomStore = defineStore('room', () => {
       return;
     }
     try {
-      const { data: row } = await getSupabase()
-        .from('rooms')
-        .select('host_id')
-        .eq('code', roomCode)
-        .maybeSingle();
+      // 先登记加入（20261102000000_room_members.sql）：不在房间名单里的人看不到房间、进不了频道
+      const supabase = getSupabase();
+      const { data: joinedHost, error: joinErr } = await supabase.rpc('join_room', { room: roomCode });
+      let row;
+      if (!joinErr) {
+        if (!joinedHost) {
+          error.value = t('找不到这个房间，可能已经关了');
+          return;
+        }
+        row = { host_id: joinedHost };
+      } else if (joinErr.code === '54000') {
+        error.value = t('房间码试太多次了，一小时后再试');
+        return;
+      } else if (joinErr.code === 'PGRST202') {
+        // 数据库还没执行那份 SQL：照旧直接查房间
+        ({ data: row } = await supabase.from('rooms').select('host_id').eq('code', roomCode).maybeSingle());
+      } else {
+        throw joinErr;
+      }
       await connect(roomCode, 'guest');
       hostId.value = row?.host_id ?? null;
       if (!row) {
