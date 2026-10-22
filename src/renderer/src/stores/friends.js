@@ -19,8 +19,10 @@ import {
 import { usePlayer } from '../composables/usePlayer';
 import { useAuthStore } from './auth';
 
-/** 超过这么久没更新就不算"正在听"，改说"x 分钟前听过"（App 关掉时数据库不会知道） */
-const STALE_MS = 15 * 60 * 1000;
+/** 播放中每隔这么久告诉好友"我还在听"（App 被关掉时数据库不会知道，靠这个判断） */
+const HEARTBEAT_MS = 2 * 60 * 1000;
+/** 超过这么久没收到"还在听"就不算正在听，改说"x 分钟前听过" */
+const STALE_MS = 5 * 60 * 1000;
 /** 超过 7 天没听的好友，首页就不显示（参考 Spotify 的好友动态） */
 const RECENT_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -97,6 +99,16 @@ export const useFriendsStore = defineStore('friends', () => {
       timer = setTimeout(() => setNowPlaying(track, playing).catch(() => {}), 3000);
     }
   );
+  // 播放中定时再送一次（只更新时间），好友那边才知道我还开着 App
+  setInterval(() => {
+    if (available.value && sharing.value && state.track && state.playing) {
+      setNowPlaying(state.track, true).catch(() => {});
+    }
+  }, HEARTBEAT_MS);
+
+  // "正在听"会随时间过期：每 30 秒重新算一次（不然好友关掉 App 后会一直显示正在听）
+  const now = ref(Date.now());
+  setInterval(() => (now.value = Date.now()), 30 * 1000);
 
   async function setShareListening(on) {
     await updateSharing({ shareListening: on });
@@ -131,7 +143,7 @@ export const useFriendsStore = defineStore('friends', () => {
       .map(f => {
         const n = listening.value.get(f.id);
         if (!n) return null;
-        const age = Date.now() - new Date(n.updatedAt).getTime();
+        const age = now.value - new Date(n.updatedAt).getTime();
         if (age > RECENT_MS) return null;
         return { ...f, track: n.track, updatedAt: n.updatedAt, live: n.playing && age < STALE_MS };
       })
@@ -139,8 +151,12 @@ export const useFriendsStore = defineStore('friends', () => {
       .sort((a, b) => b.live - a.live || new Date(b.updatedAt) - new Date(a.updatedAt))
   );
 
+  /** 现在有好友正在听（首页标题用"正在听"还是"最近在听"） */
+  const anyLive = computed(() => activity.value.some(a => a.live));
+
   return {
     available,
+    anyLive,
     profile,
     friends,
     incoming,

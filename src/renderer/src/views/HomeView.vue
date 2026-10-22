@@ -10,6 +10,7 @@ import { useAvatarStore } from '../stores/avatar';
 import { useFriendsStore } from '../stores/friends';
 import WeeklyBoard from '../components/WeeklyBoard.vue';
 import { t, locale } from '../i18n';
+import { timeAgo } from '../utils/format';
 import AvatarFigure from '../components/AvatarFigure.vue';
 import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
@@ -160,7 +161,7 @@ const clock = ms => {
     <!-- 朋友正在听（参考 Spotify 的好友动态）：好友同意、而且对方开着分享才看得到 -->
     <section v-if="friendsStore.available && (friendsStore.activity.length || friendsStore.incoming.length)" class="friends">
       <div class="section-head">
-        <h2 class="display">{{ $t('朋友正在听') }}</h2>
+        <h2 class="display">{{ friendsStore.anyLive ? $t('朋友正在听') : $t('朋友最近在听') }}</h2>
         <RouterLink to="/friends" class="see-all">
           <template v-if="friendsStore.incoming.length">{{ $t('{n} 个好友邀请', { n: friendsStore.incoming.length }) }}</template>
           <template v-else>{{ $t('全部') }}</template>
@@ -181,6 +182,7 @@ const clock = ms => {
           </span>
           <strong>{{ f.name }}</strong>
           <span>{{ f.track.name }}</span>
+          <span class="when" :class="{ now: f.live }">{{ f.live ? $t('正在听') : timeAgo(f.updatedAt, t) }}</span>
         </button>
       </div>
     </section>
@@ -738,8 +740,16 @@ h2 {
   margin-top: 6px;
   font-size: 14px;
 }
-.friend > span:last-child {
+.friend > span:not(.friend-cover) {
   font-size: 12px;
   color: var(--text-dim);
+}
+/* 正在听 / x 分钟前 */
+.friend > .when {
+  color: var(--text-faint);
+}
+.friend > .when.now {
+  color: var(--accent);
+  font-weight: 700;
 }
 </style>

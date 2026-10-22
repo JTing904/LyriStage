@@ -78,6 +78,7 @@ export default {
     'You won’t see each other’s listening anymore. You can add each other again with a friend code.',
   '解除': 'Remove',
   '朋友正在听': 'Friends are listening to',
+  '朋友最近在听': 'Friends recently played',
   '{n} 个好友邀请': '{n} friend requests',
   '邀请已送出，对方同意后就是好友了': 'Request sent. You’ll be friends once they accept',
   '对方也邀请过你，你们现在是好友了': 'They had invited you too, so you’re friends now',

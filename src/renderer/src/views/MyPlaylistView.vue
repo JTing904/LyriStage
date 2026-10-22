@@ -10,6 +10,7 @@ import { usePlayCollection } from '../composables/usePlayCollection';
 import { totalLength } from '../utils/format';
 import { t } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
+import Icon from '../components/Icon.vue';
 import TrackList from '../components/TrackList.vue';
 import SongPicker from '../components/SongPicker.vue';
 import Cover from '../components/Cover.vue';
@@ -204,10 +205,23 @@ async function removePlaylist() {
         @shuffle="shuffleAll(tracks, context)"
       >
         <template #actions>
-          <button @click="picker.open()">{{ $t('＋ 添加歌曲') }}</button>
-          <button @click="shareBox.showModal()">{{ isShared ? $t('一起编辑的人') : $t('邀请一起编辑') }}</button>
-          <button v-if="isOwner" @click="openEditor">{{ $t('编辑') }}</button>
-          <button v-if="isOwner" @click="confirmBox.showModal()">{{ $t('删除歌单') }}</button>
+          <!-- 手机：只留图标（CollectionHeader 的 .icon-action），文字给读屏用 aria-label -->
+          <button class="icon-action" :aria-label="$t('添加歌曲')" @click="picker.open()">
+            <Icon name="plus" :size="18" /><span class="label">{{ $t('添加歌曲') }}</span>
+          </button>
+          <button
+            class="icon-action"
+            :aria-label="isShared ? $t('一起编辑的人') : $t('邀请一起编辑')"
+            @click="shareBox.showModal()"
+          >
+            <Icon name="friends" :size="18" /><span class="label">{{ isShared ? $t('一起编辑的人') : $t('邀请一起编辑') }}</span>
+          </button>
+          <button v-if="isOwner" class="icon-action" :aria-label="$t('编辑')" @click="openEditor">
+            <Icon name="edit" :size="17" /><span class="label">{{ $t('编辑') }}</span>
+          </button>
+          <button v-if="isOwner" class="icon-action" :aria-label="$t('删除歌单')" @click="confirmBox.showModal()">
+            <Icon name="trash" :size="17" /><span class="label">{{ $t('删除歌单') }}</span>
+          </button>
         </template>
       </CollectionHeader>
 

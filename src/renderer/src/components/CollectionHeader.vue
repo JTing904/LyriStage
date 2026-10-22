@@ -279,6 +279,17 @@ h1 {
   .actions .label {
     display: none;
   }
+  /* 页面自己的按钮有图标的（.icon-action）：手机只留图标、圆形，一排放得下 */
+  .actions :slotted(button.icon-action) {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .actions :slotted(button.icon-action .label) {
+    display: none;
+  }
 }
 
 /* 手机横屏：画面矮，封面放左边、缩小 */
