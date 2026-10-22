@@ -3,7 +3,13 @@ import { defineConfig } from 'vitest/config';
 import { alias } from './electron.vite.config.mjs';
 
 export default defineConfig({
-  resolve: { alias },
+  resolve: {
+    alias: [
+      ...Object.entries(alias).map(([find, replacement]) => ({ find, replacement })),
+      // Edge Function 用 Deno 的 npm: 写法，测试时换成项目装好的
+      { find: /^npm:@supabase\/supabase-js@2$/, replacement: '@supabase/supabase-js' },
+    ],
+  },
   test: {
     include: ['src/core/**/*.test.js', 'server/lib/**/*.test.js', 'supabase/functions/**/*.test.js'],
     environment: 'node',

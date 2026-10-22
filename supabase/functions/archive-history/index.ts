@@ -9,6 +9,9 @@
 // 「Verify JWT」要关掉（排程不带登录，靠 x-archive-secret 这组密码确认）。
 // 手动测试（不会删任何东西）：POST {"dryRun": true, "keepMonths": 0}，会把文件存到 dry-run-<年>.json.gz、确认后删掉
 
+// Supabase 的服务器只认得开头写死的 import（单元测试里 vitest.config.mjs 把它换成项目装好的 supabase-js）
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
 const BUCKET = 'history-archive';
 const MIN_KEEP_MONTHS = 24; // 真的搬时至少留两年
 const PAGE = 1000;
@@ -131,8 +134,6 @@ async function archiveOne(db, group, dryRun) {
 }
 
 async function handle(req) {
-  const spec = 'npm:@supabase/supabase-js@2';
-  const { createClient } = await import(/* @vite-ignore */ spec);
   // @ts-ignore Deno
   const env = name => Deno.env.get(name);
   const db = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
