@@ -216,8 +216,11 @@ describe('player 播放链接过期', () => {
   it('链接拿到超过 10 分钟，按播放时先换新链接，从原来的位置接着播', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     try {
-      let version = 0;
-      const { audio, player, played } = setup(async t => ({ url: `${urlOf(t.id)}?v=${++version}` }));
+      // 每首歌各自数第几次拿链接（下一首会被预先拿，不能共用一个计数）
+      const versions = {};
+      const { audio, player, played } = setup(async t => ({
+        url: `${urlOf(t.id)}?v=${(versions[t.id] = (versions[t.id] ?? 0) + 1)}`,
+      }));
       await player.playList(tracks, 0);
       audio.tick(40);
       player.pause();
@@ -233,8 +236,10 @@ describe('player 播放链接过期', () => {
   });
 
   it('播放中音频出错：换一次链接接着播；换了还错就停下并报错', async () => {
-    let version = 0;
-    const { audio, player } = setup(async t => ({ url: `${urlOf(t.id)}?v=${++version}` }));
+    const versions = {};
+    const { audio, player } = setup(async t => ({
+      url: `${urlOf(t.id)}?v=${(versions[t.id] = (versions[t.id] ?? 0) + 1)}`,
+    }));
     const errors = [];
     player.on('error', e => errors.push(e));
     await player.playList(tracks, 0);
@@ -378,13 +383,13 @@ describe('player 睡眠定时：这首播完就停', () => {
 });
 
 describe('player 预先载入下一首', () => {
-  it('播过一半就先拿下一首的链接，切过去时直接用，不用再拿一次', async () => {
+  it('听了 10 秒就先拿下一首的链接，切过去时直接用，不用再拿一次', async () => {
     const resolve = vi.fn(async t => ({ url: urlOf(t.id) }));
     const { audio, player } = setup(resolve);
     const prefetched = [];
     player.on('prefetch', t => prefetched.push(t.id));
     await player.playList(tracks, 0); // 每首 200 秒
-    audio.tick(99);
+    audio.tick(9);
     expect(prefetched).toEqual([]);
     audio.tick(1);
     await flush();
@@ -395,5 +400,53 @@ describe('player 预先载入下一首', () => {
     expect(player.getState().track.id).toBe(2);
     expect(audio.src).toBe(urlOf(2));
     expect(resolve).toHaveBeenCalledTimes(2);
+  });
+
+  it('还在找的时候就按下一首：等它找完，不会再找一次', async () => {
+    let finish;
+    const resolve = vi.fn(t =>
+      t.id === 2 ? new Promise(r => (finish = () => r({ url: urlOf(2) }))) : Promise.resolve({ url: urlOf(t.id) })
+    );
+    const { audio, player } = setup(resolve);
+    await player.playList(tracks, 0);
+    audio.tick(10); // 开始帮第 2 首找（还没找完）
+    const switching = player.next();
+    finish();
+    await switching;
+    expect(audio.src).toBe(urlOf(2));
+    expect(resolve.mock.calls.filter(([t]) => t.id === 2)).toHaveLength(1);
+  });
+
+  it('下一首换了（插了一首「下一首播放」）：为新的那首再找', async () => {
+    const resolve = vi.fn(async t => ({ url: urlOf(t.id) }));
+    const { audio, player } = setup(resolve);
+    const prefetched = [];
+    player.on('prefetch', t => prefetched.push(t.id));
+    await player.playList(tracks, 0);
+    audio.tick(10);
+    player.playNext({ id: 99, name: '插队', dt: 200000 });
+    audio.tick(1);
+    await flush();
+    expect(prefetched).toEqual([2, 99]);
+    await player.next();
+    expect(audio.src).toBe(urlOf(99));
+    expect(resolve.mock.calls.filter(([t]) => t.id === 99)).toHaveLength(1);
+  });
+
+  it('预先找的时候失败了：切过去时再找一次', async () => {
+    let failOnce = true;
+    const resolve = vi.fn(async t => {
+      if (t.id === 2 && failOnce) {
+        failOnce = false;
+        throw new Error('网络');
+      }
+      return { url: urlOf(t.id) };
+    });
+    const { audio, player } = setup(resolve);
+    await player.playList(tracks, 0);
+    audio.tick(10);
+    await flush();
+    await player.next();
+    expect(audio.src).toBe(urlOf(2));
   });
 });

@@ -31,6 +31,8 @@ const MAX_CONSECUTIVE_FAILURES = 3;
 const RESTART_THRESHOLD = 3;
 // 网易云的播放链接大约 20 分钟后失效；拿到超过这么久就先换新的再播
 const SOURCE_TTL_MS = 10 * 60 * 1000;
+// 这首听了这么久才先帮下一首找音源（一直快速跳歌时不要白白多找，B 站搜太多会被限制）
+const PREFETCH_AFTER_SECONDS = 10;
 
 /**
  * @param {object} deps
@@ -63,9 +65,9 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
   let failures = 0;
   let sourceAt = 0; // 什么时候拿到 state.source 的（判断链接是不是过期了）
   let stopAfterCurrent = false; // 睡眠定时"这首播完就停"
-  // 预先载入下一首：这首过半（或剩 30 秒）时先拿好下一首的播放链接，切歌几乎不用等
-  let prefetchDoneFor = null; // 这首歌已经帮下一首载入过了（歌曲 id）
-  /** @type {{ id: Track['id'], source: Source, at: number } | null} */
+  // 预先找下一首的音源：这首听了 10 秒就先找好，切歌（包括按「下一首」）几乎不用等
+  let prefetchKey = null; // 已经帮哪一组「这首 > 下一首」找过（下一首换了就重找）
+  /** 正在找或找好了的；切过去时还没找完就等它，不再重找一次 @type {{ id: Track['id'], promise: Promise<Source | null>, at: number } | null} */
   let prefetched = null;
   let retried = false; // 音频出错后已经换过一次链接（再错就不重试，避免一直重来）
 
@@ -114,9 +116,11 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
     const ready = prefetched;
     prefetched = null;
     if (ready && ready.id === track.id && Date.now() - ready.at < SOURCE_TTL_MS) {
-      source = ready.source; // 预先载入好的，直接用
+      source = await ready.promise; // 预先找好的（还在找就等它）
       fetchedAt = ready.at;
-    } else {
+    }
+    // 没有预先找好（或预先找的时候失败了）：现在找
+    if (!source) {
       try {
         source = await resolveSource(track);
       } catch (err) {
@@ -150,22 +154,20 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
     sourceAt = fetchedAt;
   }
 
-  /** 这首播到一半（或剩 30 秒）时，先帮下一首拿播放链接；界面收到 prefetch 事件可以顺便载入歌词 */
+  /** 这首听了 10 秒（短歌就一半）时，先帮下一首拿播放链接；界面收到 prefetch 事件可以顺便载入歌词 */
   function maybePrefetch(time) {
     const current = state.track;
-    if (!current || prefetchDoneFor === current.id || state.mode === 'fm' || !state.duration) return;
-    if (time < Math.min(state.duration * 0.5, state.duration - 30)) return;
-    prefetchDoneFor = current.id;
+    if (!current || state.mode === 'fm' || !state.duration) return;
+    if (time < Math.min(PREFETCH_AFTER_SECONDS, state.duration / 2)) return;
     const next = queue.peekNext();
     if (!next || next.id === current.id) return;
+    // 同一组只找一次；中途下一首换了（插了「下一首播放」、排序）就为新的那首再找
+    const key = `${current.id}>${next.id}`;
+    if (prefetchKey === key) return;
+    prefetchKey = key;
     events.emit('prefetch', next);
-    resolveSource(next)
-      .then(source => {
-        if (source) prefetched = { id: next.id, source, at: Date.now() };
-      })
-      .catch(() => {
-        // 预先载入失败没关系，真的切到那首时会再拿一次
-      });
+    // 失败没关系，真的切到那首时会再拿一次
+    prefetched = { id: next.id, promise: resolveSource(next).catch(() => null), at: Date.now() };
   }
 
   /** 把找到的音源交给 audio，从 startAt 开始 */

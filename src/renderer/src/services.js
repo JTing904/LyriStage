@@ -140,14 +140,16 @@ export const sharedSources = new Map();
  * - 手机 App、网页版：Vercel 上的 API 解灰
  */
 async function resolveSource(track) {
+  // 网易云的链接、以前在 B 站挑过的视频：两个一起问（一个一个问要多等一趟）
+  const pickPromise = getBilibiliPick(track.id).catch(() => null);
   const official = await netease.songUrl(track.id);
   if (official) return official;
   const shared = sharedSources.get(track.id);
   // 房主（电脑版）分享的 B 站链接可能要带 B 站的 Referer，手机、网页版播不了，先自己找
   if (shared && (isElectron || shared.source !== 'bilibili')) return shared;
-  // 以前有人在 B 站挑过这首的视频，就直接告诉服务器（省掉一次 B 站搜索）；
+  // 以前有人在 B 站挑过这首的视频，就直接告诉服务器（服务器会先检查那个视频，省掉问公开音源和 B 站搜索）；
   // 服务器这次用了新的视频就记下来给大家用
-  const pick = await getBilibiliPick(track.id);
+  const pick = await pickPromise;
   const found = await netease.unblockUrl(track.id, { bvid: pick });
   if (found?.bvid && found.bvid !== pick) saveBilibiliPick(track.id, found.bvid);
   return found ?? shared ?? null;

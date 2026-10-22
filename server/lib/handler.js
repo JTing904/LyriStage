@@ -195,6 +195,8 @@ async function unblock(res, url, sources, { addsBilibiliReferer = false } = {}) 
   const list = requested ? requested.split(',') : ['public', 'bilibili', ...sources];
   const errors = [];
   let info = null;
+  /** @type {Error | null} B 站要求人机验证（其他音源也都没有时，让 App 说清楚） */
+  let rateLimited = null;
   try {
     // 歌名、歌手、时长（用 @unblockneteasemusic/server 的 find，直接问网易云）
     info = await require('@unblockneteasemusic/server/src/provider/find')(Number(id));
@@ -202,35 +204,47 @@ async function unblock(res, url, sources, { addsBilibiliReferer = false } = {}) 
     errors.push(`find: ${err}`);
   }
 
-  // 先问公开音源（网易云自己的完整文件，音质最好，不用搜索）
-  if (list.includes('public')) {
+  const others = list.filter(s => s !== 'bilibili' && s !== 'public');
+  const hint = url.searchParams.get('bvid') || undefined;
+
+  // 公开音源：网易云自己的完整文件，音质最好，不用搜索
+  async function tryPublic() {
+    if (!list.includes('public')) return null;
     const found = await findOnPublicSources(id, { durationMs: info?.duration });
-    if (found) return sendJson(res, 200, { code: 200, data: found });
-    errors.push('public: 都没有');
+    if (!found) errors.push('public: 都没有');
+    return found;
+  }
+  // 网易云完全没有的歌（例如周杰伦）：去 B 站找有人上传的
+  async function tryBilibili() {
+    if (!info || !list.includes('bilibili')) return null;
+    const found = await findOnBilibili({
+      name: info.name,
+      artists: info.artists.map(a => a.name),
+      durationMs: info.duration,
+    }, {
+      needsNoReferer: !addsBilibiliReferer,
+      // App 从大家共用的 bilibili_picks 表查到的视频（服务器会再检查）
+      hint,
+    });
+    if (!found) errors.push('bilibili: 没有像原曲的视频');
+    return found;
   }
 
-  // 网易云完全没有的歌（例如周杰伦）：去 B 站找有人上传的
-  const others = list.filter(s => s !== 'bilibili' && s !== 'public');
-  if (info && list.includes('bilibili')) {
+  // 以前在 B 站找到过这首（App 带了 bvid）：表示公开音源没有它，先直接检查那个视频，
+  // 省掉问公开音源的那几秒；那个视频不行了才回头问公开音源
+  const order = hint ? [tryBilibili, tryPublic] : [tryPublic, tryBilibili];
+  for (const attempt of order) {
     try {
-      const found = await findOnBilibili({
-        name: info.name,
-        artists: info.artists.map(a => a.name),
-        durationMs: info.duration,
-      }, {
-        needsNoReferer: !addsBilibiliReferer,
-        // App 从大家共用的 bilibili_picks 表查到的视频（服务器会再检查）
-        hint: url.searchParams.get('bvid') || undefined,
-      });
+      const found = await attempt();
       if (found) return sendJson(res, 200, { code: 200, data: found });
-      errors.push('bilibili: 没有像原曲的视频');
     } catch (err) {
-      // B 站要求人机验证：不是这首歌没有，过一会儿再试就好，让 App 说清楚（不要跳歌）
-      if (err instanceof BilibiliRateLimited && !others.length) {
-        return sendJson(res, 503, { code: 503, reason: 'rate-limited', msg: err.message });
-      }
       errors.push(String(err));
+      if (err instanceof BilibiliRateLimited) rateLimited = err;
     }
+  }
+  // B 站要求人机验证（而且其他地方也没有）：不是这首歌没有，过一会儿再试就好，让 App 说清楚（不要跳歌）
+  if (rateLimited && !others.length) {
+    return sendJson(res, 503, { code: 503, reason: 'rate-limited', msg: rateLimited.message });
   }
 
   if (others.length) {
