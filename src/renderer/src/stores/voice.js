@@ -1,7 +1,9 @@
 // 一起听的语音（每个人直接连每个人：WebRTC mesh，5 个人以内很稳）
 //
 // - 连线资料（offer / answer / ICE）走 Realtime 私有频道 voice:房间码（权限见 20261031000000_voice_chat.sql）；
-//   两个人之间只由 id 比较小的那个发 offer，不会两边同时发
+//   两台设备之间只由连线 ID 比较小的那个发 offer，不会两边同时发
+// - 认设备用每次加入时新产生的连线 ID（同一个账号用手机和电脑同时进来也能互相连）；
+//   画面上的头像、讲话亮圈还是照账号
 // - 连不上时经过 Cloudflare 的中转（TURN）：短期帐密跟我们的服务器拿（server/lib/voice.js）
 // - presence 记谁在语音里、有没有静音；谁在讲话是每个人自己听声音大小判断的
 // - 有人讲话时把音乐调小（duckMusic）；默认关麦克风，要按「加入语音」才会开
@@ -36,26 +38,28 @@ export const useVoiceStore = defineStore('voice', () => {
   const status = ref('off');
   const muted = ref(false);
   const error = ref('');
-  /** 在语音里的人：[{ id, muted }] */
+  /** 在语音里的人（照账号）：[{ id, muted }] */
   const participants = ref([]);
-  /** 正在讲话的人的 id（包括自己） */
+  /** 正在讲话的人的账号 id（包括自己） */
   const speaking = ref(new Set());
 
   const inVoice = computed(() => status.value === 'on');
   const selfId = () => auth.user?.id;
+  /** 这次加入语音的连线 ID（每台设备、每次加入都不一样） */
+  let session = '';
 
   let channel = null;
   let localStream = null;
   let iceServers = [];
   let audioCtx = null;
   let meterTimer = 0;
-  /** id → { pc, audio, analyser, pendingIce, lastLoud } */
+  /** 对方的连线 ID → { userId, pc, audio, analyser, pendingIce, lastLoud } */
   const peers = new Map();
   const self = { analyser: null, lastLoud: 0 };
 
   // ---- 交换连线资料 ----
   function send(to, kind, data) {
-    channel?.send({ type: 'broadcast', event: 'signal', payload: { from: selfId(), to, kind, data } });
+    channel?.send({ type: 'broadcast', event: 'signal', payload: { from: session, to, kind, data } });
   }
   const description = d => ({ type: d.type, sdp: d.sdp });
 
@@ -67,9 +71,9 @@ export const useVoiceStore = defineStore('voice', () => {
     return analyser;
   }
 
-  function createPeer(id) {
+  function createPeer(id, userId) {
     const pc = new RTCPeerConnection({ iceServers });
-    const peer = { pc, audio: null, analyser: null, pendingIce: [], lastLoud: 0 };
+    const peer = { userId, pc, audio: null, analyser: null, pendingIce: [], lastLoud: 0 };
     peers.set(id, peer);
     localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
     pc.onicecandidate = ({ candidate }) => candidate && send(id, 'ice', candidate.toJSON());
@@ -85,13 +89,13 @@ export const useVoiceStore = defineStore('voice', () => {
     };
     pc.onconnectionstatechange = async () => {
       // 网络换了（Wi-Fi ↔ 行动网络）连线断掉：发 offer 的那边重新协商一次
-      if (pc.connectionState === 'failed' && selfId() < id) {
+      if (pc.connectionState === 'failed' && session < id) {
         const offer = await pc.createOffer({ iceRestart: true });
         await pc.setLocalDescription(offer);
         send(id, 'offer', description(pc.localDescription));
       }
     };
-    if (selfId() < id) {
+    if (session < id) {
       (async () => {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
@@ -119,8 +123,8 @@ export const useVoiceStore = defineStore('voice', () => {
   }
 
   async function onSignal({ from, to, kind, data }) {
-    if (to !== selfId() || !from || !localStream) return;
-    const peer = peers.get(from) ?? createPeer(from);
+    if (to !== session || !from || !localStream) return;
+    const peer = peers.get(from) ?? createPeer(from, sessions.get(from)?.userId ?? null);
     const { pc } = peer;
     try {
       if (kind === 'offer') {
@@ -140,13 +144,19 @@ export const useVoiceStore = defineStore('voice', () => {
     }
   }
 
+  /** 连线 ID → { userId, muted }（语音频道 presence 里的每台设备） */
+  const sessions = new Map();
   function onPresence() {
-    const seen = new Map();
-    for (const p of Object.values(channel.presenceState()).flat()) if (p.id) seen.set(p.id, p);
-    participants.value = [...seen.values()].map(p => ({ id: p.id, muted: Boolean(p.muted) }));
-    const me = selfId();
-    for (const id of seen.keys()) if (id !== me && !peers.has(id)) createPeer(id);
-    for (const id of [...peers.keys()]) if (!seen.has(id)) closePeer(id);
+    sessions.clear();
+    for (const p of Object.values(channel.presenceState()).flat()) {
+      if (p.session && p.id) sessions.set(p.session, { userId: p.id, muted: Boolean(p.muted) });
+    }
+    // 画面照账号：同一个人两台设备，只要有一台没静音就算没静音
+    const byUser = new Map();
+    for (const { userId, muted: m } of sessions.values()) byUser.set(userId, (byUser.get(userId) ?? true) && m);
+    participants.value = [...byUser].map(([id, m]) => ({ id, muted: m }));
+    for (const [id, info] of sessions) if (id !== session && !peers.has(id)) createPeer(id, info.userId);
+    for (const id of [...peers.keys()]) if (!sessions.has(id)) closePeer(id);
   }
 
   // ---- 谁在讲话、讲话时把音乐调小 ----
@@ -162,16 +172,21 @@ export const useVoiceStore = defineStore('voice', () => {
   function measure() {
     const now = Date.now();
     const next = new Set();
-    const check = (id, entry, silent) => {
+    /** 这个人（这台设备）现在算不算在讲话 */
+    const talking = (entry, silent) => {
       if (!silent && level(entry.analyser) > SPEAKING_LEVEL) entry.lastLoud = now;
-      if (now - entry.lastLoud < SPEAKING_HOLD_MS) next.add(id);
+      return now - entry.lastLoud < SPEAKING_HOLD_MS;
     };
-    check(selfId(), self, muted.value);
-    for (const [id, peer] of peers) check(id, peer, false);
+    if (talking(self, muted.value)) next.add(selfId());
+    let othersTalking = false;
+    for (const peer of peers.values()) {
+      if (!talking(peer, false)) continue;
+      othersTalking = true;
+      if (peer.userId) next.add(peer.userId);
+    }
     const changed = next.size !== speaking.value.size || [...next].some(id => !speaking.value.has(id));
     if (changed) speaking.value = next;
-    // 别人在讲话：音乐小声一点
-    const othersTalking = [...next].some(id => id !== selfId());
+    // 别人（别的设备）在讲话：音乐小声一点
     if (othersTalking !== ducked) {
       ducked = othersTalking;
       duckMusic(ducked);
@@ -194,7 +209,10 @@ export const useVoiceStore = defineStore('voice', () => {
         throw new Error(t('没有麦克风权限，到系统设置里允许 LyriStage 使用麦克风'));
       }
       muted.value = false;
+      session = crypto.randomUUID();
       audioCtx = new AudioContext();
+      // 有的浏览器建好时是暂停的（没有直接的点击）：叫醒它，不然听不出谁在讲话
+      await audioCtx.resume().catch(() => {});
       self.analyser = meterFor(localStream);
 
       const ice = await api.get('/voice/ice').catch(() => null);
@@ -204,7 +222,7 @@ export const useVoiceStore = defineStore('voice', () => {
       const { data } = await supabase.auth.getSession();
       supabase.realtime.setAuth(data.session?.access_token);
       channel = supabase.channel(`voice:${code}`, {
-        config: { private: true, broadcast: { self: false }, presence: { key: selfId() } },
+        config: { private: true, broadcast: { self: false }, presence: { key: session } },
       });
       channel
         .on('broadcast', { event: 'signal' }, ({ payload }) => onSignal(payload))
@@ -212,7 +230,7 @@ export const useVoiceStore = defineStore('voice', () => {
       await new Promise((resolve, reject) => {
         channel.subscribe(async (state, err) => {
           if (state === 'SUBSCRIBED') {
-            await channel.track({ id: selfId(), muted: false });
+            await channel.track({ id: selfId(), session, muted: false });
             resolve();
           } else if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT') {
             reject(err ?? new Error(t('连不上语音')));
@@ -244,6 +262,8 @@ export const useVoiceStore = defineStore('voice', () => {
     self.analyser = null;
     if (ducked) duckMusic(false);
     ducked = false;
+    sessions.clear();
+    session = '';
     participants.value = [];
     speaking.value = new Set();
     status.value = 'off';
@@ -253,7 +273,7 @@ export const useVoiceStore = defineStore('voice', () => {
     if (!localStream) return;
     muted.value = !muted.value;
     localStream.getAudioTracks().forEach(track => (track.enabled = !muted.value));
-    channel?.track({ id: selfId(), muted: muted.value });
+    channel?.track({ id: selfId(), session, muted: muted.value });
   }
 
   // 离开房间就离开语音
