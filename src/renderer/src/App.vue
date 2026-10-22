@@ -12,6 +12,7 @@ import { createFmSource, getLyrics } from './services';
 import { usePlayer } from './composables/usePlayer';
 import {
   findAndroidUpdate,
+  installAndroidUpdate,
   installUpdate,
   isElectron,
   onBackButton,
@@ -122,12 +123,37 @@ onUpdateReady(({ version }) => {
 });
 
 // Android：GitHub 上有新版本就提示去下载（电脑版会自动更新，网页版永远是最新的）
+// Android：有新版本时按「更新」就在 App 里下载、跳出安装画面（拿不到 APK 网址时才开浏览器）
 findAndroidUpdate().then(update => {
   if (!update) return;
-  notice.show(t('有新版本 {version}', { version: update.version }), {
-    action: { label: t('下载'), run: () => openInBrowser(update.url) },
-    duration: 20000,
-  });
+  const offer = () =>
+    notice.show(t('有新版本 {version}', { version: update.version }), {
+      action: { label: t('更新'), run: () => updateNow(update) },
+      duration: 20000,
+    });
+  async function updateNow({ url }) {
+    if (!url.endsWith('.apk')) return openInBrowser(url);
+    notice.show(t('正在下载新版本…'), { duration: 120000 });
+    try {
+      const status = await installAndroidUpdate(url, percent =>
+        notice.show(t('正在下载新版本… {p}%', { p: percent }), { duration: 120000 })
+      );
+      if (status === 'needs-permission') {
+        notice.show(t('请允许 LyriStage 安装 App，回来再按一次「更新」'), {
+          action: { label: t('更新'), run: () => updateNow(update) },
+          duration: 60000,
+        });
+      } else {
+        notice.dismiss();
+      }
+    } catch (err) {
+      notice.show(t('更新失败：{error}', { error: err.message || err }), {
+        action: { label: t('改用浏览器下载'), run: () => openInBrowser(url) },
+        duration: 20000,
+      });
+    }
+  }
+  offer();
 });
 
 // 管理员：数据库快满时提醒（免费方案 500 MB；每天最多检查一次）

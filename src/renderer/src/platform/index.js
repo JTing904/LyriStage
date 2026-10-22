@@ -221,6 +221,24 @@ export async function findAndroidUpdate() {
   }
 }
 
+/**
+ * Android App 里直接更新：下载 APK、打开系统的安装画面
+ * @param {string} url GitHub Release 上 APK 的下载网址
+ * @param {(percent: number) => void} [onProgress]
+ * @returns {Promise<'installing' | 'needs-permission'>} needs-permission：第一次要先允许 LyriStage 安装 App（已经打开那个设定）
+ */
+export async function installAndroidUpdate(url, onProgress) {
+  const { registerPlugin } = await import('@capacitor/core');
+  const updater = registerPlugin('AppUpdater');
+  const listener = await updater.addListener('progress', ({ percent }) => onProgress?.(percent));
+  try {
+    const { status } = await updater.downloadAndInstall({ url });
+    return status;
+  } finally {
+    listener.remove();
+  }
+}
+
 /** 用系统浏览器打开网址（下载 APK） */
 export async function openInBrowser(url) {
   if (isNativeApp) {

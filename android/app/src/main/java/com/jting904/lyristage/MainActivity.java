@@ -14,6 +14,8 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         // 桌面小组件的桥（要在 super.onCreate 之前登记）
         registerPlugin(WidgetPlugin.class);
+        // App 里直接下载、安装新版本
+        registerPlugin(UpdatePlugin.class);
         super.onCreate(savedInstanceState);
         Window window = getWindow();
         // 画面铺到状态栏、导航列底下，两条都透明，透出页面自己的颜色
