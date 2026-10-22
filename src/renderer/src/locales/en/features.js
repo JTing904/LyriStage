@@ -59,7 +59,7 @@ export default {
   '复制邀请链接': 'Copy invite link',
   '朋友输入你的好友码、你同意后才是好友。只有好友看得到你在听什么。':
     'A friend enters your code and you approve it. Only friends can see what you’re listening to.',
-  '输入朋友的好友码': 'Enter a friend’s code',
+  '输入朋友的好友码': 'Friend code',
   '朋友的好友码': 'Friend’s code',
   '加好友': 'Add friend',
   '收到的邀请': 'Requests',
@@ -84,6 +84,8 @@ export default {
   '朋友正在听': 'Friends are listening to',
   '朋友最近在听': 'Friends recently played',
   '{n} 个好友邀请': '{n} friend requests',
+  '{name} 想加你为好友': '{name} wants to be your friend',
+  '送出中…': 'Sending…',
   '邀请已送出，对方同意后就是好友了': 'Request sent. You’ll be friends once they accept',
   '对方也邀请过你，你们现在是好友了': 'They had invited you too, so you’re friends now',
   '你们已经是好友了': 'You’re already friends',

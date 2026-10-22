@@ -102,18 +102,33 @@ const nameOf = row => (row.isMe ? t('我') : row.name || t('好友'));
 .compact .head h2 {
   font-size: 26px;
 }
+/* 标题和「这周 / 上周」放不下一行（英文、窄的手机）：分页标签换到下一行 */
+.head {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.head h2 {
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .compact .head h2 {
+    font-size: 21px;
+  }
+}
 .see-all {
   font-size: 14px;
   font-weight: 700;
   color: var(--accent);
 }
 .tabs {
+  flex: none;
   display: flex;
   padding: 3px;
   border-radius: 999px;
   background: var(--surface-hover);
 }
 .tabs button {
+  white-space: nowrap;
   padding: 5px 12px;
   border: 0;
   border-radius: 999px;

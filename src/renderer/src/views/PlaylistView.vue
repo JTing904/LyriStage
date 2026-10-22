@@ -1,6 +1,7 @@
 <script setup>
 // 网易云歌单
 import { computed, ref, watch } from 'vue';
+import { onPullRefresh } from '../composables/usePullRefresh';
 import { useRoute } from 'vue-router';
 import { netease } from '../services';
 import { usePlayCollection } from '../composables/usePlayCollection';
@@ -37,6 +38,7 @@ async function load(id) {
   }
 }
 watch(() => route.params.id, id => id && load(id), { immediate: true });
+onPullRefresh(() => load(route.params.id));
 
 const context = computed(() => `playlist:${route.params.id}`);
 const meta = computed(() => {

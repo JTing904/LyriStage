@@ -142,7 +142,9 @@ onBeforeUnmount(() => {
         <button v-if="removable" class="tool" :disabled="!selected.size" @click="removeSelected">
           <Icon name="trash" :size="15" />{{ $t('移除') }}
         </button>
-        <button class="tool" @click="stopSelecting">{{ $t('完成') }}</button>
+        <button class="tool done" :aria-label="$t('完成')" @click="stopSelecting">
+          <Icon name="check" :size="16" /><span class="label">{{ $t('完成') }}</span>
+        </button>
       </template>
       <template v-else>
         <span class="grow" />
@@ -294,8 +296,10 @@ onBeforeUnmount(() => {
 /* 多选工具列：选的时候固定在上面 */
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  row-gap: 6px;
   min-height: 44px;
   margin-bottom: 4px;
 }
@@ -310,6 +314,27 @@ onBeforeUnmount(() => {
 }
 .electron .toolbar.active {
   top: var(--titlebar-height);
+}
+/* 放不下就整个按钮换到下一排，不要把字挤成两行 */
+.picked,
+.tool {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+/* 窄的手机：「完成」只留勾勾，按钮紧一点，一排放得下 */
+@media (max-width: 420px) {
+  .toolbar {
+    gap: 6px;
+  }
+  .tool {
+    padding: 7px 11px;
+  }
+  .tool.done {
+    padding: 7px 9px;
+  }
+  .tool.done .label {
+    display: none;
+  }
 }
 .picked {
   font-size: 14px;

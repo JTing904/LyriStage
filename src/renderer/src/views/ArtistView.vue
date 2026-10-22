@@ -1,6 +1,7 @@
 <script setup>
 // 歌手：热门歌曲（先显示 10 首，可以展开到 50 首）+ 专辑
 import { computed, ref, watch } from 'vue';
+import { onPullRefresh } from '../composables/usePullRefresh';
 import { useRoute } from 'vue-router';
 import { netease } from '../services';
 import { usePlayCollection } from '../composables/usePlayCollection';
@@ -45,6 +46,7 @@ async function load(id) {
   }
 }
 watch(() => route.params.id, id => id && load(id), { immediate: true });
+onPullRefresh(() => load(route.params.id));
 
 const context = computed(() => `artist:${route.params.id}`);
 const shownSongs = computed(() =>

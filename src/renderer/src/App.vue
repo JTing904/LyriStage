@@ -10,6 +10,7 @@ import { adminStorageUsage } from '@core/data';
 import { isUnavailable, isUnblockRateLimited } from '@core/netease';
 import { createFmSource, getEnglishTranslation, getLyrics } from './services';
 import { usePlayer } from './composables/usePlayer';
+import { PULL_TRIGGER, attachPullRefresh } from './composables/usePullRefresh';
 import {
   findAndroidUpdate,
   installAndroidUpdate,
@@ -45,7 +46,36 @@ useThemeStore();
 const auth = useAuthStore();
 useRecentStore();
 // 好友：一打开就要开始告诉好友在听什么、收到好友换歌的通知
-useFriendsStore();
+const friendsStore = useFriendsStore();
+
+// 有人加你为好友：提示一次（好友资料会即时更新，App 开着时马上就知道；关着的话下次打开时说）
+const SEEN_REQUESTS_KEY = 'lyristage:seen-friend-requests';
+watch(
+  () => friendsStore.incoming,
+  incoming => {
+    let seen;
+    try {
+      seen = new Set(JSON.parse(localStorage.getItem(SEEN_REQUESTS_KEY) ?? '[]'));
+    } catch {
+      seen = new Set();
+    }
+    const fresh = incoming.filter(p => !seen.has(p.id));
+    if (!fresh.length) return;
+    try {
+      // 只记还在等的，名单不会一直变长
+      localStorage.setItem(SEEN_REQUESTS_KEY, JSON.stringify(incoming.map(p => p.id)));
+    } catch {
+      // 记不住顶多下次再提示一次
+    }
+    if (route.path === '/friends') return; // 已经在好友页，看得到
+    notice.show(
+      fresh.length === 1
+        ? t('{name} 想加你为好友', { name: fresh[0].name })
+        : t('{n} 个好友邀请', { n: fresh.length }),
+      { action: { label: t('查看'), run: () => router.push('/friends') }, duration: 8000 }
+    );
+  }
+);
 const notice = useNoticeStore();
 
 const stageOpen = ref(false);
@@ -231,6 +261,11 @@ watch(
 // 往下滑过页头后，返回列变实心并显示名字
 const TAB_PAGES = ['home', 'search', 'library', 'room'];
 const showBackBar = computed(() => !TAB_PAGES.includes(String(route.name)));
+const {
+  distance: pullDistance,
+  refreshing: pullRefreshing,
+  enabled: pullEnabled,
+} = attachPullRefresh(content);
 const scrolled = ref(false);
 function onContentScroll() {
   scrolled.value = (content.value?.scrollTop ?? 0) > 180;
@@ -251,6 +286,19 @@ function onContentScroll() {
       <MobileBackBar v-if="showBackBar" :scrolled="scrolled" />
       <RouterView />
     </main>
+    <!-- 下拉刷新的圈圈 -->
+    <div
+      v-if="pullEnabled && (pullDistance > 0 || pullRefreshing)"
+      class="pull-indicator"
+      :style="{ transform: `translate(-50%, ${pullDistance - 48}px)` }"
+      aria-hidden="true"
+    >
+      <span
+        class="pull-spinner"
+        :class="{ spinning: pullRefreshing, ready: pullDistance >= PULL_TRIGGER }"
+        :style="{ transform: pullRefreshing ? undefined : `rotate(${(pullDistance / PULL_TRIGGER) * 270}deg)` }"
+      />
+    </div>
     <PlayerBar
       class="area-bar"
       :state="state"
@@ -315,6 +363,40 @@ function onContentScroll() {
   grid-area: main;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+/* 下拉刷新：从顶端跟着手指下来的圈圈，拉够了变红，放手后转圈 */
+.pull-indicator {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 8px);
+  left: 50%;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.25);
+  pointer-events: none;
+}
+.pull-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid var(--line-strong);
+  border-top-color: var(--text-dim);
+  border-radius: 50%;
+}
+.pull-spinner.ready,
+.pull-spinner.spinning {
+  border-top-color: var(--accent);
+}
+.pull-spinner.spinning {
+  animation: pull-spin 0.8s linear infinite;
+}
+@keyframes pull-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .area-bar {
   grid-area: bar;

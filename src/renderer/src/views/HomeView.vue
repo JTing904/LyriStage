@@ -1,6 +1,7 @@
 <script setup>
 // 首页：问候、每日推荐 / 私人 FM / 继续播放、推荐歌单、新歌速递、排行榜
 import { computed, onMounted, ref } from 'vue';
+import { onPullRefresh } from '../composables/usePullRefresh';
 import { useRouter } from 'vue-router';
 import { netease, createFmSource } from '../services';
 import { usePlayer } from '../composables/usePlayer';
@@ -88,6 +89,8 @@ async function load() {
   }
 }
 onMounted(load);
+// 下拉刷新：推荐、好友
+onPullRefresh(() => Promise.all([load(), friendsStore.refresh()]));
 
 const fmPlaying = computed(() => state.mode === 'fm' && state.track);
 async function playFm() {
@@ -666,7 +669,7 @@ h2 {
     display: none;
   }
   .fm-line {
-    font-size: 18px;
+    font-size: 16px;
   }
   .fab {
     right: 12px;
@@ -675,7 +678,11 @@ h2 {
     height: 42px;
   }
   .hello h1 {
-    font-size: 26px;
+    font-size: clamp(22px, 6.6vw, 26px);
+  }
+  /* 区块标题：英文比较长（Friends recently played），26px 在 360 宽的手机会挤成两行 */
+  h2 {
+    font-size: 21px;
   }
   /* FM 方块：在播的歌名已经是上面的大字，下面只留播放钮 */
   .fm-cover,

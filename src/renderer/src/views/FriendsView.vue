@@ -1,7 +1,8 @@
 <script setup>
 // 好友：好友码、加好友、收到的邀请、好友在听什么、隐私设置。
 // 参考 Apple Music（要对方同意才能看到）和 Spotify（好友动态、私人模式）
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { onPullRefresh } from '../composables/usePullRefresh';
 import { useRoute } from 'vue-router';
 import { useFriendsStore } from '../stores/friends';
 import { useNoticeStore } from '../stores/notice';
@@ -16,6 +17,8 @@ const friendsStore = useFriendsStore();
 const notice = useNoticeStore();
 const { player } = usePlayer();
 const route = useRoute();
+// 下拉刷新：好友、邀请、在听什么
+onPullRefresh(() => friendsStore.refresh());
 
 const code = ref('');
 const busy = ref(false);
@@ -43,16 +46,29 @@ const RESULT = {
   not_found: '找不到这个好友码，检查一下有没有打错',
   self: '这是你自己的好友码',
 };
+/**
+ * 送出后的结果：直接显示在输入框下面、不会自己消失（画面下方一闪而过的提示在手机上很容易错过）
+ * @type {import('vue').Ref<{ ok: boolean, text: string } | null>}
+ */
+const addResult = ref(null);
+// 开始打下一个好友码，就把上次的结果收起来
+watch(code, value => {
+  if (value) addResult.value = null;
+});
 async function add() {
   const value = code.value.trim();
   if (!value || busy.value) return;
   busy.value = true;
+  addResult.value = null;
+  // 收起手机键盘，下面的结果和「已送出的邀请」才看得到
+  /** @type {HTMLElement | null} */ (document.activeElement)?.blur();
   try {
     const result = await friendsStore.send(value);
-    notice.show(t(RESULT[result] ?? '邀请已送出，对方同意后就是好友了'));
-    if (result !== 'not_found') code.value = '';
+    const ok = result !== 'not_found' && result !== 'self';
+    addResult.value = { ok, text: t(RESULT[result] ?? RESULT.sent) };
+    if (ok) code.value = '';
   } catch (err) {
-    notice.show(t('送出失败：{error}', { error: err.message || err }));
+    addResult.value = { ok: false, text: t('送出失败：{error}', { error: err.message || err }) };
   } finally {
     busy.value = false;
   }
@@ -153,8 +169,11 @@ async function togglePrivate() {
             :placeholder="$t('输入朋友的好友码')"
             :aria-label="$t('朋友的好友码')"
           />
-          <button class="primary" :disabled="busy || !code.trim()">{{ $t('加好友') }}</button>
+          <button class="primary" :disabled="busy || !code.trim()">{{ busy ? $t('送出中…') : $t('加好友') }}</button>
         </form>
+        <p v-if="addResult" class="add-result" :class="{ ok: addResult.ok }" role="status">
+          <Icon :name="addResult.ok ? 'check' : 'x'" :size="16" />{{ addResult.text }}
+        </p>
       </section>
 
       <!-- 收到的邀请 -->
@@ -301,6 +320,28 @@ async function togglePrivate() {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
+}
+.add-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #e5484d 12%, transparent);
+  color: #e5484d;
+  font-size: 14px;
+  font-weight: 600;
+}
+.add-result.ok {
+  background: color-mix(in srgb, #30a46c 14%, transparent);
+  color: #30a46c;
+}
+/* 提示字（"输入朋友的好友码"）用一般字体，窄的手机才放得下 */
+.code-input::placeholder {
+  font: 400 15px var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
 }
 .code-input {
   flex: 1;

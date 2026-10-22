@@ -1,6 +1,7 @@
 <script setup>
 // 自己的歌单：播放、移除歌曲、改名、删除；共同歌单（邀请别人一起编辑、看谁加了哪首）
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { onPullRefresh } from '../composables/usePullRefresh';
 import { useRoute, useRouter } from 'vue-router';
 import { getPlaylist, leaveSharedPlaylist, listPlaylistPeople, sharePlaylist, unsharePlaylist } from '@core/data';
 import { useAuthStore } from '../stores/auth';
@@ -52,6 +53,7 @@ async function load(id) {
   }
 }
 watch(() => route.params.id, id => id && load(id), { immediate: true });
+onPullRefresh(() => load(route.params.id));
 
 const tracks = computed(() => playlist.value?.tracks ?? []);
 const context = computed(() => `my:${route.params.id}`);

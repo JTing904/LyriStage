@@ -33,6 +33,7 @@ const STROKE = {
   dislike:
     'M17 14V3H8.6a2 2 0 0 0-2 1.6L5.1 12a2 2 0 0 0 2 2.4h4.4l-1 4.6a1.8 1.8 0 0 0 3.3 1.3L17 14zm0-11h3.5v11H17',
   share: 'M12 15V3M7 8l5-5 5 5M5 13v7h14v-7',
+  check: 'M5 12.5l4.5 4.5L19 7',
   chart: 'M3 21h18M6 17v-6m5 6V5m5 12v-9m4 9v-4',
   chat: 'M4 5h16v11H10l-5 4v-4H4z',
   'play-next': 'M4 6h10M4 12h10M4 18h6m6-6 5 3-5 3z',

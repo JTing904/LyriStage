@@ -6,6 +6,7 @@ import { provideStage } from './useStage';
 import { findStyle } from './styles';
 import { isElectron, PHONE_LANDSCAPE_QUERY, setSystemBarsHidden, setSystemBarsStyle } from '../platform';
 import { syncSystemBars } from '../stores/theme';
+import { setKeepAwake } from '../keepAwake';
 import PlayerBar from '../components/PlayerBar.vue';
 import StylePicker from './StylePicker.vue';
 import ShareLyricsDialog from './ShareLyricsDialog.vue';
@@ -38,6 +39,10 @@ const lightStyle = computed(
 // 手机：舞台大多是深色画面，状态栏用白色图标；浅色风格用深色图标。关掉舞台时换回跟主题
 watch(lightStyle, light => setSystemBarsStyle(!light), { immediate: true });
 onBeforeUnmount(syncSystemBars);
+
+// 看歌词时屏幕常亮：正在播放才亮着，暂停、关掉歌词就让它照常变暗
+watch(() => props.state.playing, playing => setKeepAwake(playing), { immediate: true });
+onBeforeUnmount(() => setKeepAwake(false));
 
 // 控制条：鼠标或手指一段时间不动就隐藏，沉浸看歌词
 const controlsVisible = ref(true);

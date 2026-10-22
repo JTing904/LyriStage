@@ -3,6 +3,14 @@
   - 默认深色；系统是浅色时自动切浅色
   - 用户在设置里选了"深色 / 浅色"时，<html data-theme="dark|light"> 强制指定
 */
+/* 英文界面：Noto Sans SC 的弯引号是中文全角宽度，"you’re" 会变成 "you’ re"。
+   只有这几个引号改用系统自带的英文字体（其他字不变） */
+@font-face {
+  font-family: 'Latin Quotes';
+  src: local('Roboto'), local('Segoe UI'), local('Helvetica Neue'), local('Arial');
+  unicode-range: U+2018-201F;
+}
+
 :root {
   --bg: #0e0e10;
   --sidebar: #121214;
@@ -26,6 +34,10 @@
     'Microsoft YaHei', sans-serif;
   --font-display: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
   color-scheme: dark;
+}
+:root:lang(en) {
+  --font-sans: 'Latin Quotes', 'Noto Sans SC', system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
 }
 
 @media (prefers-color-scheme: light) {

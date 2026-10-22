@@ -41,7 +41,10 @@ const TABS = [
   align-items: center;
   justify-content: center;
   gap: 3px;
+  min-width: 0;
+  padding: 0 2px;
   font-size: 11px;
+  white-space: nowrap;
   color: var(--text-dim);
 }
 .tab.active {

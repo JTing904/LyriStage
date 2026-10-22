@@ -1,6 +1,7 @@
 <script setup>
 // 我的音乐库：我喜欢的音乐（大卡片）、听歌排行（本周 / 全部）、我的歌单
 import { computed, ref, watch } from 'vue';
+import { onPullRefresh } from '../composables/usePullRefresh';
 import { joinSharedPlaylist, listLikedTracks, playRanking } from '@core/data';
 import { useRouter } from 'vue-router';
 import { useLibraryStore } from '../stores/library';
@@ -52,6 +53,10 @@ async function loadRanking() {
   }
 }
 watch(range, loadRanking, { immediate: true });
+// 下拉刷新：歌单、我喜欢、排行、好友邀请
+onPullRefresh(() =>
+  Promise.all([library.refreshPlaylists(), loadLiked(), loadRanking(), friendsStore.refresh()])
+);
 const rankingShown = computed(() => ranking.value.slice(0, 6));
 const playRanked = i => player.playList(ranking.value, i, `ranking:${range.value}`);
 
@@ -196,11 +201,17 @@ async function create() {
           <button role="radio" :aria-checked="sort === 'updated'" :class="{ on: sort === 'updated' }" @click="sort = 'updated'">{{ $t('最近更新') }}</button>
           <button role="radio" :aria-checked="sort === 'name'" :class="{ on: sort === 'name' }" @click="sort = 'name'">{{ $t('名称') }}</button>
         </div>
-        <button v-if="friendsStore.available" class="new-btn" @click="joining = !joining">
-          <Icon name="friends" :size="18" />{{ $t('加入共同歌单') }}
+        <button
+          v-if="friendsStore.available"
+          class="new-btn"
+          :aria-label="$t('加入共同歌单')"
+          :title="$t('加入共同歌单')"
+          @click="joining = !joining"
+        >
+          <Icon name="friends" :size="18" /><span class="label">{{ $t('加入共同歌单') }}</span>
         </button>
-        <button class="new-btn" @click="creating = !creating">
-          <Icon name="plus" :size="18" />{{ $t('新建歌单') }}
+        <button class="new-btn" :aria-label="$t('新建歌单')" :title="$t('新建歌单')" @click="creating = !creating">
+          <Icon name="plus" :size="18" /><span class="label">{{ $t('新建歌单') }}</span>
         </button>
       </div>
       <form v-if="joining" class="create" @submit.prevent="join">
@@ -510,6 +521,19 @@ async function create() {
   /* 手机：「我的歌单」自己一排，排序和按钮放下一排 */
   .lists-head .section-title {
     flex-basis: 100%;
+  }
+  /* 「加入共同歌单」「新建歌单」只留图标（圆的），和排序排成一排 */
+  .segmented {
+    margin-right: auto;
+  }
+  .new-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .new-btn .label {
+    display: none;
   }
 }
 

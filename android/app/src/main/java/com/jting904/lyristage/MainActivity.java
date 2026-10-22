@@ -16,6 +16,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(WidgetPlugin.class);
         // App 里直接下载、安装新版本
         registerPlugin(UpdatePlugin.class);
+        // 看歌词时屏幕常亮
+        registerPlugin(KeepAwakePlugin.class);
         super.onCreate(savedInstanceState);
         Window window = getWindow();
         // 画面铺到状态栏、导航列底下，两条都透明，透出页面自己的颜色
