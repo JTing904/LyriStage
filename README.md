@@ -107,7 +107,7 @@ If Electron fails with `Cannot read properties of undefined` inside VS Code, the
    `room_handover`, `delete_account` (delete your account from Settings), `bilibili_picks` and `bilibili_picks_grant`,
    `friends_and_shared_playlists` and `playlist_people_profiles`, `history_compaction` (monthly clean-up of old history;
    needs the `pg_cron` extension), `slim_play_history`, `friends_weekly_board`, `storage_usage_all_databases`,
-   `playlist_covers`, `archive_old_history` (moves history older than two years to File storage every month).
+   `playlist_covers`, `archive_old_history` (moves history older than two years to File storage every month), `archive_secret_hash`.
    For that last one, deploy [supabase/functions/archive-history](supabase/functions/archive-history) as an Edge Function
    with JWT verification off, then run the `archive_function_url` line at the bottom of the SQL file with your project ref.
 3. Authentication → Providers: enable Email (and GitHub / Google if you want them).
