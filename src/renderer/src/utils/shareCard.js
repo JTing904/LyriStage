@@ -89,7 +89,7 @@ export function paintCover(ctx, img, x, y, size, radius = 36) {
 
 /** 底部的 LyriStage 标志 */
 export function paintBrand(ctx) {
-  const y = CARD_HEIGHT - 120;
+  const y = CARD_HEIGHT - 100;
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
   ctx.font = `900 52px ${SERIF}`;
@@ -100,10 +100,6 @@ export function paintBrand(ctx) {
   ctx.fillText(lyri, x, y);
   ctx.fillStyle = ACCENT;
   ctx.fillText('Stage', x + ctx.measureText(lyri).width, y);
-  ctx.textAlign = 'center';
-  ctx.font = `400 26px ${SANS}`;
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-  ctx.fillText('jting904.github.io/LyriStage', CARD_WIDTH / 2, y + 48);
 }
 
 /**
@@ -175,6 +171,98 @@ export async function renderLyricCard({ lines, track, palette }) {
   ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
   const artists = (track?.ar ?? []).map(a => a.name).join(' / ');
   ctx.fillText(wrapText(ctx, artists, width)[0] ?? '', left, CARD_HEIGHT - 242);
+
+  paintBrand(ctx);
+  return canvas;
+}
+
+/**
+ * 歌单海报：上面是封面（自己的封面，没有就用前 4 首拼），下面歌单名、谁的歌单、前几首歌
+ * @param {{ name: string, owner: string, cover?: string | null, tracks: any[], palette: any,
+ *   labels: { byline: string, more: (n: number) => string } }} options
+ * @returns {Promise<HTMLCanvasElement>}
+ */
+export async function renderPlaylistCard({ name, owner, cover, tracks, palette, labels }) {
+  await loadCardFonts();
+  const LIST = 5;
+  const songCovers = await Promise.all(tracks.slice(0, LIST).map(t => loadCover(t.al?.picUrl, 160)));
+  const art = cover
+    ? [await loadCover(cover, 720)]
+    : await Promise.all(tracks.slice(0, 4).map(t => loadCover(t.al?.picUrl, 360)));
+  const canvas = document.createElement('canvas');
+  canvas.width = CARD_WIDTH;
+  canvas.height = CARD_HEIGHT;
+  const ctx = canvas.getContext('2d');
+  paintBackground(ctx, palette);
+
+  // 封面：一张，或 2×2 拼起来（跟 App 里的歌单封面一样）
+  const size = 560;
+  const x0 = (CARD_WIDTH - size) / 2;
+  const y0 = 150;
+  if (art.length >= 4) {
+    paintCover(ctx, null, x0, y0, size);
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(x0, y0, size, size, 36);
+    ctx.clip();
+    const half = size / 2;
+    art.forEach((img, i) => {
+      if (img) ctx.drawImage(img, x0 + (i % 2) * half, y0 + Math.floor(i / 2) * half, half, half);
+    });
+    ctx.restore();
+  } else {
+    paintCover(ctx, art[0], x0, y0, size);
+  }
+
+  // 歌单名、谁的歌单
+  const left = 110;
+  const width = CARD_WIDTH - left * 2;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  let titleSize = 92;
+  for (; titleSize > 56; titleSize -= 4) {
+    ctx.font = `900 ${titleSize}px ${SERIF}`;
+    if (ctx.measureText(name).width <= width) break;
+  }
+  ctx.fillStyle = '#fff';
+  const title = wrapText(ctx, name, width).slice(0, 2);
+  let y = y0 + size + 140;
+  for (const line of title) {
+    ctx.fillText(line, CARD_WIDTH / 2, y);
+    y += titleSize * 1.15;
+  }
+  ctx.font = `400 34px ${SANS}`;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.fillText(labels.byline, CARD_WIDTH / 2, y + 4);
+  y += 90;
+
+  // 前几首歌：小封面、歌名、歌手
+  const rowH = 118;
+  ctx.textAlign = 'left';
+  tracks.slice(0, LIST).forEach((track, i) => {
+    const top = y + i * rowH;
+    ctx.font = `700 34px ${SANS}`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(i + 1), left, top + 44);
+    paintCover(ctx, songCovers[i], left + 56, top, 88, 14);
+    const textX = left + 56 + 88 + 30;
+    const textW = CARD_WIDTH - left - textX;
+    ctx.font = `700 38px ${SANS}`;
+    ctx.fillStyle = '#fff';
+    ctx.fillText(wrapText(ctx, track.name ?? '', textW)[0] ?? '', textX, top + 26);
+    ctx.font = `400 30px ${SANS}`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    const artists = (track.ar ?? []).map(a => a.name).join(' / ');
+    ctx.fillText(wrapText(ctx, artists, textW)[0] ?? '', textX, top + 70);
+  });
+  if (tracks.length > LIST) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = `400 30px ${SANS}`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.fillText(labels.more(tracks.length - LIST), CARD_WIDTH / 2, y + LIST * rowH + 40);
+  }
 
   paintBrand(ctx);
   return canvas;
