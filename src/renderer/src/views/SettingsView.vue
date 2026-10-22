@@ -2,7 +2,7 @@
 // 设置：账号（编辑头像和名字、退出登录）、邀请朋友（管理员才有）、我的公仔（换衣服）、外观（深色 / 浅色 / 跟随系统）、
 // 桌面歌词（电脑版才有）
 import { computed, ref, watch } from 'vue';
-import { NAME_MAX, adminStorageUsage, clearHistory, createInvite, deleteMyAccount, exportMyData, listInvites } from '@core/data';
+import { NAME_MAX, adminClearErrors, adminErrorSummary, adminStorageUsage, clearHistory, createInvite, deleteMyAccount, exportMyData, listInvites } from '@core/data';
 import { useAuthStore } from '../stores/auth';
 import { useLibraryStore } from '../stores/library';
 import { useThemeStore, THEME_OPTIONS } from '../stores/theme';
@@ -27,6 +27,7 @@ import EqualizerPanel from '../components/EqualizerPanel.vue';
 import { pinWidget } from '../widget';
 import { isLockScreenLyricsOn, setLockScreenLyrics } from '../mediaSession';
 import { t, locale, LOCALES } from '../i18n';
+import { timeAgo } from '../utils/format';
 
 // ---- 锁屏歌词（Android App）----
 const lockLyrics = ref(isLockScreenLyricsOn());
@@ -112,6 +113,28 @@ async function checkStorage() {
   }
 }
 const mb = bytes => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
+// ---- 错误回报（管理员）：朋友遇到的错误，同一种合并成一行 ----
+const ERROR_KIND = { crash: 'App 出错', playback: '播放失败', unplayable: '没有音源', lyrics: '歌词载不出来' };
+const errors = ref(null);
+const errorsError = ref('');
+async function checkErrors() {
+  errorsError.value = '';
+  try {
+    errors.value = await adminErrorSummary(7);
+    if (errors.value === null) errorsError.value = t('数据库还没执行错误回报的 SQL');
+  } catch (err) {
+    errorsError.value = err.message;
+  }
+}
+async function clearErrors() {
+  try {
+    await adminClearErrors();
+    errors.value = [];
+  } catch (err) {
+    errorsError.value = err.message;
+  }
+}
 
 // ---- 邀请朋友（管理员）----
 const invites = ref([]);
@@ -480,6 +503,36 @@ async function logout() {
             </li>
           </ul>
         </template>
+      </div>
+    </div>
+
+    <div v-if="auth.admin" class="group">
+      <h2>{{ $t('错误回报') }}</h2>
+      <div class="row source-row">
+        <div class="invite-top">
+          <p class="hint">{{ $t('朋友最近 7 天遇到的错误') }}</p>
+          <button class="ghost" @click="checkErrors">{{ $t('查看') }}</button>
+          <button v-if="errors?.length" class="ghost" @click="clearErrors">{{ $t('清除') }}</button>
+        </div>
+        <p v-if="errorsError" class="invite-error" role="alert">{{ errorsError }}</p>
+        <p v-else-if="errors && !errors.length" class="hint">{{ $t('没有错误 🎉') }}</p>
+        <ul v-else-if="errors" class="source-list error-list">
+          <li v-for="e in errors" :key="e.kind + e.message">
+            <span class="error-kind" :class="e.kind">{{ $t(ERROR_KIND[e.kind] ?? e.kind) }}</span>
+            <span class="source-name error-message">{{ e.message }}</span>
+            <span class="date">
+              {{ $t('{n} 次 · {p} 人 · {ago}', { n: e.times, p: e.people, ago: timeAgo(e.lastAt, t) }) }}
+            </span>
+            <span class="error-meta">
+              {{ [e.names.join('、'), e.platforms.join(' / '), e.versions.join(' / ')].filter(Boolean).join(' · ') }}
+              <template v-if="e.example?.song"> · 《{{ e.example.song }}》{{ e.example.artist }}</template>
+            </span>
+            <details v-if="e.detail" class="error-detail">
+              <summary>{{ $t('详细') }}</summary>
+              <pre>{{ e.detail }}</pre>
+            </details>
+          </li>
+        </ul>
       </div>
     </div>
 
@@ -1057,6 +1110,46 @@ code {
   border-radius: inherit;
   background: var(--accent);
 }
+/* 错误回报 */
+.error-list li {
+  align-items: baseline;
+}
+.error-kind {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-hover);
+  font-size: 12px;
+  font-weight: 700;
+}
+.error-kind.crash,
+.error-kind.playback {
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+  color: var(--danger);
+}
+.error-message {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.error-meta {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.error-detail {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.error-detail pre {
+  max-height: 200px;
+  margin: 6px 0 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 11px;
+}
+
 /* 音源状态：绿点可以用，红点不能用 */
 .source-row {
   flex-direction: column;

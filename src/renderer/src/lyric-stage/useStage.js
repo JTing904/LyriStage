@@ -12,6 +12,7 @@ import {
 } from 'vue';
 import { findLineIndex } from '@core/lyrics';
 import { getPalette, FALLBACK_PALETTE } from './palette';
+import { report, trackContext } from '../errorReporter';
 
 const STAGE_KEY = Symbol('lyric-stage');
 const SETTINGS_KEY = 'lyristage:stage';
@@ -135,7 +136,12 @@ export function provideStage({ state, player, getLyrics }) {
     ]);
     if (state.track?.id !== id) return; // 已经切歌了
     if (lyricResult.status === 'fulfilled') lyrics.value = lyricResult.value;
-    else lyricsError.value = lyricResult.reason;
+    else {
+      lyricsError.value = lyricResult.reason;
+      report('lyrics', lyricResult.reason?.message ?? String(lyricResult.reason), {
+        context: trackContext(current),
+      });
+    }
     if (colors.status === 'fulfilled') palette.value = colors.value;
   }
   watch(() => state.track?.id, loadLyrics, { immediate: true });

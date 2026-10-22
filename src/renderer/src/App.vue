@@ -34,6 +34,7 @@ import MobileBackBar from './components/MobileBackBar.vue';
 import PlayerBar from './components/PlayerBar.vue';
 import QueuePanel from './components/QueuePanel.vue';
 import RoomReactions from './components/RoomReactions.vue';
+import { report, trackContext } from './errorReporter';
 // 歌词舞台、海报墙：打开时才载入（App 打开时不用等）
 const LyricStage = defineAsyncComponent(() => import('./lyric-stage/LyricStage.vue'));
 const QueueWall = defineAsyncComponent(() => import('./components/QueueWall.vue'));
@@ -77,6 +78,9 @@ auth.whenReady().then(() => {
 const offPlayer = [
   player.on('unplayable', ({ track }) => {
     const name = track?.name ?? '';
+    report('unplayable', isUnavailable(track) ? '网易云已下架，也找不到其他音源' : '找不到音源', {
+      context: trackContext(track),
+    });
     if (isUnavailable(track)) {
       notice.show(t('《{name}》在网易云已下架', { name }), {
         action: {
@@ -91,6 +95,13 @@ const offPlayer = [
   player.on('error', ({ track, error }) => {
     // 浏览器要用户先点一下页面才允许出声，不算错误
     if (error?.name === 'NotAllowedError') return;
+    // 断网不用回报（不是 App 的问题）
+    if (!(error instanceof ApiError && error.status === undefined)) {
+      report('playback', isUnblockRateLimited(error) ? 'B 站暂时限制搜索' : error?.message ?? String(error), {
+        detail: error?.stack ?? null,
+        context: { ...trackContext(track), status: error?.status ?? null },
+      });
+    }
     if (isUnblockRateLimited(error)) {
       notice.show(t('B 站暂时限制搜索，过一会儿再按播放'));
     } else if (error instanceof ApiError && error.status === undefined) {
