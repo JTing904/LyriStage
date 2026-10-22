@@ -3,10 +3,12 @@
 // - 其他路径交给 @neteasecloudmusicapienhanced/api，默认带上大陆 realIP
 // - /song/url/match（解灰）自己实现，见下面 unblock()
 // - /lyric/translate（歌词英文翻译）见 translate.js
+// - /voice/ice（一起听语音的连线资料）见 voice.js
 const crypto = require('crypto');
 const { findOnBilibili, checkBilibili, BilibiliRateLimited } = require('./bilibili');
 const { findOnPublicSources, checkPublicSources } = require('./publicSources');
 const { handleTranslate } = require('./translate');
+const { handleIce } = require('./voice');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -387,6 +389,10 @@ function createHandler(options = {}) {
     }
     if (url.pathname === '/lyric/translate') {
       const { status, body } = await handleTranslate(req, url, { ...options.translate, fetchLyric });
+      return sendJson(res, status, body);
+    }
+    if (url.pathname === '/voice/ice') {
+      const { status, body } = await handleIce(options.voice ?? {});
       return sendJson(res, status, body);
     }
     if (!url.searchParams.has('realIP')) {

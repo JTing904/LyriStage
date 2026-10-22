@@ -175,6 +175,15 @@ export const player = createPlayer({ audio, resolveSource });
 /** 均衡器、音量平衡（设置页） */
 export const audioEffects = createAudioEffects(audio);
 
+/**
+ * 一起听的语音：有人讲话时把音乐调小（不改设置里的音量，讲完就回到原本的大小）
+ * @param {boolean} on
+ */
+export function duckMusic(on) {
+  const volume = player.getState().volume;
+  audio.setVolume(on ? volume * 0.35 : volume);
+}
+
 // 预先载入下一首的歌词（存进歌词缓存，切过去时马上有）
 player.on('prefetch', track => getLyrics(track).catch(() => {}));
 connectMediaSession(player, { getLyrics });

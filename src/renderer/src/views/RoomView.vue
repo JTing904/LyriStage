@@ -5,14 +5,19 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router';
 import { useRoomStore, normalizeCode, REACTIONS } from '../stores/room';
 import { useUiStore } from '../stores/ui';
+import { useVoiceStore } from '../stores/voice';
 import { usePlayer } from '../composables/usePlayer';
 import { getEnglishTranslation, getLyrics } from '../services';
 import { t } from '../i18n';
 import Cover from '../components/Cover.vue';
+import Icon from '../components/Icon.vue';
 import LyricStage from '../lyric-stage/LyricStage.vue';
 
 const room = useRoomStore();
 const ui = useUiStore();
+const voice = useVoiceStore();
+/** 语音里的人：id → { muted } */
+const inVoice = computed(() => new Map(voice.participants.map(p => [p.id, p])));
 const route = useRoute();
 const { state, player } = usePlayer();
 
@@ -132,12 +137,45 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
             </button>
           </span>
           <span class="grow" />
+          <!-- 语音：默认关麦克风，按了才加入 -->
+          <button
+            v-if="voice.status === 'off'"
+            class="voice-btn"
+            :title="$t('加入语音')"
+            @click="voice.join()"
+          >
+            <Icon name="mic" :size="16" /><span class="label">{{ $t('加入语音') }}</span>
+          </button>
+          <span v-else class="voice-on">
+            <button
+              class="voice-btn"
+              :class="{ muted: voice.muted }"
+              :disabled="voice.status === 'connecting'"
+              :aria-label="voice.muted ? $t('打开麦克风') : $t('静音')"
+              :title="voice.muted ? $t('打开麦克风') : $t('静音')"
+              @click="voice.toggleMute()"
+            >
+              <Icon :name="voice.muted ? 'mic-off' : 'mic'" :size="16" />
+              <span class="label">{{ voice.status === 'connecting' ? $t('连接中…') : voice.muted ? $t('已静音') : $t('语音中') }}</span>
+            </button>
+            <button class="voice-leave" :aria-label="$t('离开语音')" :title="$t('离开语音')" @click="voice.leave()">
+              <Icon name="x" :size="14" />
+            </button>
+          </span>
           <span class="avatars" :aria-label="$t('{n} 人在听', { n: room.members.length })">
-            <span v-for="m in shownMembers" :key="m.id" class="av" :title="m.name">
+            <span
+              v-for="m in shownMembers"
+              :key="m.id"
+              class="av"
+              :class="{ speaking: voice.speaking.has(m.id) }"
+              :title="m.name"
+            >
               <Cover :url="m.avatar || ''" :size="34" round>
                 <span class="initial">{{ initial(m.name) }}</span>
               </Cover>
               <span v-if="m.id === room.hostId" class="crown" aria-hidden="true">👑</span>
+              <span v-if="inVoice.get(m.id)?.muted" class="mic-badge" aria-hidden="true"><Icon name="mic-off" :size="10" /></span>
+              <span v-else-if="inVoice.has(m.id)" class="mic-badge on" aria-hidden="true"><Icon name="mic" :size="10" /></span>
             </span>
             <span v-if="room.members.length > shownMembers.length" class="av more-count">
               +{{ room.members.length - shownMembers.length }}
@@ -154,7 +192,8 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
           </span>
         </div>
 
-        <section class="stage-panel">
+        <p v-if="voice.error" class="voice-error" role="alert">{{ voice.error }}</p>
+      <section class="stage-panel">
           <LyricStage
             embedded
             :state="state"
@@ -229,7 +268,13 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
             <Cover :url="m.avatar || ''" :size="40" round class="avatar">
               <span class="initial">{{ initial(m.name) }}</span>
             </Cover>
-            <span class="name">{{ m.name }}<template v-if="m.id === room.selfId"> {{ $t('（我）') }}</template></span>
+            <span class="name">
+              {{ m.name }}<template v-if="m.id === room.selfId"> {{ $t('（我）') }}</template>
+              <small v-if="inVoice.has(m.id)" class="voice-state">
+                <Icon :name="inVoice.get(m.id).muted ? 'mic-off' : 'mic'" :size="12" />
+                {{ inVoice.get(m.id).muted ? $t('已静音') : voice.speaking.has(m.id) ? $t('正在讲话') : $t('语音中') }}
+              </small>
+            </span>
             <span v-if="m.id === room.hostId" class="badge">{{ $t('房主') }}</span>
             <button
               v-else-if="room.role === 'host' && m.id !== room.selfId"
@@ -458,6 +503,86 @@ header p {
   background: var(--accent);
   color: var(--on-accent);
   font-weight: 800;
+}
+/* 语音 */
+.voice-on {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.voice-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+.voice-on .voice-btn {
+  border-color: #30a46c;
+  background: color-mix(in srgb, #30a46c 16%, var(--surface));
+  color: #30a46c;
+}
+.voice-on .voice-btn.muted {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--text-dim);
+}
+.voice-leave {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-dim);
+}
+.voice-leave:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* 正在讲话：头像外面一圈绿光 */
+.av.speaking {
+  box-shadow: 0 0 0 2px #30a46c, 0 0 12px 2px rgb(48 164 108 / 0.6);
+  z-index: 1;
+}
+.mic-badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--bg);
+  border-radius: 50%;
+  background: var(--text-faint);
+  color: #fff;
+}
+.mic-badge.on {
+  background: #30a46c;
+}
+.voice-error {
+  margin: 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+.voice-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  color: #30a46c;
+  font-size: 12px;
+  font-weight: 600;
 }
 .listening {
   display: inline-flex;
@@ -745,8 +870,17 @@ header p {
     padding-left: 12px;
   }
   .chip-label,
-  .listening {
+  .listening,
+  .voice-btn .label {
     display: none;
+  }
+  .voice-btn {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+  .voice-error {
+    padding: 0 12px 6px;
   }
   .chip code {
     font-size: 15px;

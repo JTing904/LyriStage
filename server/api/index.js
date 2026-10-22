@@ -21,6 +21,11 @@ const handler = createHandler({
     azureRegion: process.env.AZURE_TRANSLATOR_REGION,
     cacheSecret: process.env.LYRIC_CACHE_SECRET,
   },
+  // 一起听的语音（见 lib/voice.js）：Cloudflare TURN 的 key 只在 Vercel 的环境变量里
+  voice: {
+    keyId: process.env.CLOUDFLARE_TURN_KEY_ID,
+    apiToken: process.env.CLOUDFLARE_TURN_API_TOKEN,
+  },
 });
 
 module.exports = misconfigured
