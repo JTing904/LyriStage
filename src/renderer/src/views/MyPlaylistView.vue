@@ -1,6 +1,6 @@
 <script setup>
 // 自己的歌单：播放、移除歌曲、改名、删除；共同歌单（邀请别人一起编辑、看谁加了哪首）
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getPlaylist, leaveSharedPlaylist, listPlaylistPeople, sharePlaylist, unsharePlaylist } from '@core/data';
 import { useAuthStore } from '../stores/auth';
@@ -251,6 +251,39 @@ async function save() {
   }
 }
 
+// 「⋯」选单：编辑、删除歌单（按钮太多一行放不下，这两个不常用）
+/** @type {import('vue').Ref<{ x: number, y: number } | null>} */
+const moreMenu = ref(null);
+function toggleMore(event) {
+  if (moreMenu.value) {
+    moreMenu.value = null;
+    return;
+  }
+  const r = event.currentTarget.getBoundingClientRect();
+  // 菜单宽 200、高约 100：靠左对齐按钮，右边放不下就往左
+  moreMenu.value = {
+    x: Math.max(8, Math.min(r.left, window.innerWidth - 208)),
+    y: r.bottom + 110 > window.innerHeight ? r.top - 104 : r.bottom + 6,
+  };
+}
+const closeMore = () => (moreMenu.value = null);
+function moreAction(fn) {
+  closeMore();
+  fn();
+}
+const onOutside = event => {
+  if (moreMenu.value && !event.target.closest?.('.track-menu, .more-btn')) closeMore();
+};
+const onKey = event => event.key === 'Escape' && closeMore();
+window.addEventListener('pointerdown', onOutside, true);
+window.addEventListener('keydown', onKey);
+window.addEventListener('scroll', closeMore, true);
+onBeforeUnmount(() => {
+  window.removeEventListener('pointerdown', onOutside, true);
+  window.removeEventListener('keydown', onKey);
+  window.removeEventListener('scroll', closeMore, true);
+});
+
 // 删除（用 App 自己的确认框，不用系统弹窗）
 const confirmBox = ref(null);
 async function removePlaylist() {
@@ -300,11 +333,15 @@ async function removePlaylist() {
           >
             <Icon name="share" :size="17" /><span class="label">{{ $t('分享海报') }}</span>
           </button>
-          <button v-if="isOwner" class="icon-action" :aria-label="$t('编辑')" @click="openEditor">
-            <Icon name="edit" :size="17" /><span class="label">{{ $t('编辑') }}</span>
-          </button>
-          <button v-if="isOwner" class="icon-action" :aria-label="$t('删除歌单')" @click="confirmBox.showModal()">
-            <Icon name="trash" :size="17" /><span class="label">{{ $t('删除歌单') }}</span>
+          <button
+            v-if="isOwner"
+            class="icon-action more-btn"
+            :aria-label="$t('更多')"
+            aria-haspopup="menu"
+            :aria-expanded="Boolean(moreMenu)"
+            @click="toggleMore"
+          >
+            <Icon name="more" :size="18" />
           </button>
         </template>
       </CollectionHeader>
@@ -315,6 +352,23 @@ async function removePlaylist() {
       </p>
       <TrackList v-else :tracks="tracks" :context="context" removable :adders="adders" @remove="remove" />
     </template>
+
+    <!-- 「⋯」选单：编辑、删除歌单 -->
+    <Teleport to="body">
+      <div
+        v-if="moreMenu"
+        class="track-menu"
+        role="menu"
+        :style="{ left: `${moreMenu.x}px`, top: `${moreMenu.y}px` }"
+      >
+        <button role="menuitem" @click="moreAction(openEditor)">
+          <Icon name="edit" :size="18" />{{ $t('编辑') }}
+        </button>
+        <button role="menuitem" @click="moreAction(() => confirmBox.showModal())">
+          <Icon name="trash" :size="18" />{{ $t('删除歌单') }}
+        </button>
+      </div>
+    </Teleport>
 
     <SongPicker
       ref="picker"
@@ -398,6 +452,12 @@ async function removePlaylist() {
 </template>
 
 <style scoped>
+/* 「⋯」只有图标：圆的 */
+.icon-action.more-btn {
+  width: 44px;
+  padding: 0;
+  justify-content: center;
+}
 .editor {
   width: min(440px, calc(100vw - 32px));
   padding: 0;

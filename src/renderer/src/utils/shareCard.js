@@ -400,10 +400,17 @@ export async function renderQueueWallCard({ tiles, palette, lightsOff = false, l
 }
 
 /** canvas → PNG */
-export const canvasToBlob = canvas =>
-  new Promise((resolve, reject) =>
-    canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('图片产生失败'))), 'image/png')
-  );
+// 不用 canvas.toBlob：Chrome 把它排在页面空闲时才做，App 一直在更新播放进度，
+// 在 Android 平板上一张要 4~13 秒；toDataURL 当场转，0.3 秒
+export async function canvasToBlob(canvas) {
+  const dataUrl = canvas.toDataURL('image/png');
+  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  if (!base64) throw new Error('图片产生失败');
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: 'image/png' });
+}
 
 /**
  * 听歌报告卡片
