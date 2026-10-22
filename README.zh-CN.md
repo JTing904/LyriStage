@@ -11,7 +11,7 @@
 
 [官网](https://jting904.github.io/LyriStage/) · [下载](https://github.com/JTing904/LyriStage/releases/latest) · [网页版](https://lyristage.vercel.app) · [English](README.md)
 
-![版本](https://img.shields.io/badge/version-2.1.4-ff3b5c) ![许可证](https://img.shields.io/badge/code-MIT-blue) ![平台](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
+![版本](https://img.shields.io/badge/version-2.1.5-ff3b5c) ![许可证](https://img.shields.io/badge/code-MIT-blue) ![平台](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
 <a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage 宣传片：到官网观看"></a>
 
@@ -19,13 +19,13 @@
 
 ## 功能
 
-- **九种歌词舞台**：唱到哪个字就亮哪个字，每句下面有翻译。播放中随时切换风格。
+- **九种歌词舞台**：唱到哪个字就亮哪个字，每句下面有翻译（中文，或机器翻译的英文），日文、韩文歌还有罗马音。播放中随时切换风格，看歌词时屏幕不会自己暗掉。
 - **歌词分享卡片**：选 1 到 4 句，用封面颜色做成限动尺寸的图片。
 - **用歌词找歌**：只记得一句歌词也搜得到。
 - **每日推荐、私人 FM**：每天早上一份新歌单，由 LyriStage 自己的推荐算法根据你的听歌记录挑选。FM 按「不喜欢」以后就少推荐这类歌。不需要网易云账号。
 - **听歌报告、年度回顾**：这个月、今年听了多久、最常听的歌和歌手；年度回顾像限时动态一样一页一页看，有年度歌曲、今年最常听到的一句歌词，每页都能做成图片分享。
 - **相似歌曲电台**：从任何一首歌开始，接着播相似的歌，按你的口味排。
-- **一起听**：开一个房间，把六位房间码发给朋友，大家同一时间听同一首。可以聊天、送表情，房主也能把房间交给别人。
+- **一起听**：开一个房间，把六位房间码发给朋友，大家同一时间听同一首，房间里就看得到歌词。可以语音、聊天、送表情，房主也能把房间交给别人。
 - **好友**：用好友码加好友（要对方同意），看得到好友在听什么；好友周榜比一比这周谁听最久、各自最常听的歌手。随时可以关掉分享或开私人模式。
 - **共同歌单**：邀请朋友一起加歌，每首歌会显示是谁加的。歌单可以换成自己的封面照片，也能做成海报分享。
 - **播放队列、睡眠定时**：下一首播放、加入队列、拖动排序，也能把整个队列看成一面封面海报墙，还能做成图片分享；15 / 30 / 60 分钟后或这首播完就停。

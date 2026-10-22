@@ -11,7 +11,7 @@ Nine full-screen lyric stages, a daily mix made from what you love, and rooms wh
 
 [Website](https://jting904.github.io/LyriStage/) · [Download](https://github.com/JTing904/LyriStage/releases/latest) · [Web app](https://lyristage.vercel.app) · [中文](README.zh-CN.md)
 
-![Version](https://img.shields.io/badge/version-2.1.4-ff3b5c) ![License](https://img.shields.io/badge/code-MIT-blue) ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
+![Version](https://img.shields.io/badge/version-2.1.5-ff3b5c) ![License](https://img.shields.io/badge/code-MIT-blue) ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
 <a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage trailer: watch it on the website"></a>
 
@@ -19,13 +19,13 @@ Nine full-screen lyric stages, a daily mix made from what you love, and rooms wh
 
 ## Features
 
-- **Nine lyric stages.** Words light up as they are sung, with translations under each line. Switch styles any time while a song plays.
+- **Nine lyric stages.** Words light up as they are sung, with a translation under each line (Chinese, or English by machine translation) and romanization for Japanese and Korean songs. Switch styles any time while a song plays; the screen stays on while you watch.
 - **Share lyrics.** Pick 1-4 lines and turn them into a story-sized card in the cover's colours.
 - **Search by lyrics.** Remember only one line? Search it.
 - **Daily Mix and Personal FM.** A new playlist every morning, picked by LyriStage's own recommendation engine from your listening. Dislike a song on FM and you'll hear fewer like it. No NetEase account needed.
 - **Listening report and Year in Review.** Your month or year in music, plus a story-style year in review with your song of the year and the lyric you heard most. Every page can be shared as an image.
 - **Song radio.** Start a station from any song: similar songs, ranked by your taste.
-- **Listen Together.** Open a room, share the six-letter code, and everyone hears the same song at the same moment. Chat, send reactions, and hand the room to someone else.
+- **Listen Together.** Open a room, share the six-letter code, and everyone hears the same song at the same moment with the lyrics on screen. Talk over voice, chat, send reactions, and hand the room to someone else.
 - **Friends.** Add friends with a code (they approve it) and see what they're listening to. A weekly board shows who listened most and everyone's top artist. Turn sharing off or use a private session any time.
 - **Shared playlists.** Invite others to add songs; each song shows who added it. Give a playlist your own cover photo, or share it as a poster.
 - **Queue and sleep timer.** Play next, add to queue, drag to reorder, or see the whole queue as a poster wall of covers and share it as an image; stop after 15/30/60 minutes or at the end of the song.
