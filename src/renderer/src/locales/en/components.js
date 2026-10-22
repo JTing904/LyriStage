@@ -123,6 +123,9 @@ export default {
   朋友: 'Friend',
   '要先登录 LyriStage 才能一起听': 'Log in to LyriStage to listen together',
   房主离开了房间: 'The host left the room',
+  '房主离开了，一会儿没回来房间就会关闭': 'The host left. The room will close if they don’t come back soon',
+  房主关闭了房间: 'The host closed the room',
+  '房主离开了，房间已关闭': 'The host left, so the room was closed',
   连不上房间: "Couldn't connect to the room",
   '房间码是 6 个字母和数字': 'Room codes are 6 letters and numbers',
   '这个房间现在没有房主，可能还没开或已经关了':

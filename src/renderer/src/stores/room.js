@@ -2,7 +2,9 @@
 //
 // - 房主：播放状态有变化就广播（歌、播放 / 暂停、进度），另外每 3 秒广播一次让大家校正
 // - 成员：收到就照着播；差超过 1.2 秒才跳进度，避免一直卡
-// - presence：谁在房间里；房主离开时成员会收到通知
+// - presence：谁在房间里
+// - 房主按「关闭房间」：先广播 closed，成员马上离开；房主没关就不见了（App 被关掉、断线）：
+//   等 HOST_GONE_MS 还没回来，成员也离开（交给别人当房主的话房间照样继续）
 // - 谁是房主记在数据库的 rooms 表（开房间时写入）；Realtime 的权限只让房主广播，
 //   成员改了 App 也没办法控制别人的播放
 // 每个人自己拿音频（手机 App 也会自己解灰），不占房主的流量
@@ -24,6 +26,8 @@ const newCode = () =>
 export const normalizeCode = code => String(code ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 const HEARTBEAT_MS = 3000;
+/** 房主不见了多久就把房间当成关了（网络闪断、换房主重连都比这个快很多） */
+const HOST_GONE_MS = 45000;
 
 // 别人的头像只从这几个地方载入：头像网址是用户自己填的资料，
 // 随便一个网址会让房间里其他人的 App 去连那个网站（对方就知道你的 IP）
@@ -79,6 +83,7 @@ export const useRoomStore = defineStore('room', () => {
   let channel = null;
   let heartbeat = 0;
   let offPlayer = [];
+  let hostGoneTimer = 0;
 
   function me() {
     return {
@@ -145,6 +150,24 @@ export const useRoomStore = defineStore('room', () => {
       .filter(m => m.id && !seen.has(m.id) && seen.add(m.id))
       .map(m => ({ ...m, avatar: safeAvatar(m.avatar) }));
     for (const m of members.value) names.set(m.id, m.name);
+    // 成员：房主在就取消倒数；房主不在就开始倒数
+    if (role.value !== 'guest') return;
+    if (host.value) {
+      clearTimeout(hostGoneTimer);
+      hostGoneTimer = 0;
+    } else if (!hostGoneTimer) {
+      hostGoneTimer = setTimeout(() => {
+        hostGoneTimer = 0;
+        if (role.value === 'guest' && inRoom.value && !host.value) closedByHost(t('房主离开了，房间已关闭'));
+      }, HOST_GONE_MS);
+    }
+  }
+
+  /** 房主关了房间（或不见了）：成员也离开，画面下方说一声 */
+  async function closedByHost(message) {
+    if (role.value !== 'guest') return;
+    await leave();
+    useNoticeStore().show(message, { duration: 6000 });
   }
 
   /** 连进房间；Realtime 偶尔会第一次连不上，等一秒自动再试一次 */
@@ -195,11 +218,13 @@ export const useRoomStore = defineStore('room', () => {
         { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `code=eq.${roomCode}` },
         ({ new: row }) => onHostChanged(row)
       )
+      // 房主按了「关闭房间」
+      .on('broadcast', { event: 'closed' }, () => closedByHost(t('房主关闭了房间')))
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
         if (role.value !== 'guest' || !leftPresences.some(p => p.id === hostId.value)) return;
         // 等几秒再判断：房主转让时新房主会重新连线，一下下不在不代表离开了
         setTimeout(() => {
-          if (role.value === 'guest' && inRoom.value && !host.value) notice.value = t('房主离开了房间');
+          if (role.value === 'guest' && inRoom.value && !host.value) notice.value = t('房主离开了，一会儿没回来房间就会关闭');
         }, 3000);
       });
 
@@ -330,8 +355,12 @@ export const useRoomStore = defineStore('room', () => {
 
   async function leave() {
     clearInterval(heartbeat);
+    clearTimeout(hostGoneTimer);
+    hostGoneTimer = 0;
     // 房主关房间：数据库里的房间也删掉
     if (role.value === 'host' && code.value) {
+      // 先告诉大家房间关了（换房主时 reconnect 会先把自己改成成员，不会走到这里）
+      await channel?.send({ type: 'broadcast', event: 'closed', payload: {} }).catch(() => {});
       const { error: err } = await getSupabase()?.from('rooms').delete().eq('code', code.value) ?? {};
       if (err) console.warn('[LyriStage] 删除房间失败', err);
     }
