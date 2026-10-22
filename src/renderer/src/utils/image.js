@@ -35,24 +35,3 @@ export const squareAvatar = file => squareImage(file, 256);
 
 /** 歌单封面：640×640（大封面也清楚，约 100 KB） @param {File} file */
 export const squareCover = file => squareImage(file, 640);
-
-/**
- * 歌词舞台背景：不裁切，最长边缩到 maxSide（约 200–300 KB）
- * @param {Blob} file
- * @param {number} [maxSide]
- * @returns {Promise<Blob>}
- */
-export async function fitImage(file, maxSide = 1920) {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  const encode = type => new Promise(resolve => canvas.toBlob(resolve, type, 0.85));
-  const webp = await encode('image/webp');
-  return webp?.type === 'image/webp' ? webp : encode('image/jpeg');
-}

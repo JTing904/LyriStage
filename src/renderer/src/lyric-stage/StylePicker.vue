@@ -1,57 +1,12 @@
 <script setup>
-// 歌词风格选择：9 张小缩略图（每张是那种风格的迷你示意），3 列排列；
-// 下面是翻译开关、背景（封面 / 自己的照片，全部歌或只这首）
-import { computed, ref } from 'vue';
+// 歌词风格选择：9 张小缩略图（每张是那种风格的迷你示意），3 列排列
 import { LYRIC_STYLES } from './styles';
-import { useStage } from './useStage';
-import { useStageBackgroundsStore } from '../stores/stageBackgrounds';
-import { t } from '../i18n';
 
-const props = defineProps({
+defineProps({
   current: { type: String, required: true },
   showTranslation: { type: Boolean, required: true },
 });
 const emit = defineEmits(['select', 'update:showTranslation']);
-
-// ---- 背景 ----
-/** 用封面当背景的风格才换（其他风格的背景是风格本身的一部分） */
-const USES_BACKDROP = new Set(['kinetic', 'perspective', 'scroll', 'karaoke', 'vinyl']);
-const { track } = useStage();
-const backgrounds = useStageBackgroundsStore();
-const usingPhoto = computed(() => Boolean(backgrounds.allSongs?.enabled));
-const songHasOwn = computed(() => backgrounds.hasOwn(track.value));
-const fileInput = ref(null);
-/** 选照片是要给 'all'（全部歌）还是 'song'（只这首） */
-let target = 'all';
-const busy = ref(false);
-const problem = ref('');
-
-async function run(task) {
-  busy.value = true;
-  problem.value = '';
-  try {
-    await task();
-  } catch (err) {
-    problem.value = t('没成功：{error}', { error: err.message || err });
-  } finally {
-    busy.value = false;
-  }
-}
-function pick(which) {
-  target = which;
-  fileInput.value.click();
-}
-function onFile(event) {
-  const file = event.target.files?.[0];
-  event.target.value = '';
-  if (!file) return;
-  run(() => (target === 'song' ? backgrounds.setForSong(track.value, file) : backgrounds.setForAll(file)));
-}
-/** 封面 / 我的照片：还没有照片时先选一张 */
-function choosePhoto(on) {
-  if (on && !backgrounds.allSongs) return pick('all');
-  if (on !== usingPhoto.value) run(() => backgrounds.useAllSongs(on));
-}
 </script>
 
 <template>
@@ -108,33 +63,6 @@ function choosePhoto(on) {
       />
       <span class="switch" aria-hidden="true" />
     </label>
-
-    <div v-if="backgrounds.available" class="bg">
-      <div class="bg-row">
-        <span>{{ $t('背景') }}</span>
-        <div class="segments" role="radiogroup" :aria-label="$t('背景')">
-          <button role="radio" :aria-checked="!usingPhoto" :class="{ active: !usingPhoto }" :disabled="busy" @click="choosePhoto(false)">
-            {{ $t('封面') }}
-          </button>
-          <button role="radio" :aria-checked="usingPhoto" :class="{ active: usingPhoto }" :disabled="busy" @click="choosePhoto(true)">
-            {{ $t('我的照片') }}
-          </button>
-        </div>
-      </div>
-      <div class="bg-links">
-        <button v-if="backgrounds.allSongs" :disabled="busy" @click="pick('all')">{{ $t('换照片') }}</button>
-        <button v-if="track" :disabled="busy" @click="pick('song')">
-          {{ songHasOwn ? $t('换这首的照片') : $t('只换这首') }}
-        </button>
-        <button v-if="songHasOwn" :disabled="busy" @click="run(() => backgrounds.removeForSong(track))">
-          {{ $t('这首不用专属照片') }}
-        </button>
-      </div>
-      <p v-if="busy" class="bg-note">{{ $t('上传中…') }}</p>
-      <p v-else-if="problem" class="bg-note error" role="alert">{{ problem }}</p>
-      <p v-else-if="!USES_BACKDROP.has(props.current)" class="bg-note">{{ $t('这个风格不换背景') }}</p>
-      <input ref="fileInput" type="file" accept="image/*" hidden @change="onFile" />
-    </div>
   </div>
 </template>
 
@@ -324,72 +252,6 @@ function choosePhoto(on) {
     ),
     repeating-radial-gradient(circle, #111 0 1px, #222 1px 2px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
-}
-
-/* 背景 */
-.bg {
-  display: grid;
-  gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-.bg-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 4px;
-  font-size: 13px;
-}
-.segments {
-  display: flex;
-  padding: 2px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-}
-.segments button {
-  min-width: 56px;
-  padding: 5px 12px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.75);
-  font: inherit;
-  cursor: pointer;
-}
-.segments button.active {
-  background: #fff;
-  color: #111;
-  font-weight: 600;
-}
-.bg-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 0 4px;
-}
-.bg-links button {
-  padding: 5px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 999px;
-  background: none;
-  color: #fff;
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.bg button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-.bg-note {
-  margin: 0;
-  padding: 0 4px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
-}
-.bg-note.error {
-  color: #ff8a8a;
 }
 
 /* 开关 */

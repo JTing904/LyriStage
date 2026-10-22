@@ -4,11 +4,13 @@
 import { computed } from 'vue';
 import { useStage, splitPhrases, displayWords, displayText } from '../useStage';
 
-const { track, backdrop: stageBackdrop, line, lineIndex, now, inInterlude, settings } =
+const { track, coverUrl, line, lineIndex, now, inInterlude, settings } =
   useStage();
 
-// 背景：小尺寸封面（或自己的照片）放大，浏览器插值后自然变模糊，比实时 blur 滤镜省电
-const backdrop = computed(() => stageBackdrop.value.blur);
+// 背景：小尺寸封面放大，浏览器插值后自然变模糊，比实时 blur 滤镜省电
+const backdrop = computed(
+  () => coverUrl.value && `${coverUrl.value}?param=24y24`
+);
 
 // 显示用的字：全角括号换半角、句尾标点去掉，大字才会真正居中
 const words = computed(() => displayWords(line.value?.words ?? []));

@@ -10,4 +10,3 @@ export * from './bilibiliPicks';
 export * from './friends';
 export * from './playlistCovers';
 export * from './archive';
-export * from './stageBackgrounds';

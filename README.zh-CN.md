@@ -107,7 +107,7 @@ npm run web:dev           # 网页版：http://localhost:5173（同一个 Wi-Fi 
    `room_handover`（房主转让）、`delete_account`（在设置页删除账号）、`bilibili_picks` 和 `bilibili_picks_grant`、
    `friends_and_shared_playlists` 和 `playlist_people_profiles`（好友、共同歌单）、
    `history_compaction`（每月自动整理旧的听歌记录，要先开启 `pg_cron`）、`slim_play_history`（听歌记录瘦身）、`friends_weekly_board`（好友周榜）、
-   `storage_usage_all_databases`、`playlist_covers`（歌单自定义封面）、`archive_old_history`（每月把两年以前的听歌记录搬去 File storage）、`archive_secret_hash`、`stage_backgrounds`（歌词舞台用自己的照片当背景）。
+   `storage_usage_all_databases`、`playlist_covers`（歌单自定义封面）、`archive_old_history`（每月把两年以前的听歌记录搬去 File storage）、`archive_secret_hash`。
    最后这份还要把 [supabase/functions/archive-history](supabase/functions/archive-history) 部署成 Edge Function（关掉 JWT 验证），
    再把 SQL 文件最下面 `archive_function_url` 那一行换成你的项目代号执行。
 3. Authentication → Providers：打开 Email（要 GitHub / Google 登录的话也打开）。
