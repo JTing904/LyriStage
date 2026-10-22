@@ -11,7 +11,7 @@
 
 [官网](https://jting904.github.io/LyriStage/) · [下载](https://github.com/JTing904/LyriStage/releases/latest) · [网页版](https://lyristage.vercel.app) · [English](README.md)
 
-![版本](https://img.shields.io/badge/version-2.1.5-ff3b5c) ![许可证](https://img.shields.io/badge/code-MIT-blue) ![平台](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
+![版本](https://img.shields.io/badge/version-2.1.6-ff3b5c) ![许可证](https://img.shields.io/badge/code-MIT-blue) ![平台](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
 <a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage 宣传片：到官网观看"></a>
 
@@ -25,7 +25,7 @@
 - **每日推荐、私人 FM**：每天早上一份新歌单，由 LyriStage 自己的推荐算法根据你的听歌记录挑选。FM 按「不喜欢」以后就少推荐这类歌。不需要网易云账号。
 - **听歌报告、年度回顾**：这个月、今年听了多久、最常听的歌和歌手；年度回顾像限时动态一样一页一页看，有年度歌曲、今年最常听到的一句歌词，每页都能做成图片分享。
 - **相似歌曲电台**：从任何一首歌开始，接着播相似的歌，按你的口味排。
-- **一起听**：开一个房间，把六位房间码发给朋友，大家同一时间听同一首，房间里就看得到歌词。可以语音、聊天、送表情，房主也能把房间交给别人。
+- **一起听**：开一个房间，把六位房间码发给朋友，大家同一时间听同一首，房间里就看得到歌词。可以语音（Android 关掉屏幕也继续）、聊天、送表情、点歌给房主，房主也能把房间交给别人。好友看得到你在一起听，可以请求加入，你同意了才进得来。
 - **好友**：用好友码加好友（要对方同意），看得到好友在听什么；好友周榜比一比这周谁听最久、各自最常听的歌手。随时可以关掉分享或开私人模式。
 - **共同歌单**：邀请朋友一起加歌，每首歌会显示是谁加的。歌单可以换成自己的封面照片，也能做成海报分享。
 - **播放队列、睡眠定时**：下一首播放、加入队列、拖动排序，也能把整个队列看成一面封面海报墙，还能做成图片分享；15 / 30 / 60 分钟后或这首播完就停。
@@ -107,8 +107,10 @@ npm run web:dev           # 网页版：http://localhost:5173（同一个 Wi-Fi 
    `room_handover`（房主转让）、`delete_account`（在设置页删除账号）、`bilibili_picks` 和 `bilibili_picks_grant`、
    `friends_and_shared_playlists` 和 `playlist_people_profiles`（好友、共同歌单）、
    `history_compaction`（每月自动整理旧的听歌记录，要先开启 `pg_cron`）、`slim_play_history`（听歌记录瘦身）、`friends_weekly_board`（好友周榜）、
-   `storage_usage_all_databases`、`playlist_covers`（歌单自定义封面）、`archive_old_history`（每月把两年以前的听歌记录搬去 File storage）、`archive_secret_hash`、`app_errors`（错误自动回报给管理员）、`weekly_backup`（每周自动备份到私人的 backups 桶，留最近 8 份；用同一个 Edge Function）、`backup_read_access`。
-   最后这份还要把 [supabase/functions/archive-history](supabase/functions/archive-history) 部署成 Edge Function（关掉 JWT 验证），
+   `storage_usage_all_databases`、`playlist_covers`（歌单自定义封面）、`archive_old_history`（每月把两年以前的听歌记录搬去 File storage）、`archive_secret_hash`、`app_errors`（错误自动回报给管理员）、`weekly_backup`（每周自动备份到私人的 backups 桶，留最近 8 份；用同一个 Edge Function）、`backup_read_access`、
+   `lyric_translations`（共用的英文歌词翻译）、`voice_chat`（一起听语音）、`room_requests_and_listing`（点歌、好友的房间、请求加入）、`room_members`（只有房间里的人看得到房间）。
+   `archive_old_history` 和 `weekly_backup`
+   还要把 [supabase/functions/archive-history](supabase/functions/archive-history) 部署成 Edge Function（关掉 JWT 验证），
    再把 SQL 文件最下面 `archive_function_url` 那一行换成你的项目代号执行。
 3. Authentication → Providers：打开 Email（要 GitHub / Google 登录的话也打开）。
    在 URL Configuration 的 Redirect URLs 加上 `lyristage://auth/callback`（电脑版登录）和 `http://localhost:5173/**`（网页版开发）。

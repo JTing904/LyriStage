@@ -11,7 +11,7 @@ Nine full-screen lyric stages, a daily mix made from what you love, and rooms wh
 
 [Website](https://jting904.github.io/LyriStage/) · [Download](https://github.com/JTing904/LyriStage/releases/latest) · [Web app](https://lyristage.vercel.app) · [中文](README.zh-CN.md)
 
-![Version](https://img.shields.io/badge/version-2.1.5-ff3b5c) ![License](https://img.shields.io/badge/code-MIT-blue) ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
+![Version](https://img.shields.io/badge/version-2.1.6-ff3b5c) ![License](https://img.shields.io/badge/code-MIT-blue) ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
 <a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage trailer: watch it on the website"></a>
 
@@ -25,7 +25,7 @@ Nine full-screen lyric stages, a daily mix made from what you love, and rooms wh
 - **Daily Mix and Personal FM.** A new playlist every morning, picked by LyriStage's own recommendation engine from your listening. Dislike a song on FM and you'll hear fewer like it. No NetEase account needed.
 - **Listening report and Year in Review.** Your month or year in music, plus a story-style year in review with your song of the year and the lyric you heard most. Every page can be shared as an image.
 - **Song radio.** Start a station from any song: similar songs, ranked by your taste.
-- **Listen Together.** Open a room, share the six-letter code, and everyone hears the same song at the same moment with the lyrics on screen. Talk over voice, chat, send reactions, and hand the room to someone else.
+- **Listen Together.** Open a room, share the six-letter code, and everyone hears the same song at the same moment with the lyrics on screen. Talk over voice (it keeps going with the screen off on Android), chat, send reactions, request songs for the host to queue, and hand the room to someone else. Friends see when you're in a room and can ask to join; you let them in.
 - **Friends.** Add friends with a code (they approve it) and see what they're listening to. A weekly board shows who listened most and everyone's top artist. Turn sharing off or use a private session any time.
 - **Shared playlists.** Invite others to add songs; each song shows who added it. Give a playlist your own cover photo, or share it as a poster.
 - **Queue and sleep timer.** Play next, add to queue, drag to reorder, or see the whole queue as a poster wall of covers and share it as an image; stop after 15/30/60 minutes or at the end of the song.
@@ -107,8 +107,10 @@ If Electron fails with `Cannot read properties of undefined` inside VS Code, the
    `room_handover`, `delete_account` (delete your account from Settings), `bilibili_picks` and `bilibili_picks_grant`,
    `friends_and_shared_playlists` and `playlist_people_profiles`, `history_compaction` (monthly clean-up of old history;
    needs the `pg_cron` extension), `slim_play_history`, `friends_weekly_board`, `storage_usage_all_databases`,
-   `playlist_covers`, `archive_old_history` (moves history older than two years to File storage every month), `archive_secret_hash`, `app_errors` (automatic error reports for the admin), `weekly_backup` (weekly backup to a private bucket, last 8 kept; needs the same Edge Function), `backup_read_access`.
-   For that last one, deploy [supabase/functions/archive-history](supabase/functions/archive-history) as an Edge Function
+   `playlist_covers`, `archive_old_history` (moves history older than two years to File storage every month), `archive_secret_hash`, `app_errors` (automatic error reports for the admin), `weekly_backup` (weekly backup to a private bucket, last 8 kept; needs the same Edge Function), `backup_read_access`,
+   `lyric_translations` (shared English lyric translations), `voice_chat`, `room_requests_and_listing` (song requests, friends' rooms, knock to join), `room_members` (only people in a room can see it).
+   For `weekly_backup` and `archive_old_history`,
+   deploy [supabase/functions/archive-history](supabase/functions/archive-history) as an Edge Function
    with JWT verification off, then run the `archive_function_url` line at the bottom of the SQL file with your project ref.
 3. Authentication → Providers: enable Email (and GitHub / Google if you want them).
    Under URL Configuration add `lyristage://auth/callback` (desktop sign-in) and `http://localhost:5173/**` (web dev) to Redirect URLs.
