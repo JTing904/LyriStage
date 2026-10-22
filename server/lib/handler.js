@@ -2,9 +2,11 @@
 //
 // - 其他路径交给 @neteasecloudmusicapienhanced/api，默认带上大陆 realIP
 // - /song/url/match（解灰）自己实现，见下面 unblock()
+// - /lyric/translate（歌词英文翻译）见 translate.js
 const crypto = require('crypto');
 const { findOnBilibili, checkBilibili, BilibiliRateLimited } = require('./bilibili');
 const { findOnPublicSources, checkPublicSources } = require('./publicSources');
+const { handleTranslate } = require('./translate');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -335,6 +337,15 @@ function createHandler(options = {}) {
     return appPromise;
   }
 
+  /** 翻译用：直接叫网易云 API 的歌词模块拿原文 LRC（不用再走一次 HTTP） */
+  async function fetchLyric(id) {
+    await getApp(); // 匿名账号、设置要先准备好
+    const lyricNew = require('@neteasecloudmusicapienhanced/api/module/lyric_new');
+    const request = require('@neteasecloudmusicapienhanced/api/util/request');
+    const result = await lyricNew({ id, realIP, cookie: {} }, request);
+    return result?.body?.lrc?.lyric ?? '';
+  }
+
   const { localToken } = options;
   // 只有 Vercel（要检查成员的那个）需要限流；电脑版本机 API 只有自己在用
   const rateLimit = options.requireMember ? createRateLimiter() : null;
@@ -373,6 +384,10 @@ function createHandler(options = {}) {
     }
     if (url.pathname === '/unblock/status') {
       return unblockStatus(res);
+    }
+    if (url.pathname === '/lyric/translate') {
+      const { status, body } = await handleTranslate(req, url, { ...options.translate, fetchLyric });
+      return sendJson(res, status, body);
     }
     if (!url.searchParams.has('realIP')) {
       url.searchParams.set('realIP', realIP);

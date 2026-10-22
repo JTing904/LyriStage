@@ -13,6 +13,14 @@ const handler = createHandler({
   realIP: process.env.DEFAULT_REAL_IP,
   unmSources: process.env.UNM_SOURCES?.split(','),
   requireMember: locked ? { supabaseUrl, anonKey } : undefined,
+  // 歌词英文翻译（见 lib/translate.js）：Azure 的密钥、区域，写入缓存用的密码，都只在 Vercel 的环境变量里
+  translate: {
+    supabaseUrl,
+    anonKey,
+    azureKey: process.env.AZURE_TRANSLATOR_KEY,
+    azureRegion: process.env.AZURE_TRANSLATOR_REGION,
+    cacheSecret: process.env.LYRIC_CACHE_SECRET,
+  },
 });
 
 module.exports = misconfigured
