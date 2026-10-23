@@ -1336,6 +1336,7 @@ h1 {
 }
 .account .ghost {
   flex: none;
+  white-space: nowrap;
 }
 /* 编辑资料 */
 .profile {

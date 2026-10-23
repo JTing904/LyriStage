@@ -55,3 +55,6 @@ dist-web/
 
 # 宣传影片的临时导演页和截图
 /src/renderer/public/promo
+
+# 排版检查的截图和报告（npm run layout:check）
+/scripts/layout-check/out

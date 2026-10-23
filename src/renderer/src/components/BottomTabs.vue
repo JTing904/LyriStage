@@ -2,6 +2,7 @@
 // 手机版底部的 Tab
 import Icon from './Icon.vue';
 import { useFriendsStore } from '../stores/friends';
+import { locale } from '../i18n';
 
 const friendsStore = useFriendsStore();
 
@@ -10,7 +11,8 @@ const TABS = [
   { to: '/search', icon: 'search', label: '搜索' },
   { to: '/friends', icon: 'friends', label: '好友' },
   { to: '/library', icon: 'library', label: '音乐库' },
-  { to: '/room', icon: 'users', label: '一起听' },
+  // 英文的 Listen Together 在五个分页里放不下，底部这里用短的
+  { to: '/room', icon: 'users', label: '一起听', en: 'Together' },
 ];
 </script>
 
@@ -29,7 +31,7 @@ const TABS = [
         <!-- 好友：新的邀请、还没看的回应 -->
         <span v-if="tab.to === '/friends' && friendsStore.badge" class="dot" :aria-label="$t('有新的好友动态')" />
       </span>
-      <span>{{ $t(tab.label) }}</span>
+      <span>{{ locale === 'en' && tab.en ? tab.en : $t(tab.label) }}</span>
     </RouterLink>
   </nav>
 </template>

@@ -580,6 +580,7 @@ header p {
 }
 .voice-btn {
   display: inline-flex;
+  white-space: nowrap;
   align-items: center;
   gap: 6px;
   height: 34px;

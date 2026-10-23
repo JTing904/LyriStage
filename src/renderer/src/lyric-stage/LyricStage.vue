@@ -184,7 +184,8 @@ onBeforeUnmount(() => {
         :aria-expanded="pickerOpen"
         @click="pickerOpen = !pickerOpen"
       >
-        {{ $t('风格：{name}', { name: $t(style.name) }) }}
+        <!-- 一起听房间里的位置比较窄：只写风格名字 -->
+        {{ embedded ? $t(style.name) : $t('风格：{name}', { name: $t(style.name) }) }}
       </button>
       <button v-if="embedded" class="pill" :title="$t('全屏歌词')" @click="emit('expand')">
         {{ $t('全屏') }}
@@ -377,6 +378,7 @@ button {
 }
 .pill {
   padding: 7px 14px;
+  white-space: nowrap;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(8px);
