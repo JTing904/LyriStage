@@ -13,7 +13,7 @@ import { useNoticeStore } from '../stores/notice';
 import { redirectTarget } from '../router';
 import AvatarFigure from '../components/AvatarFigure.vue';
 import Icon from '../components/Icon.vue';
-import { t } from '../i18n';
+import { LOCALES, locale, t } from '../i18n';
 import { humanMessage } from '../friendlyError';
 
 const auth = useAuthStore();
@@ -146,6 +146,19 @@ onBeforeUnmount(() => clearInterval(resendTimer));
     </aside>
 
     <main class="panel">
+      <!-- 还没登录也能换语言（第一次打开跟着系统，不对的话在这里换） -->
+      <div class="lang" role="group" :aria-label="$t('语言')">
+        <button
+          v-for="l in LOCALES"
+          :key="l.value"
+          type="button"
+          :class="{ on: locale === l.value }"
+          :aria-pressed="locale === l.value"
+          @click="locale = l.value"
+        >
+          {{ l.value === 'en' ? 'EN' : '中' }}
+        </button>
+      </div>
       <div class="form-wrap">
         <div class="logo display small">Lyri<span>Stage</span></div>
         <AvatarFigure class="mobile-figure" :url="avatar.url" />
@@ -410,6 +423,7 @@ onBeforeUnmount(() => clearInterval(resendTimer));
 
 /* 右边：表单 */
 .panel {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -590,6 +604,33 @@ button:disabled {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 22px;
   letter-spacing: 0.3em;
+}
+.lang {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 14px);
+  right: 16px;
+  z-index: 2;
+  display: flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface-hover);
+}
+.lang button {
+  min-width: 40px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lang button.on {
+  background: var(--bg);
+  color: var(--text);
 }
 .switch {
   margin: 0;

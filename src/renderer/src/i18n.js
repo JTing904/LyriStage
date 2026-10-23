@@ -19,7 +19,9 @@ function load() {
   } catch {
     // 读不到就用默认
   }
-  return 'zh-CN';
+  // 第一次打开：跟着手机 / 电脑的语言（中文系统用中文，其他都用英文）
+  const system = navigator.languages?.[0] ?? navigator.language ?? '';
+  return !system || /^zh/i.test(system) ? 'zh-CN' : 'en';
 }
 
 /** 目前的语言（'zh-CN' | 'en'），模板里用到 t() 的地方会跟着更新 */
