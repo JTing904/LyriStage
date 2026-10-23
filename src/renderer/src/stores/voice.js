@@ -18,6 +18,7 @@ import { isNativeApp, translateApiBase } from '../platform';
 import { useAuthStore } from './auth';
 import { useRoomStore } from './room';
 import { t } from '../i18n';
+import { humanMessage } from '../friendlyError';
 
 /** 声音大小超过这个就算在讲话（0~1 的 RMS） */
 const SPEAKING_LEVEL = 0.035;
@@ -250,7 +251,7 @@ export const useVoiceStore = defineStore('voice', () => {
       meterTimer = setInterval(measure, 120);
       status.value = 'on';
     } catch (err) {
-      error.value = err.message || String(err);
+      error.value = humanMessage(err, t('没加入语音'));
       await leave();
     }
   }

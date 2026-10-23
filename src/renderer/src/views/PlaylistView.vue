@@ -9,6 +9,7 @@ import { count, totalLength } from '../utils/format';
 import { t } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
 import TrackList from '../components/TrackList.vue';
+import LoadError from '../components/LoadError.vue';
 
 const route = useRoute();
 const { playAll, shuffleAll } = usePlayCollection();
@@ -32,7 +33,7 @@ async function load(id) {
     info.value = detail;
     tracks.value = songs;
   } catch (err) {
-    error.value = err.message || String(err);
+    error.value = err;
   } finally {
     loading.value = false;
   }
@@ -57,7 +58,7 @@ const meta = computed(() => {
 <template>
   <div class="page">
     <p v-if="loading" class="page-state">{{ $t('加载中…') }}</p>
-    <p v-else-if="error" class="page-state">{{ $t('歌单加载失败：{error}', { error }) }}</p>
+    <LoadError v-else-if="error" :error="error" :what="$t('歌单')" @retry="load(route.params.id)" />
     <template v-else-if="info">
       <CollectionHeader
         :kind="$t('歌单')"

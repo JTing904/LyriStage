@@ -12,6 +12,7 @@ import { redirectTarget } from '../router';
 import AvatarFigure from '../components/AvatarFigure.vue';
 import Icon from '../components/Icon.vue';
 import { t } from '../i18n';
+import { humanMessage } from '../friendlyError';
 
 const auth = useAuthStore();
 const avatar = useAvatarStore();
@@ -65,8 +66,8 @@ function describe(err) {
     return t('邮箱格式不对');
   if (/rate limit|too many/i.test(message)) return t('尝试太多次了，请稍后再试');
   if (/failed to fetch|network/i.test(message)) return t('连不上服务器，请检查网络');
-  // 自己丢出的中文错误（例如邀请码不对）有对照就换成目前的语言
-  return t(message);
+  // 自己丢出的中文错误（例如邀请码不对）有对照就换成目前的语言；其他的说人话
+  return humanMessage(err, t('没登录成功'));
 }
 
 async function run(action) {
@@ -180,7 +181,7 @@ function submitInvite() {
               {{ $t(p.label) }}
             </button>
             <p v-if="auth.oauthError" class="error" role="alert">
-              {{ $t('第三方登录失败：{error}', { error: auth.oauthError }) }}
+              {{ auth.oauthError }}
             </p>
             <div class="divider"><span />{{ $t('或用邮箱') }}<span /></div>
           </template>

@@ -8,6 +8,7 @@ import { totalLength } from '../utils/format';
 import { t, locale } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
 import TrackList from '../components/TrackList.vue';
+import LoadError from '../components/LoadError.vue';
 
 const { playAll, shuffleAll } = usePlayCollection();
 
@@ -21,7 +22,7 @@ async function load(force = false) {
   try {
     tracks.value = await getDailyRecommendations({ netease, force });
   } catch (err) {
-    error.value = err.message || String(err);
+    error.value = err;
   } finally {
     loading.value = false;
     refreshing.value = false;
@@ -68,7 +69,7 @@ const meta = computed(() =>
     </CollectionHeader>
 
     <p v-if="loading" class="page-state">{{ $t('正在按你的口味挑歌，第一次会久一点…') }}</p>
-    <p v-else-if="error" class="page-state">{{ $t('每日推荐加载失败：{error}', { error }) }}</p>
+    <LoadError v-else-if="error" :error="error" :what="$t('每日推荐')" @retry="load()" />
     <TrackList v-else :tracks="tracks" :context="context" />
   </div>
 </template>

@@ -19,6 +19,7 @@ import { useAuthStore } from './auth';
 import { useNoticeStore } from './notice';
 import { useFriendsStore } from './friends';
 import { t } from '../i18n';
+import { showError, explainError, humanMessage } from '../friendlyError';
 
 /** 可以点的表情（数据库也只接受这几个） */
 export const REACTIONS = ['❤️', '🔥', '😭', '😂', '👏', '🎶'];
@@ -382,7 +383,7 @@ export const useRoomStore = defineStore('room', () => {
       .eq('code', code.value)
       .select('code');
     if (err || !data?.length) {
-      useNoticeStore().show(t('转让失败：{error}', { error: err?.message ?? t('没有权限') }));
+      showError(err, t('没交出去'));
       return false;
     }
     const name = nameOf(memberId);
@@ -422,7 +423,7 @@ export const useRoomStore = defineStore('room', () => {
     const message = err?.message || String(err);
     error.value = /unauthorized|permission|denied/i.test(message)
       ? t('没有权限加入（要是 LyriStage 成员）')
-      : t('连不上房间：{error}', { error: message });
+      : humanMessage(err, t('连不上房间'));
     leave();
   }
 
@@ -656,7 +657,7 @@ export const useRoomStore = defineStore('room', () => {
         ? t('聊天还没开通：要先在 Supabase 执行聊天的 SQL')
         : /row-level security|policy/i.test(err.message)
           ? t('发不出去：发得太快了，或房间已经关了')
-          : t('发送失败：{error}', { error: err.message });
+          : explainError(err, t('没送出去')).message;
       // 原始错误记在主控台，方便查问题
       console.warn('[LyriStage] 聊天发送失败', err);
       useNoticeStore().show(message);
@@ -723,7 +724,7 @@ export const useRoomStore = defineStore('room', () => {
   async function answerKnock(id, accept) {
     knocks.value = knocks.value.filter(k => k.id !== id);
     const { error: err } = await getSupabase().rpc('answer_knock', { knock_id: id, accept });
-    if (err) useNoticeStore().show(t('操作失败：{error}', { error: err.message }));
+    if (err) showError(err, t('没改成功'));
   }
 
   // ---- 敲门（好友这边）----

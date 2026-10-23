@@ -3,7 +3,7 @@
 // - 电脑（宽 ≥ 900px）：左边侧边栏 + 中间内容 + 底部完整播放条
 // - 手机（窄，或手机横过来：矮又是触控）：内容 + 迷你播放条 + 底部 Tab
 // 歌词舞台是盖在最上面的全屏层
-import { computed, onUnmounted, ref, watch, defineAsyncComponent } from 'vue';
+import { computed, nextTick, onUnmounted, ref, shallowRef, watch, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { ApiError } from '@core/http/client';
@@ -40,6 +40,7 @@ import PlayerBar from './components/PlayerBar.vue';
 import QueuePanel from './components/QueuePanel.vue';
 import RoomReactions from './components/RoomReactions.vue';
 import { report, trackContext } from './errorReporter';
+import { explainError } from './friendlyError';
 // 歌词舞台、海报墙：打开时才载入（App 打开时不用等）
 const LyricStage = defineAsyncComponent(() => import('./lyric-stage/LyricStage.vue'));
 const QueueWall = defineAsyncComponent(() => import('./components/QueueWall.vue'));
@@ -80,6 +81,23 @@ watch(
   }
 );
 const notice = useNoticeStore();
+// 有对话框开着（加到歌单、便签…）时，提示放进最上面那个对话框里：
+// 放在外面会被对话框盖住，按钮也按不到（对话框外面的东西都按不到）
+const toastHost = shallowRef('body');
+watch(
+  () => notice.current?.id,
+  async () => {
+    await nextTick(); // 等「按了就关掉」的对话框先关
+    toastHost.value = [...document.querySelectorAll('dialog[open]')].pop() ?? 'body';
+  },
+  { flush: 'post' }
+);
+// 放着提示的对话框关掉了：提示搬回外面（不然跟着对话框一起不见）
+const rehostToast = () => {
+  if (toastHost.value !== 'body' && !toastHost.value.open) toastHost.value = [...document.querySelectorAll('dialog[open]')].pop() ?? 'body';
+};
+document.addEventListener('close', rehostToast, true);
+onUnmounted(() => document.removeEventListener('close', rehostToast, true));
 
 const ui = useUiStore();
 const { stageOpen } = storeToRefs(ui);
@@ -182,7 +200,7 @@ findAndroidUpdate().then(update => {
         notice.dismiss();
       }
     } catch (err) {
-      notice.show(t('更新失败：{error}', { error: err.message || err }), {
+      notice.show(explainError(err, t('新版本没下载成功')).message, {
         action: { label: t('改用浏览器下载'), run: () => openInBrowser(url) },
         duration: 20000,
       });
@@ -320,25 +338,27 @@ function onContentScroll() {
     <QueuePanel />
     <RoomReactions />
     <LoginPrompt />
-    <Transition name="toast">
-      <div v-if="notice.current" class="toast" role="status">
-        <span>{{ notice.current.message }}</span>
-        <button
-          v-if="notice.current.action"
-          class="toast-action"
-          @click="notice.current.action.run(), notice.dismiss()"
-        >
-          {{ notice.current.action.label }}
-        </button>
-        <span
-          v-if="notice.current.countdown"
-          :key="notice.current.id"
-          class="toast-countdown"
-          :style="{ animationDuration: `${notice.current.countdown}ms` }"
-          aria-hidden="true"
-        />
-      </div>
-    </Transition>
+    <Teleport :to="toastHost">
+      <Transition name="toast">
+        <div v-if="notice.current" class="toast" :class="{ 'in-dialog': toastHost !== 'body' }" role="status">
+          <span>{{ notice.current.message }}</span>
+          <button
+            v-if="notice.current.action"
+            class="toast-action"
+            @click="notice.current.action.run(), notice.dismiss()"
+          >
+            {{ notice.current.action.label }}
+          </button>
+          <span
+            v-if="notice.current.countdown"
+            :key="notice.current.id"
+            class="toast-countdown"
+            :style="{ animationDuration: `${notice.current.countdown}ms` }"
+            aria-hidden="true"
+          />
+        </div>
+      </Transition>
+    </Teleport>
 
     <QueueWall v-if="ui.wallOpen" @close="ui.wallOpen = false" />
 
@@ -449,6 +469,11 @@ function onContentScroll() {
   font-weight: 700;
   transform: translateX(-50%);
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+.toast.in-dialog {
+  /* 对话框（手机是从下面滑上来的面板）的按钮在下面：提示放上面，不要挡住 */
+  top: calc(env(safe-area-inset-top) + 16px);
+  bottom: auto;
 }
 .toast-countdown {
   position: absolute;

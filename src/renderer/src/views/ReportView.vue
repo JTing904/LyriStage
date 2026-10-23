@@ -12,6 +12,8 @@ import { t, locale } from '../i18n';
 import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
 import YearReview from '../components/YearReview.vue';
+import LoadError from '../components/LoadError.vue';
+import { showError } from '../friendlyError';
 
 // 年度回顾（像 Spotify Wrapped 的限动）
 const yearReview = ref(null);
@@ -35,7 +37,7 @@ async function load() {
     const rows = await listHistoryBetween(from, to);
     if (token === loadToken) report.value = buildReport(rows);
   } catch (err) {
-    if (token === loadToken) error.value = err.message || String(err);
+    if (token === loadToken) error.value = err;
   } finally {
     if (token === loadToken) loading.value = false;
   }
@@ -102,7 +104,7 @@ async function share(action) {
     } else await saveImage(blob, fileName);
   } catch (err) {
     if (err?.name !== 'AbortError' && !/cancel/i.test(err?.message ?? '')) {
-      notice.show(t('操作失败：{error}', { error: err.message || err }));
+      showError(err, t('没分享出去'));
     }
   } finally {
     busy.value = false;
@@ -134,7 +136,7 @@ async function share(action) {
     </div>
 
     <p v-if="loading" class="page-state">{{ $t('正在整理你的听歌记录…') }}</p>
-    <p v-else-if="error" class="page-state">{{ $t('载入失败：{error}', { error }) }}</p>
+    <LoadError v-else-if="error" :error="error" :what="$t('听歌报告')" @retry="load()" />
     <p v-else-if="!report?.plays" class="page-state">{{ $t('这段时间还没有听歌记录。多听几首再来看看！') }}</p>
 
     <template v-else>

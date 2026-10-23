@@ -7,6 +7,7 @@ import { canvasToBlob, renderLyricCard } from '../utils/shareCard';
 import { useNoticeStore } from '../stores/notice';
 import { t } from '../i18n';
 import Icon from '../components/Icon.vue';
+import { showError } from '../friendlyError';
 
 const emit = defineEmits(['close']);
 const { lines, lineIndex, track, palette, subText } = useStage();
@@ -78,7 +79,7 @@ async function run(action) {
   } catch (err) {
     // 用户在系统分享里按了取消，不算错误
     if (err?.name !== 'AbortError' && !/cancel/i.test(err?.message ?? '')) {
-      notice.show(t('操作失败：{error}', { error: err.message || err }));
+      showError(err, t('没分享出去'));
     }
   } finally {
     busy.value = false;

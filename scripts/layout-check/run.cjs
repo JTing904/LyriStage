@@ -146,6 +146,7 @@ function MOCK_MEMBERS() {
  * - reach：一定要按得到的东西（会卷过去，看有没有被盖住）
  * - seeLandscape：横屏时不用卷就要看得到的东西（例如一起听的聊天输入框）
  * - fits：[里面的东西, 外框]，里面的东西不能超出外框（外框写 viewport = 整个画面）
+ * - offline：先把 App 的网络关掉（检查完打开）
  */
 const PAGES = [
   { id: 'home', hash: '#/', reach: ['.search input'] },
@@ -189,6 +190,8 @@ const PAGES = [
     fits: [['dialog.add-dialog[open]', 'viewport']],
   },
   { id: 'artist', hash: '#/artist/6452', wait: 4000 },
+  // 断网时打开没看过的歌单：「连不上网络」的卡片
+  { id: 'load-error', hash: '#/playlist/2829883282', wait: 4000, offline: true },
   { id: 'settings', hash: '#/settings' },
   { id: 'settings-account', hash: '#/settings?c=account' },
   { id: 'settings-appearance', hash: '#/settings?c=appearance' },
@@ -715,6 +718,12 @@ async function main() {
           await page.evaluate(`${HELPERS}; STORE('room').createRoom()`);
           openedRoom = true;
         }
+        const cdp = p.offline ? await page.context().newCDPSession(page) : null;
+        const setOffline = on => cdp?.send('Network.emulateNetworkConditions', { offline: on, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+        if (cdp) {
+          await cdp.send('Network.enable');
+          await setOffline(true);
+        }
         if (p.stage) {
           // 全屏歌词（设备上最好有一首正在播的歌，不然只看得到空的舞台）
           await page.evaluate(`${HELPERS}; STORE('ui').stageOpen = true`);
@@ -733,6 +742,10 @@ async function main() {
         await page.evaluate(() => document.querySelectorAll('[data-lc]').forEach(el => ((el.style.outline = ''), el.removeAttribute('data-lc'))));
         if (p.close) await page.evaluate(`${HELPERS}; (${p.close.toString()})()`).catch(() => {});
         if (p.stage) await page.evaluate(`${HELPERS}; STORE('ui').stageOpen = false`);
+        if (cdp) {
+          await setOffline(false);
+          await cdp.detach().catch(() => {});
+        }
         await page.evaluate(() => (document.querySelector('.area-main') ?? document.scrollingElement)?.scrollTo(0, 0)).catch(() => {});
         results.push({ name, profile: profile.label, locale, theme, page: p.id, width, height, issues });
         const markText = issues.length ? `✗ ${issues.length}` : '✓';

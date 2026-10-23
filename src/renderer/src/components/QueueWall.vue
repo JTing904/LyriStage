@@ -17,6 +17,7 @@ import { canvasToBlob, renderQueueWallCard } from '../utils/shareCard';
 import { t as tr } from '../i18n';
 import Cover from './Cover.vue';
 import Icon from './Icon.vue';
+import { showError } from '../friendlyError';
 
 const emit = defineEmits(['close']);
 const { state, player } = usePlayer();
@@ -99,7 +100,7 @@ async function share() {
     else await saveImage(blob, fileName);
   } catch (err) {
     if (err?.name !== 'AbortError' && !/cancel/i.test(err?.message ?? '')) {
-      notice.show(tr('操作失败：{error}', { error: err.message || err }));
+      showError(err, tr('没分享出去'));
     }
   } finally {
     sharing.value = false;

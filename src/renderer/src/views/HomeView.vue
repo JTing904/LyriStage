@@ -14,6 +14,7 @@ import { t, locale } from '../i18n';
 import AvatarFigure from '../components/AvatarFigure.vue';
 import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
+import LoadError from '../components/LoadError.vue';
 
 const router = useRouter();
 const { state, player } = usePlayer();
@@ -62,6 +63,8 @@ const newSongs = ref(cached?.newSongs ?? []);
 const charts = ref(cached?.charts ?? []);
 const loading = ref(!cached);
 const failed = ref(false);
+/** 失败的原因（三块都没拿到时整块换成「载不出来」的卡片） */
+const failedError = ref(null);
 
 /** 推荐歌单、新歌、排行榜；哪一块失败就显示「重试」（Vercel 太久没用时第一次会比较慢） */
 async function load() {
@@ -77,6 +80,7 @@ async function load() {
   if (c.status === 'fulfilled') charts.value = c.value.slice(0, 4);
   // 有拿到新的才算失败（有上次的内容就不用显示「重试」吓人）
   failed.value = [p, s, c].some(r => r.status === 'rejected') && !cached;
+  failedError.value = [p, s, c].find(r => r.status === 'rejected')?.reason ?? null;
   loading.value = false;
   try {
     localStorage.setItem(
@@ -187,7 +191,13 @@ const clock = ms => {
     <!-- 好友开着「一起听」：按「请求加入」，房主同意才进得去（朋友正在听、周榜在好友页） -->
     <FriendRooms />
 
-    <p v-if="failed" class="retry">
+    <LoadError
+      v-if="failed && !playlists.length && !newSongs.length && !charts.length"
+      :error="failedError"
+      :what="$t('推荐')"
+      @retry="load"
+    />
+    <p v-else-if="failed" class="retry">
       {{ $t('有些内容没有载入成功。') }}
       <button :disabled="loading" @click="load">{{ loading ? $t('载入中…') : $t('重试') }}</button>
     </p>

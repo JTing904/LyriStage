@@ -12,6 +12,7 @@ import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
 import TileGrid from '../components/TileGrid.vue';
 import TrackList from '../components/TrackList.vue';
+import LoadError from '../components/LoadError.vue';
 
 const TABS = [
   { id: 'all', label: '综合' },
@@ -107,7 +108,7 @@ async function load() {
       }
     }
   } catch (err) {
-    if (id === requestId) error.value = err.message || String(err);
+    if (id === requestId) error.value = err;
   } finally {
     if (id === requestId) loading.value = false;
   }
@@ -127,7 +128,7 @@ async function loadMore() {
     items.value = [...items.value, ...list];
     hasMore.value = list.length === PAGE;
   } catch (err) {
-    error.value = err.message || String(err);
+    error.value = err;
   } finally {
     loadingMore.value = false;
   }
@@ -214,7 +215,7 @@ const empty = computed(() =>
       </nav>
 
       <p v-if="loading" class="page-state">{{ $t('搜索中…') }}</p>
-      <p v-else-if="error" class="page-state">{{ $t('搜索失败：{error}', { error }) }}</p>
+      <LoadError v-else-if="error" :error="error" :what="$t('搜索结果')" @retry="load()" />
       <p v-else-if="empty" class="page-state">{{ $t('没有找到「{q}」相关的结果', { q }) }}</p>
 
       <!-- 综合 -->

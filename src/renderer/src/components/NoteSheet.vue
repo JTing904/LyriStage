@@ -12,6 +12,7 @@ import { artistNames, timeAgo } from '../utils/format';
 import { t } from '../i18n';
 import Cover from './Cover.vue';
 import Icon from './Icon.vue';
+import { showError } from '../friendlyError';
 
 const auth = useAuthStore();
 const friendsStore = useFriendsStore();
@@ -65,9 +66,7 @@ async function react(emoji) {
     await friendsStore.react(id, emoji, note?.body ? 'note' : 'listening', note?.body || song?.name || '');
     sent.value = new Set(sent.value).add(emoji);
   } catch (err) {
-    notice.show(
-      err?.code === '54000' ? t('送太多了，等一下再送') : t('送不出去：{error}', { error: err.message || err })
-    );
+    showError(err, t('没送出去'));
   }
 }
 
@@ -102,7 +101,7 @@ async function share() {
     notice.show(t('便签分享给好友了，24 小时后自动消失'));
     close();
   } catch (err) {
-    notice.show(t('分享失败：{error}', { error: err.message || err }));
+    showError(err, t('没分享出去'));
   } finally {
     busy.value = false;
   }
@@ -113,7 +112,7 @@ async function remove() {
     await friendsStore.deleteNote();
     close();
   } catch (err) {
-    notice.show(t('删除失败：{error}', { error: err.message || err }));
+    showError(err, t('没删掉'));
   } finally {
     busy.value = false;
   }

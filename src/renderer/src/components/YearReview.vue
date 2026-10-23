@@ -12,6 +12,7 @@ import { canvasToBlob, renderStoryCard } from '../utils/shareCard';
 import { useNoticeStore } from '../stores/notice';
 import { t } from '../i18n';
 import Icon from './Icon.vue';
+import { showError, explainError } from '../friendlyError';
 
 const SLIDE_MS = 7000;
 const notice = useNoticeStore();
@@ -48,7 +49,7 @@ async function load() {
     line.value = lyrics ? mostRepeatedLine(lyrics.lines) : null;
     palettes.value = { song: songPalette, artist: artistPalette };
   } catch (err) {
-    error.value = err.message || String(err);
+    error.value = explainError(err, t('一年回顾载不出来')).message;
   } finally {
     loading.value = false;
   }
@@ -262,7 +263,7 @@ async function shareSlide() {
     else await saveImage(blob, fileName);
   } catch (err) {
     if (err?.name !== 'AbortError' && !/cancel/i.test(err?.message ?? '')) {
-      notice.show(t('操作失败：{error}', { error: err.message || err }));
+      showError(err, t('没分享出去'));
     }
   } finally {
     sharing.value = false;
@@ -328,7 +329,7 @@ async function shareSlide() {
     </div>
     <div v-else class="story waiting" style="--c1: #ff3b5c; --c2: #5b21b6">
       <button class="close" :aria-label="$t('关闭')" @click="close"><Icon name="x" :size="22" /></button>
-      <p class="sub">{{ error ? $t('载入失败：{error}', { error }) : $t('正在整理你的一年…') }}</p>
+      <p class="sub">{{ error || $t('正在整理你的一年…') }}</p>
     </div>
   </dialog>
 </template>

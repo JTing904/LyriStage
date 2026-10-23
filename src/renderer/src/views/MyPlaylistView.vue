@@ -21,6 +21,8 @@ import { squareCover } from '../utils/image';
 import { getPalette } from '../lyric-stage/palette';
 import { canShareImage, saveImage, shareImage } from '../platform';
 import { canvasToBlob, renderPlaylistCard } from '../utils/shareCard';
+import LoadError from '../components/LoadError.vue';
+import { showError } from '../friendlyError';
 
 const route = useRoute();
 const router = useRouter();
@@ -48,7 +50,7 @@ async function load(id) {
       playlist.value.tracks = applyPrivileges(playlist.value.tracks, privileges);
     });
   } catch (err) {
-    error.value = err.message || String(err);
+    error.value = err;
   } finally {
     loading.value = false;
   }
@@ -75,7 +77,7 @@ async function remove(list) {
     await library.removeFromPlaylist(playlistId, [...ids]);
   } catch (err) {
     playlist.value.tracks = before;
-    library.say(t('移除失败：{error}', { error: err.message || err }));
+    showError(err, t('没移除成功'));
     return;
   }
   useNoticeStore().undo(
@@ -93,7 +95,7 @@ async function restore(playlistId, removed) {
   } catch (err) {
     const ids = new Set(removed.map(t => t.id));
     if (showing()) playlist.value.tracks = playlist.value.tracks.filter(t => !ids.has(t.id));
-    library.say(t('复原失败：{error}', { error: err.message || err }));
+    showError(err, t('没复原成功'));
   }
 }
 
@@ -131,7 +133,7 @@ async function startSharing() {
     await loadPeople();
     library.refreshPlaylists();
   } catch (err) {
-    library.say(t('操作失败：{error}', { error: err.message || err }));
+    showError(err, t('没改成功'));
   } finally {
     shareBusy.value = false;
   }
@@ -144,7 +146,7 @@ async function stopSharing() {
     people.value = [];
     library.refreshPlaylists();
   } catch (err) {
-    library.say(t('操作失败：{error}', { error: err.message || err }));
+    showError(err, t('没改成功'));
   } finally {
     shareBusy.value = false;
   }
@@ -164,7 +166,7 @@ async function leave() {
     await library.refreshPlaylists();
     router.replace('/library');
   } catch (err) {
-    library.say(t('操作失败：{error}', { error: err.message || err }));
+    showError(err, t('没改成功'));
   }
 }
 
@@ -195,7 +197,7 @@ async function sharePoster() {
     else await saveImage(blob, fileName);
   } catch (err) {
     if (err?.name !== 'AbortError' && !/cancel/i.test(err?.message ?? '')) {
-      library.say(t('操作失败：{error}', { error: err.message || err }));
+      showError(err, t('没分享出去'));
     }
   } finally {
     posterBusy.value = false;
@@ -211,7 +213,7 @@ async function addSongs(list) {
     await library.addToPlaylist(playlist.value.id, list);
     playlist.value = await getPlaylist(playlist.value.id);
   } catch (err) {
-    library.say(t('加入失败：{error}', { error: err.message || err }));
+    showError(err, t('没加进去'));
   } finally {
     adding.value = false;
   }
@@ -268,7 +270,7 @@ async function save() {
     resetCoverChoice();
     editor.value.close();
   } catch (err) {
-    library.say(t('保存失败：{error}', { error: err.message || err }));
+    showError(err, t('没保存成功'));
   } finally {
     saving.value = false;
   }
@@ -315,7 +317,7 @@ async function removePlaylist() {
     await library.deletePlaylist(playlist.value.id);
     router.replace('/library');
   } catch (err) {
-    library.say(t('删除失败：{error}', { error: err.message || err }));
+    showError(err, t('没删掉'));
   }
 }
 </script>
@@ -323,7 +325,7 @@ async function removePlaylist() {
 <template>
   <div class="page">
     <p v-if="loading && !playlist" class="page-state">{{ $t('加载中…') }}</p>
-    <p v-else-if="error" class="page-state">{{ $t('歌单加载失败：{error}', { error }) }}</p>
+    <LoadError v-else-if="error" :error="error" :what="$t('歌单')" @retry="load(route.params.id)" />
     <template v-else-if="playlist">
       <CollectionHeader
         :kind="isShared ? $t('共同歌单') : $t('我的歌单')"

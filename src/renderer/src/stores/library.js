@@ -19,6 +19,7 @@ import {
 import { useAuthStore } from './auth';
 import { useNoticeStore } from './notice';
 import { t } from '../i18n';
+import { showError } from '../friendlyError';
 
 export const useLibraryStore = defineStore('library', () => {
   const auth = useAuthStore();
@@ -71,7 +72,7 @@ export const useLibraryStore = defineStore('library', () => {
       version.value++;
     } catch (err) {
       likedIds.value = before;
-      say(t('操作失败：{error}', { error: err.message || err }));
+      showError(err, t('没改成功'), { retry: () => toggleLike(track) });
       return;
     }
     // 在「我喜欢的音乐」里取消（歌会从列表消失）：可以复原，用原本喜欢的时间放回原位
@@ -87,7 +88,7 @@ export const useLibraryStore = defineStore('library', () => {
       version.value++;
     } catch (err) {
       likedIds.value = likedIds.value.filter(x => x !== id);
-      say(t('操作失败：{error}', { error: err.message || err }));
+      showError(err, t('没复原成功'));
     }
   }
 
@@ -96,7 +97,7 @@ export const useLibraryStore = defineStore('library', () => {
     try {
       playlists.value = await listPlaylists();
     } catch (err) {
-      say(t('歌单载入失败：{error}', { error: err.message || err }));
+      showError(err, t('歌单载不出来'));
     }
   }
 

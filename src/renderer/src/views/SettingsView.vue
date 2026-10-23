@@ -33,6 +33,7 @@ import { pushSupported, pushWanted, setPushWanted } from '../push';
 import { OFFLINE_LIMITS, offlineBytes, offlineSettings, offlineSupported, offlineTracks, saveOfflineSettings } from '../offline';
 import { t, locale, LOCALES } from '../i18n';
 import { timeAgo } from '../utils/format';
+import { showError, humanMessage } from '../friendlyError';
 
 // ---- 锁屏歌词（Android App）----
 const lockLyrics = ref(isLockScreenLyricsOn());
@@ -230,7 +231,7 @@ async function exportData() {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     await saveFile(blob, `LyriStage-my-data-${new Date().toISOString().slice(0, 10)}.json`);
   } catch (err) {
-    if (err?.name !== 'AbortError') library.say(t('导出失败：{error}', { error: err.message || String(err) }));
+    if (err?.name !== 'AbortError') showError(err, t('没导出成功'));
   } finally {
     exporting.value = false;
   }
@@ -256,7 +257,7 @@ async function removeAccount() {
     window.location.hash = '#/';
     window.location.reload();
   } catch (err) {
-    library.say(t('删除失败：{error}', { error: err.message || String(err) }));
+    showError(err, t('没删掉'));
   } finally {
     deleting.value = false;
   }
@@ -272,7 +273,7 @@ async function clearAllHistory() {
     clearBox.value.close();
     library.say(t('听歌记录已经清除'));
   } catch (err) {
-    library.say(t('清除失败：{error}', { error: err.message || String(err) }));
+    showError(err, t('没清除成功'));
   } finally {
     clearing.value = false;
   }
@@ -346,7 +347,7 @@ async function saveProfile() {
     cancelEdit();
     library.say(t('资料已更新'));
   } catch (err) {
-    profileError.value = t('保存失败：{error}', { error: t(err.message || String(err)) });
+    profileError.value = humanMessage(err, t('没保存成功'));
   } finally {
     saving.value = false;
   }

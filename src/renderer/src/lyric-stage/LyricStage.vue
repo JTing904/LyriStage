@@ -10,6 +10,8 @@ import { setKeepAwake } from '../keepAwake';
 import PlayerBar from '../components/PlayerBar.vue';
 import StylePicker from './StylePicker.vue';
 import ShareLyricsDialog from './ShareLyricsDialog.vue';
+import { explainError } from '../friendlyError';
+import { t } from '../i18n';
 
 const props = defineProps({
   state: { type: Object, required: true },
@@ -23,6 +25,7 @@ const emit = defineEmits(['close', 'expand']);
 
 const stage = provideStage(props);
 const { settings, track, lyrics, lyricsError, lines, retryLyrics } = stage;
+const lyricsErrorText = computed(() => lyricsError.value && explainError(lyricsError.value, t('歌词载不出来')).message);
 const style = computed(() => findStyle(settings.style));
 
 const status = computed(() => {
@@ -160,7 +163,7 @@ onBeforeUnmount(() => {
         <template v-else-if="status === 'no-lyrics'"
           >{{ $t('这首歌暂时没有歌词') }}</template
         >
-        <template v-else>{{ $t('歌词加载失败：{error}', { error: lyricsError?.message }) }}</template>
+        <template v-else>{{ lyricsErrorText }}</template>
       </p>
       <button v-if="status === 'error'" class="retry" @click="retryLyrics">{{ $t('重试') }}</button>
     </div>

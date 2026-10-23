@@ -5,6 +5,7 @@ import { useLibraryStore } from '../stores/library';
 import PlaylistCover from './PlaylistCover.vue';
 import Icon from './Icon.vue';
 import { t } from '../i18n';
+import { showError } from '../friendlyError';
 
 const library = useLibraryStore();
 const tracks = computed(() => library.pendingTracks);
@@ -41,7 +42,7 @@ async function addChosen() {
     await library.addToPlaylists([...chosen.value], tracks.value);
     library.closeAddDialog();
   } catch (err) {
-    library.say(t('加入失败：{error}', { error: err.message || err }));
+    showError(err, t('没加进去'), { retry: addChosen });
   } finally {
     busy.value = false;
   }
@@ -64,7 +65,7 @@ async function create() {
     newName.value = '';
     creating.value = false;
   } catch (err) {
-    library.say(t('新建失败：{error}', { error: err.message || err }));
+    showError(err, t('没建立成功'));
   } finally {
     busy.value = false;
   }

@@ -15,6 +15,7 @@ import FriendNotes from '../components/FriendNotes.vue';
 import FriendRooms from '../components/FriendRooms.vue';
 import NoteSheet from '../components/NoteSheet.vue';
 import Icon from '../components/Icon.vue';
+import { showError, humanMessage } from '../friendlyError';
 
 const friendsStore = useFriendsStore();
 const notice = useNoticeStore();
@@ -71,7 +72,7 @@ async function add() {
     addResult.value = { ok, text: t(RESULT[result] ?? RESULT.sent) };
     if (ok) code.value = '';
   } catch (err) {
-    addResult.value = { ok: false, text: t('送出失败：{error}', { error: err.message || err }) };
+    addResult.value = { ok: false, text: humanMessage(err, t('好友邀请没送出去')) };
   } finally {
     busy.value = false;
   }
@@ -117,7 +118,7 @@ async function answer(person, accept) {
     await friendsStore.answer(person.id, accept);
     notice.show(accept ? t('你和 {name} 现在是好友了', { name: person.name }) : t('已拒绝'));
   } catch (err) {
-    notice.show(t('操作失败：{error}', { error: err.message || err }));
+    showError(err, t('没改成功'));
   }
 }
 
@@ -133,7 +134,7 @@ async function confirmRemove() {
   try {
     await friendsStore.remove(person.id);
   } catch (err) {
-    notice.show(t('操作失败：{error}', { error: err.message || err }));
+    showError(err, t('没改成功'));
   }
 }
 
@@ -157,14 +158,14 @@ async function toggleShare(on) {
   try {
     await friendsStore.setShareListening(on);
   } catch (err) {
-    notice.show(t('保存失败：{error}', { error: err.message || err }));
+    showError(err, t('没保存成功'));
   }
 }
 async function togglePrivate() {
   try {
     await friendsStore.setPrivateMode(!friendsStore.inPrivateMode);
   } catch (err) {
-    notice.show(t('保存失败：{error}', { error: err.message || err }));
+    showError(err, t('没保存成功'));
   }
 }
 </script>

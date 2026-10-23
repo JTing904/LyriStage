@@ -19,6 +19,7 @@ import {
 } from '@core/data';
 import { isElectron, isNativeApp, onAuthCallback, openAuthPage } from '../platform';
 import { t } from '../i18n';
+import { humanMessage } from '../friendlyError';
 
 const PROVIDER_LABEL = { github: 'GitHub', google: 'Google', email: '邮箱' };
 
@@ -118,7 +119,7 @@ export const useAuthStore = defineStore('auth', () => {
         try {
           await finishOAuth(location.href);
         } catch (err) {
-          oauthError.value = err.message || String(err);
+          oauthError.value = humanMessage(err, t('第三方登录没成功'));
         }
         history.replaceState(null, '', location.pathname + location.hash);
       }
@@ -142,7 +143,7 @@ export const useAuthStore = defineStore('auth', () => {
   onAuthCallback(url => {
     oauthError.value = '';
     finishOAuth(url).catch(err => {
-      oauthError.value = err.message || String(err);
+      oauthError.value = humanMessage(err, t('第三方登录没成功'));
     });
   });
 

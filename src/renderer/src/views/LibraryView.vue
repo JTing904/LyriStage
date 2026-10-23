@@ -15,6 +15,7 @@ import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
 import TileGrid from '../components/TileGrid.vue';
 import { offlineSupported, offlineTracks } from '../offline';
+import { showError } from '../friendlyError';
 
 const library = useLibraryStore();
 const friendsStore = useFriendsStore();
@@ -30,7 +31,7 @@ async function loadLiked() {
   try {
     likedRows.value = await listLikedTracks();
   } catch (err) {
-    library.say(t('载入失败：{error}', { error: err.message || err }));
+    showError(err, t('载不出来'));
   } finally {
     likedReady.value = true;
   }
@@ -102,7 +103,7 @@ async function join() {
     await library.refreshPlaylists();
     router.push(`/my/${id}`);
   } catch (err) {
-    library.say(t('加入失败：{error}', { error: err.message || err }));
+    showError(err, t('没加进去'));
   }
 }
 
@@ -117,7 +118,7 @@ async function create() {
     newName.value = '';
     creating.value = false;
   } catch (err) {
-    library.say(t('新建失败：{error}', { error: err.message || err }));
+    showError(err, t('没建立成功'));
   }
 }
 </script>

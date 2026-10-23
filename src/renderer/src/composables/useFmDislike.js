@@ -3,6 +3,7 @@ import { dislikeTrack } from '@core/data';
 import { usePlayer } from './usePlayer';
 import { useNoticeStore } from '../stores/notice';
 import { t } from '../i18n';
+import { showError } from '../friendlyError';
 
 export function useFmDislike() {
   const { state, player } = usePlayer();
@@ -17,7 +18,7 @@ export function useFmDislike() {
       player.getFmSource()?.invalidate?.();
       notice.show(t('以后会少推荐这类歌'));
     } catch (err) {
-      notice.show(t('操作失败：{error}', { error: err.message || err }));
+      showError(err, t('没改成功'));
     }
   };
 }
