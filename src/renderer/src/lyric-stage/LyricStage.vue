@@ -61,7 +61,9 @@ function wake() {
   controlsVisible.value = true;
   clearTimeout(hideTimer);
   hideTimer = setTimeout(() => {
-    if (!pickerOpen.value) controlsVisible.value = false;
+    // 风格面板、睡眠定时选单开着时不要藏（藏了就按不到选单）
+    if (pickerOpen.value || document.querySelector('.sleep-menu')) return wake();
+    controlsVisible.value = false;
   }, 3000);
 }
 

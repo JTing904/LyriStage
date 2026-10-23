@@ -173,11 +173,12 @@ const clock = ms => {
       <div class="card continue">
         <span class="label">{{ $t('继续播放') }}</span>
         <p v-if="continueList.length === 0" class="empty">{{ $t('播过的歌会出现在这里') }}</p>
+        <!-- 从这首开始，接着播最近播过的（不是播完一首就停） -->
         <button
-          v-for="track in continueList"
+          v-for="(track, i) in continueList"
           :key="track.id"
           class="row"
-          @click="player.playList([track], 0, 'recent')"
+          @click="player.playList([...recent.tracks], i, 'recent')"
         >
           <Cover :url="track.al?.picUrl" :size="44" />
           <span class="meta">

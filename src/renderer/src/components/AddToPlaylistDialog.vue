@@ -1,6 +1,8 @@
 <script setup>
-// 「加到歌单」对话框：勾选一个或好几个歌单，按「加入」一次加进去；也可以马上新建一个
+// 「加到歌单」对话框：勾选一个或好几个歌单，按「加入」一次加进去；也可以马上新建一个（建好就加进去、关掉）
+// 已经有这首歌的歌单写「已加入」，不能再勾
 import { computed, nextTick, ref, watch } from 'vue';
+import { countTracksInPlaylists } from '@core/data';
 import { useLibraryStore } from '../stores/library';
 import PlaylistCover from './PlaylistCover.vue';
 import Icon from './Icon.vue';
@@ -16,12 +18,20 @@ const busy = ref(false);
 const nameInput = ref(null);
 /** 勾选的歌单 id */
 const chosen = ref(new Set());
+/** 歌单 id → 已经有其中几首（查不到就是空的，照常可以勾） */
+const already = ref(new Map());
+/** 全部都有了：不能再勾 */
+const hasAll = id => (already.value.get(id) ?? 0) >= (tracks.value?.length ?? 1);
 
 watch(tracks, value => {
   if (value) {
     newName.value = '';
     creating.value = false;
     chosen.value = new Set();
+    already.value = new Map();
+    countTracksInPlaylists(value.map(track => track.id))
+      .then(counts => tracks.value === value && (already.value = counts))
+      .catch(() => {});
     nextTick(() => dialog.value?.showModal());
   } else {
     dialog.value?.close();
@@ -29,6 +39,7 @@ watch(tracks, value => {
 });
 
 function toggle(id) {
+  if (hasAll(id)) return;
   const next = new Set(chosen.value);
   if (next.has(id)) next.delete(id);
   else next.add(id);
@@ -54,21 +65,24 @@ async function startCreate() {
   nameInput.value?.focus();
 }
 
-/** 新建的歌单自动勾上 */
+/** 新建歌单：建好就把歌加进去（连同已经勾的歌单），关掉对话框 */
 async function create() {
   const name = newName.value.trim();
   if (!name || busy.value) return;
   busy.value = true;
+  let row;
   try {
-    const row = await library.createPlaylist(name);
-    chosen.value = new Set([...chosen.value, row.id]);
-    newName.value = '';
-    creating.value = false;
+    row = await library.createPlaylist(name);
   } catch (err) {
     showError(err, t('没建立成功'));
-  } finally {
     busy.value = false;
+    return;
   }
+  chosen.value = new Set([...chosen.value, row.id]);
+  newName.value = '';
+  creating.value = false;
+  busy.value = false;
+  await addChosen();
 }
 
 const title = computed(() => {
@@ -102,18 +116,22 @@ const title = computed(() => {
         <li v-for="p in library.playlists" :key="p.id">
           <button
             class="row"
-            :class="{ on: chosen.has(p.id) }"
+            :class="{ on: chosen.has(p.id), done: hasAll(p.id) }"
             :aria-pressed="chosen.has(p.id)"
-            :disabled="busy"
+            :disabled="busy || hasAll(p.id)"
             @click="toggle(p.id)"
           >
-            <span class="check" :class="{ on: chosen.has(p.id) }" aria-hidden="true">
+            <span v-if="hasAll(p.id)" class="done-tag">{{ $t('已加入') }}</span>
+            <span v-else class="check" :class="{ on: chosen.has(p.id) }" aria-hidden="true">
               <svg v-if="chosen.has(p.id)" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10" /></svg>
             </span>
             <PlaylistCover :cover="p.cover_url" :covers="p.covers" :name="p.name" :size="44" radius="8px" class="cover" />
             <span class="meta">
               <strong>{{ p.name }}</strong>
-              <span>{{ $t('{n} 首', { n: p.trackCount }) }}</span>
+              <span>
+                {{ $t('{n} 首', { n: p.trackCount }) }}<template v-if="already.get(p.id) && !hasAll(p.id)">
+                  · {{ $t('已经有其中 {n} 首', { n: already.get(p.id) }) }}</template>
+              </span>
             </span>
           </button>
         </li>
@@ -211,6 +229,23 @@ h2 {
   height: 20px;
   border: 2px solid var(--line-strong);
   border-radius: 6px;
+}
+.done-tag {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-hover);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.row.done {
+  cursor: default;
+}
+.row.done .meta,
+.row.done .cover {
+  opacity: 0.55;
 }
 .check.on {
   border-color: var(--accent);

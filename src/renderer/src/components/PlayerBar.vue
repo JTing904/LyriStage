@@ -3,7 +3,7 @@
 // - 完整（默认，参考 YouTube Music）：贴满底部，最上面一条细进度条，
 //   左边播放控制和时间，中间封面和歌名，右边音量 / 循环 / 随机
 // - 精简（compact）：放在底部中间，封面和歌名在上，进度条两边是时间，下面一排按钮；歌词舞台用
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import LikeButton from './LikeButton.vue';
 import AddToPlaylistButton from './AddToPlaylistButton.vue';
 import Icon from './Icon.vue';
@@ -22,6 +22,15 @@ const auth = useAuthStore();
 const dislike = useFmDislike();
 /** 一起听的成员：播放键、进度条变灰（还是按得到，按了会说只有房主能控制） */
 const locked = computed(useRoomLocked());
+
+// 歌词舞台的睡眠定时选单（点外面就关）
+const SLEEP_OPTIONS = [15, 30, 60];
+const sleepMenu = ref(false);
+const closeSleepMenu = event => {
+  if (sleepMenu.value && !event.target.closest?.('.sleep-wrap')) sleepMenu.value = false;
+};
+document.addEventListener('pointerdown', closeSleepMenu, true);
+onBeforeUnmount(() => document.removeEventListener('pointerdown', closeSleepMenu, true));
 
 const props = defineProps({
   state: { type: Object, required: true },
@@ -305,6 +314,29 @@ function toggleMute() {
         >
           <Icon name="dislike" :size="20" />
         </button>
+        <!-- 歌词舞台：睡眠定时（开着时写还剩多久）；完整播放条的在播放队列面板里 -->
+        <span v-if="compact" class="sleep-wrap">
+          <button
+            class="icon toggle sleep-btn"
+            :class="{ on: sleep.active }"
+            :title="$t('睡眠定时')"
+            :aria-label="$t('睡眠定时')"
+            :aria-expanded="sleepMenu"
+            @click="sleepMenu = !sleepMenu"
+          >
+            <Icon name="moon" :size="20" />
+            <span v-if="sleep.active" class="sleep-left">{{ sleep.afterSong ? $t('这首') : sleep.remaining }}</span>
+          </button>
+          <div v-if="sleepMenu" class="sleep-menu" role="menu">
+            <button v-for="m in SLEEP_OPTIONS" :key="m" role="menuitem" @click="(sleep.start(m), (sleepMenu = false))">
+              {{ $t('{n} 分钟', { n: m }) }}
+            </button>
+            <button role="menuitem" @click="(sleep.startAfterSong(), (sleepMenu = false))">{{ $t('这首播完') }}</button>
+            <button v-if="sleep.active" role="menuitem" class="off" @click="(sleep.cancel(), (sleepMenu = false))">
+              {{ $t('关掉睡眠定时') }}
+            </button>
+          </div>
+        </span>
         <button
           class="icon toggle queue-btn"
           :class="{ on: ui.queueOpen }"
@@ -314,7 +346,7 @@ function toggleMute() {
           @click="ui.queueOpen = !ui.queueOpen"
         >
           <Icon name="queue" :size="20" />
-          <span v-if="sleep.active" class="sleep-dot" aria-hidden="true"><Icon name="moon" :size="10" /></span>
+          <span v-if="sleep.active && !compact" class="sleep-dot" aria-hidden="true"><Icon name="moon" :size="10" /></span>
         </button>
         <div class="volume">
           <button
@@ -412,6 +444,60 @@ function toggleMute() {
   background: rgba(0, 0, 0, 0.08);
 }
 
+.sleep-wrap {
+  position: relative;
+  display: flex;
+}
+button.icon.sleep-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 40px;
+  gap: 4px;
+  padding: 0 8px;
+  border-radius: 999px;
+}
+.sleep-left {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.sleep-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 5;
+  display: grid;
+  min-width: 160px;
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(20, 20, 22, 0.92);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  color: #fff;
+  text-shadow: none;
+  transform: translateX(-50%);
+}
+.sleep-menu button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sleep-menu button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.sleep-menu .off {
+  color: #ff8fa3;
+}
 .queue-btn {
   position: relative;
 }

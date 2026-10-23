@@ -227,6 +227,24 @@ export async function addTracksToPlaylist(
 }
 
 /**
+ * 「加到歌单」对话框：哪些歌单已经有这几首歌
+ * @param {Array<string | number>} trackIds
+ * @returns {Promise<Map<string, number>>} 歌单 id → 已经有其中几首
+ */
+export async function countTracksInPlaylists(trackIds, source = DEFAULT_SOURCE) {
+  const rows = unwrap(
+    await requireSupabase()
+      .from('playlist_tracks')
+      .select('playlist_id')
+      .eq('source', source)
+      .in('track_id', trackIds.map(String))
+  );
+  const counts = new Map();
+  for (const { playlist_id: id } of rows) counts.set(id, (counts.get(id) ?? 0) + 1);
+  return counts;
+}
+
+/**
  * 复原刚移除的歌：放回原本的 position；共同歌单记回原本是谁加的
  * @param {Array<Record<string, any> & { position: number, addedBy?: string | null }>} tracks
  */

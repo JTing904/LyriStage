@@ -495,4 +495,10 @@ export default {
   网络恢复了: 'Back online',
   没有网络: 'No internet',
   听存在手机的歌: 'Saved songs',
+  // 加到歌单
+  已加入: 'Added',
+  '已经有其中 {n} 首': 'already has {n}',
+  // 歌词舞台的睡眠定时
+  这首: 'Song',
+  关掉睡眠定时: 'Turn off sleep timer',
 };
