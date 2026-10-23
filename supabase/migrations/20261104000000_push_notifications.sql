@@ -25,6 +25,8 @@ create table if not exists public.push_tokens (
 create index if not exists push_tokens_user on public.push_tokens (user_id);
 alter table public.push_tokens enable row level security;
 revoke all on public.push_tokens from anon, authenticated;
+-- 只有 Edge Function（service_role）读得到：查要送哪几台、删掉失效的
+grant select, delete on public.push_tokens to service_role;
 
 /** 这台手机要收通知（换了账号登录的话，代号改记到新账号） */
 create or replace function public.register_push_token(token text, locale text default 'zh-CN')
