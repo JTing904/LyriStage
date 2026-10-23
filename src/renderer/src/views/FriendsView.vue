@@ -16,6 +16,7 @@ import FriendRooms from '../components/FriendRooms.vue';
 import NoteSheet from '../components/NoteSheet.vue';
 import Icon from '../components/Icon.vue';
 import { showError, humanMessage } from '../friendlyError';
+import { shareLink } from '../platform';
 
 const friendsStore = useFriendsStore();
 const notice = useNoticeStore();
@@ -34,12 +35,17 @@ const inviteLink = computed(() =>
     : ''
 );
 
-async function copy(text, message) {
+/** 「分享」：手机跳出系统分享（WhatsApp…，附好友码和链接），电脑复制 */
+async function shareInvite() {
   try {
-    await navigator.clipboard.writeText(text);
-    notice.show(message);
+    const result = await shareLink({
+      title: t('加我当 LyriStage 好友'),
+      text: t('在 LyriStage 加我当好友，好友码 {code}', { code: friendsStore.profile.friendCode }),
+      url: inviteLink.value,
+    });
+    if (result === 'copied') notice.show(t('邀请链接已复制，传给朋友就好'));
   } catch {
-    notice.show(t('复制失败，请手动选取'));
+    notice.show(t('分享不了，把上面的好友码传给朋友吧'));
   }
 }
 
@@ -297,11 +303,8 @@ async function togglePrivate() {
           <span class="label">{{ friendsStore.searchAvailable ? $t('或用好友码：你的好友码') : $t('你的好友码') }}</span>
           <code>{{ friendsStore.profile?.friendCode ?? '…' }}</code>
           <div class="buttons">
-            <button class="ghost" :disabled="!friendsStore.profile" @click="copy(friendsStore.profile.friendCode, $t('好友码已复制'))">
-              {{ $t('复制好友码') }}
-            </button>
-            <button class="ghost" :disabled="!inviteLink" @click="copy(inviteLink, $t('邀请链接已复制，传给朋友就好'))">
-              {{ $t('复制邀请链接') }}
+            <button class="ghost" :disabled="!inviteLink" @click="shareInvite">
+              <Icon name="share" :size="16" />{{ $t('分享') }}
             </button>
           </div>
           <p class="hint">{{ $t('朋友输入你的好友码、你同意后才是好友。只有好友看得到你在听什么。') }}</p>
@@ -518,6 +521,11 @@ async function togglePrivate() {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.buttons .ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .hint,
 .empty {

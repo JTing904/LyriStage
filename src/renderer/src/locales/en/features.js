@@ -520,4 +520,15 @@ export default {
   让别人用名字搜到我: 'Let others find me by name',
   '关掉的话，只有拿到你好友码的人才能加你': 'When off, only people with your friend code can add you',
   '一小时内送太多邀请了，等一下再送': 'Too many requests in the last hour. Try again later',
+  // 分享邀请（房间、好友码、共同歌单）
+  'LyriStage 一起听': 'LyriStage Listen Together',
+  '来 LyriStage 跟我一起听歌，房间码 {code}': 'Listen with me on LyriStage. Room code {code}',
+  邀请: 'Invite',
+  '加我当 LyriStage 好友': 'Add me on LyriStage',
+  '在 LyriStage 加我当好友，好友码 {code}': 'Add me as a friend on LyriStage. Friend code {code}',
+  '分享不了，把上面的好友码传给朋友吧': 'Couldn’t share. Send your friend code above instead',
+  一起编辑歌单: 'Edit a playlist together',
+  '来 LyriStage 一起编辑歌单「{name}」，共享歌单码 {code}': 'Edit the playlist "{name}" with me on LyriStage. Playlist code {code}',
+  '分享不了，把上面的共享歌单码传给朋友吧': 'Couldn’t share. Send the playlist code above instead',
+  共享歌单码: 'Playlist code',
 };

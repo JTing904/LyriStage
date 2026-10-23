@@ -167,6 +167,36 @@ export async function shareImage(blob, fileName) {
   await navigator.share({ files: [new File([blob], fileName, { type: 'image/png' })] });
 }
 
+/**
+ * 分享一句话和链接（邀请好友、房间、共同歌单）：手机叫出系统分享（WhatsApp…），
+ * 电脑没有分享面板就复制到剪贴板
+ * @param {{ title: string, text: string, url: string }} content
+ * @returns {Promise<'shared' | 'copied' | 'cancelled'>}
+ */
+export async function shareLink({ title, text, url }) {
+  if (isNativeApp) {
+    const { Share } = await import('@capacitor/share');
+    try {
+      await Share.share({ title, text, url, dialogTitle: title });
+      return 'shared';
+    } catch (err) {
+      if (/cancel/i.test(err?.message ?? '')) return 'cancelled';
+      throw err;
+    }
+  }
+  // 手机浏览器：系统分享；电脑浏览器的分享面板很少人用，直接复制比较顺
+  if (navigator.share && window.matchMedia?.('(pointer: coarse)').matches) {
+    try {
+      await navigator.share({ title, text, url });
+      return 'shared';
+    } catch (err) {
+      if (err?.name === 'AbortError') return 'cancelled';
+    }
+  }
+  await navigator.clipboard.writeText(`${text} ${url}`);
+  return 'copied';
+}
+
 /** 能不能复制图片到剪贴板（电脑版、电脑浏览器） */
 export const canCopyImage = () =>
   !isNativeApp && typeof ClipboardItem !== 'undefined' && Boolean(navigator.clipboard?.write);

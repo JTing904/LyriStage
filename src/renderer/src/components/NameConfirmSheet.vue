@@ -52,7 +52,8 @@ async function save() {
         <input v-model="name" autocomplete="nickname" maxlength="30" required />
       </label>
       <p v-if="looksLikeEmail" class="warn">{{ $t('这看起来像邮箱的前缀，朋友可能认不出是你，要不要换成平常的称呼？') }}</p>
-      <button class="primary" :disabled="busy || !name.trim()">{{ busy ? $t('请稍候…') : $t('确定') }}</button>
+      <!-- 打开时焦点在「确定」：不要一跳出来就弹键盘（大部分人按确定就好） -->
+      <button class="primary" autofocus :disabled="busy || !name.trim()">{{ busy ? $t('请稍候…') : $t('确定') }}</button>
     </form>
   </dialog>
 </template>

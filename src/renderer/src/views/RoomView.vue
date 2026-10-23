@@ -15,6 +15,8 @@ import Icon from '../components/Icon.vue';
 import SongPicker from '../components/SongPicker.vue';
 import HostSheet from '../components/HostSheet.vue';
 import LyricStage from '../lyric-stage/LyricStage.vue';
+import { t } from '../i18n';
+import { shareLink } from '../platform';
 
 const room = useRoomStore();
 const ui = useUiStore();
@@ -126,14 +128,21 @@ const shownMembers = computed(() =>
   isPhone.value ? [room.host ?? room.members[0]].filter(Boolean) : room.members.slice(0, 5)
 );
 
-const shareLink = computed(() => `https://lyristage.vercel.app/#/room?code=${room.code}`);
-async function copy(text, which) {
+const roomLink = computed(() => `https://lyristage.vercel.app/#/room?code=${room.code}`);
+/** 「邀请」：手机叫出系统分享（WhatsApp…），电脑复制 */
+async function invite() {
   try {
-    await navigator.clipboard.writeText(text);
-    copied.value = which;
-    setTimeout(() => (copied.value = ''), 2000);
+    const result = await shareLink({
+      title: t('LyriStage 一起听'),
+      text: t('来 LyriStage 跟我一起听歌，房间码 {code}', { code: room.code }),
+      url: roomLink.value,
+    });
+    if (result === 'copied') {
+      copied.value = 'link';
+      setTimeout(() => (copied.value = ''), 2000);
+    }
   } catch {
-    // 不能复制就让用户自己抄
+    // 分享不了：房间码就在旁边，用户自己抄
   }
 }
 
@@ -202,12 +211,10 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
           <span class="chip">
             <span class="chip-label">{{ $t('房间') }}</span>
             <code>{{ room.code }}</code>
-            <button class="chip-btn" @click="copy(room.code, 'code')">
-              {{ copied === 'code' ? $t('已复制 ✓') : $t('复制') }}
-            </button>
-            <button class="chip-btn link-btn" :aria-label="$t('邀请链接')" @click="copy(shareLink, 'link')">
+            <!-- 一个「邀请」：手机跳出分享（WhatsApp…，附房间码和链接），电脑复制 -->
+            <button class="chip-btn invite-btn" @click="invite">
               <template v-if="copied === 'link'">{{ $t('已复制 ✓') }}</template>
-              <template v-else><Icon name="share" :size="14" class="link-icon" /><span class="link-text">{{ $t('邀请链接') }}</span></template>
+              <template v-else><Icon name="share" :size="14" />{{ $t('邀请') }}</template>
             </button>
           </span>
           <span class="grow" />
@@ -606,8 +613,10 @@ header p {
   font-weight: 700;
   white-space: nowrap;
 }
-.link-icon {
-  display: none;
+.invite-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .chip-btn:hover {
   background: var(--line-strong);
@@ -1229,16 +1238,10 @@ header p {
     min-height: 180px;
   }
 }
-/* 很窄的手机：头像放不下就收起来（成员分页看得到），「邀请链接」只留图标 */
+/* 很窄的手机：头像放不下就收起来（成员分页看得到） */
 @media (max-width: 379px) {
   .avatars {
     display: none;
-  }
-  .link-btn .link-text {
-    display: none;
-  }
-  .link-btn .link-icon {
-    display: block;
   }
 }
 /* 手机横屏：画面矮，歌词在左、聊天在右，跟电脑版一样排，不用往下卷才看到聊天 */

@@ -23,6 +23,7 @@ import { canShareImage, saveImage, shareImage } from '../platform';
 import { canvasToBlob, renderPlaylistCard } from '../utils/shareCard';
 import LoadError from '../components/LoadError.vue';
 import { showError } from '../friendlyError';
+import { shareLink as shareText } from '../platform';
 
 const route = useRoute();
 const router = useRouter();
@@ -151,12 +152,17 @@ async function stopSharing() {
     shareBusy.value = false;
   }
 }
-async function copyShareLink() {
+/** 「分享」：手机跳出系统分享（附共享歌单码和链接），电脑复制 */
+async function shareInvite() {
   try {
-    await navigator.clipboard.writeText(shareLink.value);
-    library.say(t('邀请链接已复制，传给朋友就好'));
+    const result = await shareText({
+      title: t('一起编辑歌单'),
+      text: t('来 LyriStage 一起编辑歌单「{name}」，共享歌单码 {code}', { name: playlist.value.name, code: playlist.value.shareCode }),
+      url: shareLink.value,
+    });
+    if (result === 'copied') library.say(t('邀请链接已复制，传给朋友就好'));
   } catch {
-    library.say(t('复制失败，请手动选取'));
+    library.say(t('分享不了，把上面的共享歌单码传给朋友吧'));
   }
 }
 async function leave() {
@@ -415,8 +421,9 @@ async function removePlaylist() {
         </template>
         <template v-else>
           <div v-if="isOwner" class="share-code">
+            <span class="share-label">{{ $t('共享歌单码') }}</span>
             <code>{{ playlist.shareCode }}</code>
-            <button type="button" class="ghost" @click="copyShareLink">{{ $t('复制邀请链接') }}</button>
+            <button type="button" class="ghost" @click="shareInvite"><Icon name="share" :size="16" />{{ $t('分享') }}</button>
           </div>
           <ul class="people">
             <li v-for="p in people" :key="p.id">
@@ -609,9 +616,22 @@ textarea:focus {
 /* 一起编辑 */
 .share-code {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
+}
+.share-label {
+  flex-basis: 100%;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.share-code .ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .share-code code {
   font: 800 26px/1 'JetBrains Mono', ui-monospace, monospace;
