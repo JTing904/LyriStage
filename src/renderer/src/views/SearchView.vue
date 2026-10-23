@@ -13,6 +13,7 @@ import Icon from '../components/Icon.vue';
 import TileGrid from '../components/TileGrid.vue';
 import TrackList from '../components/TrackList.vue';
 import LoadError from '../components/LoadError.vue';
+import { explainError } from '../friendlyError';
 
 const TABS = [
   { id: 'all', label: '综合' },
@@ -35,6 +36,42 @@ const tab = computed(() =>
 
 const input = ref(q.value);
 watch(q, value => (input.value = value));
+
+// ---- 最近搜索（存在这台设备，最多 10 个）----
+const RECENT_KEY = 'lyristage:recent-searches';
+const RECENT_MAX = 10;
+const recent = ref((() => {
+  try {
+    const list = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]');
+    return Array.isArray(list) ? list.filter(x => typeof x === 'string').slice(0, RECENT_MAX) : [];
+  } catch {
+    return [];
+  }
+})());
+function saveRecent(list) {
+  recent.value = list;
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+  } catch {
+    // 存不了就只在这次有
+  }
+}
+// 搜过的放最前面（同一个词不重复）
+watch(
+  q,
+  value => value && saveRecent([value, ...recent.value.filter(x => x.toLowerCase() !== value.toLowerCase())].slice(0, RECENT_MAX)),
+  { immediate: true }
+);
+const removeRecent = word => saveRecent(recent.value.filter(x => x !== word));
+const searchRecent = word => router.replace({ query: { q: word, tab: tab.value } });
+
+// 输入框右边的 ✕：清掉字，回到最近搜索
+const inputEl = ref(null);
+function clearInput() {
+  input.value = '';
+  if (q.value) router.replace({ query: {} });
+  inputEl.value?.focus();
+}
 function submit() {
   const keywords = input.value.trim();
   if (keywords) router.replace({ query: { q: keywords, tab: tab.value } });
@@ -48,6 +85,8 @@ const items = ref([]);
 const hasMore = ref(false);
 const loading = ref(false);
 const loadingMore = ref(false);
+/** 加载更多失败：已经有的结果留着，只在下面说一句（不要整页变成错误） */
+const moreError = ref('');
 const error = ref('');
 
 /**
@@ -70,6 +109,7 @@ function addHidden(id, songs, limit, apply) {
 
 let requestId = 0;
 async function load() {
+  moreError.value = '';
   const id = ++requestId;
   error.value = '';
   items.value = [];
@@ -118,6 +158,7 @@ watch([q, tab], load, { immediate: true });
 async function loadMore() {
   const id = requestId;
   loadingMore.value = true;
+  moreError.value = '';
   try {
     const list = await netease.search(q.value, {
       type: tab.value,
@@ -128,7 +169,7 @@ async function loadMore() {
     items.value = [...items.value, ...list];
     hasMore.value = list.length === PAGE;
   } catch (err) {
-    error.value = err;
+    if (id === requestId) moreError.value = explainError(err, t('载不出更多')).message;
   } finally {
     loadingMore.value = false;
   }
@@ -193,12 +234,16 @@ const empty = computed(() =>
     <form class="search" role="search" @submit.prevent="submit">
       <Icon name="search" :size="18" />
       <input
+        ref="inputEl"
         v-model="input"
         :placeholder="$t('搜索歌曲、歌手、专辑、歌单或一句歌词')"
         :aria-label="$t('搜索')"
         enterkeyhint="search"
         :autofocus="!q"
       />
+      <button v-if="input" type="button" class="clear" :aria-label="$t('清除')" @click="clearInput">
+        <Icon name="x" :size="16" />
+      </button>
     </form>
 
     <template v-if="q">
@@ -270,12 +315,27 @@ const empty = computed(() =>
         <TileGrid v-else-if="tab === 'artist'" :items="artistTiles(items)" />
         <TileGrid v-else-if="tab === 'album'" :items="albumTiles(items)" />
         <TileGrid v-else :items="playlistTiles(items)" />
+        <p v-if="moreError && !loadingMore" class="more-error" role="alert">{{ moreError }}</p>
         <button v-if="hasMore" class="more" :disabled="loadingMore" @click="loadMore">
-          {{ loadingMore ? $t('加载中…') : $t('加载更多') }}
+          {{ loadingMore ? $t('加载中…') : moreError ? $t('重试') : $t('加载更多') }}
         </button>
       </template>
     </template>
 
+    <section v-else-if="recent.length" class="recent">
+      <div class="recent-head">
+        <h2 class="section-title">{{ $t('最近搜索') }}</h2>
+        <button type="button" class="recent-clear" @click="saveRecent([])">{{ $t('全部清除') }}</button>
+      </div>
+      <ul class="chips">
+        <li v-for="word in recent" :key="word" class="chip">
+          <button type="button" class="chip-word" @click="searchRecent(word)">{{ word }}</button>
+          <button type="button" class="chip-x" :aria-label="$t('删除「{word}」', { word })" @click="removeRecent(word)">
+            <Icon name="x" :size="14" />
+          </button>
+        </li>
+      </ul>
+    </section>
     <p v-else class="page-state">{{ $t('输入歌名、歌手、歌单名字，或记得的一句歌词') }}</p>
   </div>
 </template>
@@ -305,6 +365,89 @@ const empty = computed(() =>
   color: var(--text);
   font: inherit;
   font-size: 16px;
+}
+
+.more-error {
+  margin: 16px 0 0;
+  color: var(--text-dim);
+  font-size: 14px;
+  text-align: center;
+}
+.clear {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin-right: -10px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-hover);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.recent {
+  max-width: 720px;
+  margin-top: 24px;
+}
+.recent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.recent-head .section-title {
+  margin: 0;
+}
+.recent-clear {
+  padding: 6px 4px;
+  border: 0;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  max-width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+}
+.chip-word {
+  min-width: 0;
+  overflow: hidden;
+  padding: 9px 4px 9px 14px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.chip-x {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-faint);
+  cursor: pointer;
 }
 
 .tabs {

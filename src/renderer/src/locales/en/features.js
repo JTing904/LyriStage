@@ -486,4 +486,9 @@ export default {
   新密码不能跟旧密码一样: 'Use a password you haven’t used before',
   // 设置入口（没登录也能进）
   还没输入邀请码: 'Invite code not entered yet',
+  // 搜索：最近搜索、加载更多失败
+  最近搜索: 'Recent searches',
+  全部清除: 'Clear all',
+  '删除「{word}」': 'Remove "{word}"',
+  载不出更多: 'Couldn’t load more',
 };
