@@ -190,6 +190,14 @@ const PAGES = [
     fits: [['dialog.add-dialog[open]', 'viewport']],
   },
   { id: 'artist', hash: '#/artist/6452', wait: 4000 },
+  // 断网胶囊 + 同时有提示：两个不能叠在一起，也不能盖住迷你播放条
+  {
+    id: 'offline-pill',
+    hash: '#/',
+    offline: true,
+    open: () => STORE('notice').show('没有网络，没改成功', { action: { label: '重试', run: () => {} }, duration: 20000 }),
+    close: () => STORE('notice').dismiss(),
+  },
   // 断网时打开没看过的歌单：「连不上网络」的卡片
   { id: 'load-error', hash: '#/playlist/2829883282', wait: 4000, offline: true },
   { id: 'settings', hash: '#/settings' },

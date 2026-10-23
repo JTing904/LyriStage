@@ -86,7 +86,9 @@ function onPointerMove(event) {
   hoverRatio.value = ratioAt(event);
   if (dragging.value) dragRatio.value = hoverRatio.value;
 }
-function onPointerUp() {
+function onPointerUp(event) {
+  // 手指放开：拖动时显示的时间也收起来（滑鼠的话移开才收）
+  if (event?.pointerType !== 'mouse') hoverRatio.value = null;
   if (!dragging.value) return;
   dragging.value = false;
   props.player.seek(dragRatio.value * duration.value);
@@ -495,6 +497,37 @@ function toggleMute() {
   font-variant-numeric: tabular-nums;
   pointer-events: none;
   text-shadow: none;
+}
+
+/* 手指：进度条的感应范围加大到 32px（细线本身不变粗太多），圆点一直看得到；
+   拖的时候圆点变大、上面显示拖到几分几秒 */
+@media (pointer: coarse) {
+  .scrubber {
+    height: 32px;
+  }
+  .track-line {
+    top: 14px;
+    height: 4px;
+  }
+  .scrubber.active .track-line {
+    top: 13px;
+    height: 6px;
+  }
+  .knob {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  .scrubber.active .knob {
+    transform: translate(-50%, -50%) scale(1.6);
+  }
+  .tooltip {
+    bottom: 32px;
+    padding: 4px 8px;
+    font-size: 14px;
+  }
+  /* 完整播放条（平板）：进度条贴着上缘，感应范围变高后往上移，线还是在上缘 */
+  .player-bar:not(.compact) .progress {
+    top: -15px;
+  }
 }
 
 /* ---------- 按钮行（完整） ---------- */

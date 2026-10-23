@@ -345,8 +345,11 @@ const clock = ms => {
   font-size: clamp(30px, 4vw, 44px);
   line-height: 1.15;
 }
-.hello h1 .nowrap {
-  white-space: nowrap;
+.hello h1 {
+  /* 中文不要从词中间断开（「晚上好」不拆），英文照常在空格换行；
+     不能整段 nowrap：英文字放大时「Good evening,」会跑到公仔下面 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .hello-name {
   display: inline-block;

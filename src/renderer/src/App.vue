@@ -12,6 +12,7 @@ import { isUnavailable, isUnblockRateLimited } from '@core/netease';
 import { createFmSource, getEnglishTranslation, getLyrics } from './services';
 import { usePlayer } from './composables/usePlayer';
 import { installRoomLock } from './composables/useRoomLock';
+import { offlineSupported } from './offline';
 import { PULL_TRIGGER, attachPullRefresh } from './composables/usePullRefresh';
 import {
   findAndroidUpdate,
@@ -100,6 +101,21 @@ document.addEventListener('close', rehostToast, true);
 onUnmounted(() => document.removeEventListener('close', rehostToast, true));
 
 const ui = useUiStore();
+
+// 断网：下面（迷你播放条上方）一个小胶囊「没有网络 · 听存在手机的歌」（手机 App 才有离线歌）；网络回来说一声
+const offline = ref(!navigator.onLine);
+const onOffline = () => (offline.value = true);
+const onOnline = () => {
+  if (!offline.value) return;
+  offline.value = false;
+  notice.show(t('网络恢复了'));
+};
+window.addEventListener('offline', onOffline);
+window.addEventListener('online', onOnline);
+onUnmounted(() => {
+  window.removeEventListener('offline', onOffline);
+  window.removeEventListener('online', onOnline);
+});
 const { stageOpen } = storeToRefs(ui);
 const route = useRoute();
 const router = useRouter();
@@ -338,14 +354,33 @@ function onContentScroll() {
     <QueuePanel />
     <RoomReactions />
     <LoginPrompt />
+    <Transition name="toast">
+      <component
+        :is="offlineSupported ? 'RouterLink' : 'div'"
+        v-if="offline && !stageOpen"
+        :to="offlineSupported ? '/offline' : undefined"
+        class="offline-pill"
+        role="status"
+      >
+        <span aria-hidden="true">📡</span>{{ $t('没有网络') }}
+        <template v-if="offlineSupported"> · <b>{{ $t('听存在手机的歌') }}</b></template>
+      </component>
+    </Transition>
     <Teleport :to="toastHost">
       <Transition name="toast">
-        <div v-if="notice.current" class="toast" :class="{ 'in-dialog': toastHost !== 'body' }" role="status">
+        <!-- 点提示就关掉（按钮照常） -->
+        <div
+          v-if="notice.current"
+          class="toast"
+          :class="{ 'in-dialog': toastHost !== 'body', 'above-pill': offline && !stageOpen }"
+          role="status"
+          @click="notice.dismiss()"
+        >
           <span>{{ notice.current.message }}</span>
           <button
             v-if="notice.current.action"
             class="toast-action"
-            @click="notice.current.action.run(), notice.dismiss()"
+            @click.stop="notice.current.action.run(), notice.dismiss()"
           >
             {{ notice.current.action.label }}
           </button>
@@ -470,6 +505,34 @@ function onContentScroll() {
   transform: translateX(-50%);
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
 }
+.offline-pill {
+  position: fixed;
+  z-index: 190;
+  bottom: 110px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 32px);
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.2);
+}
+.offline-pill b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: color-mix(in srgb, var(--accent) 70%, var(--bg));
+}
+.toast.above-pill {
+  bottom: 156px;
+}
 .toast.in-dialog {
   /* 对话框（手机是从下面滑上来的面板）的按钮在下面：提示放上面，不要挡住 */
   top: calc(env(safe-area-inset-top) + 16px);
@@ -493,7 +556,8 @@ function onContentScroll() {
 }
 .toast-action {
   flex: none;
-  padding: 4px 12px;
+  min-height: 36px;
+  padding: 0 14px;
   border: 0;
   border-radius: 999px;
   background: var(--accent);
@@ -538,6 +602,12 @@ function onContentScroll() {
     border-radius: 16px;
     font-size: 13px;
   }
+  .offline-pill {
+    bottom: calc(148px + env(safe-area-inset-bottom));
+  }
+  .toast.above-pill {
+    bottom: calc(194px + env(safe-area-inset-bottom));
+  }
 }
 /* 手机横屏：画面矮，Tab 改成左边一条直的，迷你播放条留在底部，内容才不会被挤扁 */
 @media (pointer: coarse) and (max-height: 600px) and (orientation: landscape) {
@@ -556,8 +626,12 @@ function onContentScroll() {
   .area-mobile > .mini {
     grid-area: mini;
   }
-  .toast {
+  .toast,
+  .offline-pill {
     bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  .toast.above-pill {
+    bottom: calc(130px + env(safe-area-inset-bottom));
   }
 }
 </style>

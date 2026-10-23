@@ -491,4 +491,8 @@ export default {
   全部清除: 'Clear all',
   '删除「{word}」': 'Remove "{word}"',
   载不出更多: 'Couldn’t load more',
+  // 断网胶囊
+  网络恢复了: 'Back online',
+  没有网络: 'No internet',
+  听存在手机的歌: 'Saved songs',
 };
