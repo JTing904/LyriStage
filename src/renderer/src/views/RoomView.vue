@@ -10,10 +10,10 @@ import { useVoiceStore } from '../stores/voice';
 import { usePlayer } from '../composables/usePlayer';
 import { getEnglishTranslation, getLyrics } from '../services';
 import { artistNames } from '../utils/format';
-import { t } from '../i18n';
 import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
 import SongPicker from '../components/SongPicker.vue';
+import HostSheet from '../components/HostSheet.vue';
 import LyricStage from '../lyric-stage/LyricStage.vue';
 
 const room = useRoomStore();
@@ -102,10 +102,13 @@ async function openPickerFromQuery() {
 onMounted(openPickerFromQuery);
 watch(() => route.query.pick, openPickerFromQuery);
 
-function handOver(member) {
-  if (window.confirm(t('把房主交给 {name}？之后由 {name} 决定播什么，你会变成普通成员继续听。', { name: member.name }))) {
-    room.transferHost(member.id);
-  }
+// 房主：关闭房间、换房主之前先确认（成员离开不用问）
+const hostSheet = ref(null);
+const handOver = member => hostSheet.value.open('pick', member);
+function leaveOrClose() {
+  menuOpen.value = false;
+  if (room.role === 'host') hostSheet.value.open('close');
+  else room.leave();
 }
 
 const memberOf = id => room.members.find(m => m.id === id);
@@ -113,7 +116,15 @@ const initial = name => (name || '?').slice(0, 1).toUpperCase();
 const timeOf = at => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 /** 上面那条只放前 5 个头像，其他的显示 +N */
-const shownMembers = computed(() => room.members.slice(0, 5));
+// 手机：顶部那条放不下一排头像（人多会把整页撑宽），只放房主一个，右下角写几个人
+const phoneQuery = window.matchMedia('(max-width: 899px)');
+const isPhone = ref(phoneQuery.matches);
+const onPhoneChange = e => (isPhone.value = e.matches);
+phoneQuery.addEventListener('change', onPhoneChange);
+onBeforeUnmount(() => phoneQuery.removeEventListener('change', onPhoneChange));
+const shownMembers = computed(() =>
+  isPhone.value ? [room.host ?? room.members[0]].filter(Boolean) : room.members.slice(0, 5)
+);
 
 const shareLink = computed(() => `https://lyristage.vercel.app/#/room?code=${room.code}`);
 async function copy(text, which) {
@@ -239,8 +250,9 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
               <span v-if="m.id === room.hostId" class="crown" aria-hidden="true">👑</span>
               <span v-if="inVoice.get(m.id)?.muted" class="mic-badge" aria-hidden="true"><Icon name="mic-off" :size="10" /></span>
               <span v-else-if="inVoice.has(m.id)" class="mic-badge on" aria-hidden="true"><Icon name="mic" :size="10" /></span>
+              <span v-if="isPhone && room.members.length > 1" class="people-count" aria-hidden="true">{{ room.members.length }}</span>
             </span>
-            <span v-if="room.members.length > shownMembers.length" class="av more-count">
+            <span v-if="!isPhone && room.members.length > shownMembers.length" class="av more-count">
               +{{ room.members.length - shownMembers.length }}
             </span>
           </span>
@@ -260,7 +272,7 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
           <span class="more-wrap">
             <button class="round-btn" :aria-label="$t('更多')" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">⋯</button>
             <div v-if="menuOpen" class="menu" role="menu">
-              <button role="menuitem" class="danger" @click="(menuOpen = false), room.leave()">
+              <button role="menuitem" class="danger" @click="leaveOrClose">
                 {{ room.role === 'host' ? $t('关闭房间') : $t('离开房间') }}
               </button>
             </div>
@@ -402,6 +414,7 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
         </ul>
       </aside>
 
+      <HostSheet ref="hostSheet" />
       <SongPicker
         ref="picker"
         :busy="requesting"
@@ -602,6 +615,22 @@ header p {
 .avatars {
   display: flex;
   align-items: center;
+}
+.people-count {
+  position: absolute;
+  right: -6px;
+  bottom: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 2px solid var(--bg);
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 14px;
+  text-align: center;
 }
 .av {
   position: relative;

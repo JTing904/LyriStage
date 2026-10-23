@@ -330,6 +330,13 @@ function onContentScroll() {
         >
           {{ notice.current.action.label }}
         </button>
+        <span
+          v-if="notice.current.countdown"
+          :key="notice.current.id"
+          class="toast-countdown"
+          :style="{ animationDuration: `${notice.current.countdown}ms` }"
+          aria-hidden="true"
+        />
       </div>
     </Transition>
 
@@ -442,6 +449,22 @@ function onContentScroll() {
   font-weight: 700;
   transform: translateX(-50%);
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+.toast-countdown {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  transform-origin: left;
+  animation: countdown linear forwards;
+}
+@keyframes countdown {
+  to {
+    transform: scaleX(0);
+  }
 }
 .toast-action {
   flex: none;

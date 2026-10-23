@@ -95,7 +95,7 @@ const menu = ref(null);
 function openMenu(event, track) {
   const r = event.currentTarget.getBoundingClientRect();
   // 菜单宽 200、每项约 50 高：靠右对齐按钮，下面放不下就往上开
-  const height = (room.role === 'guest' ? 5 : 4) * 50 + 10;
+  const height = (4 + (room.role === 'guest' ? 1 : 0) + (props.removable ? 1 : 0)) * 50 + 10;
   const x = Math.max(8, Math.min(r.right - 200, window.innerWidth - 208));
   const y = r.bottom + height + 6 > window.innerHeight ? r.top - height : r.bottom + 4;
   menu.value = { track, x, y };
@@ -115,6 +115,8 @@ async function menuAction(action) {
   } else if (action === 'queue') {
     player.addToQueue(track);
     if (allowed) notice.show(tr('已加入播放队列：{name}', { name: track.name }));
+  } else if (action === 'remove') {
+    emit('remove', [track]);
   } else if (action === 'radio') {
     player.playFm(createSongRadio(track), { context: `radio:${track.id}` });
     if (allowed) notice.show(tr('开始《{name}》的电台：接下来是相似的歌', { name: track.name }));
@@ -226,9 +228,10 @@ onBeforeUnmount(() => {
         >
           <Icon name="more" :size="18" />
         </button>
+        <!-- 手机收进「⋯」（紧贴着 ⋯ 很容易误按）；电脑版留着 -->
         <button
           v-if="removable"
-          class="act"
+          class="act remove-btn"
           :title="$t('从歌单移除')"
           :aria-label="$t('从歌单移除')"
           @click.stop="emit('remove', [t])"
@@ -260,6 +263,9 @@ onBeforeUnmount(() => {
         </button>
         <button role="menuitem" @click="menuAction('playlist')">
           <Icon name="plus" :size="18" />{{ $t('加到歌单') }}
+        </button>
+        <button v-if="removable" role="menuitem" class="danger menu-remove" @click="menuAction('remove')">
+          <Icon name="trash" :size="18" />{{ $t('从歌单移除') }}
         </button>
       </div>
     </Teleport>
@@ -527,6 +533,22 @@ onBeforeUnmount(() => {
   font-size: 11px;
   line-height: 16px;
   vertical-align: 1px;
+}
+
+/* 「从歌单移除」：电脑版是每首右边的按钮；手机、平板收进「⋯」选单（紧贴着 ⋯ 很容易误按，一按就没了） */
+.menu-remove {
+  display: none;
+}
+.track-menu .menu-remove {
+  color: var(--accent);
+}
+@media (max-width: 899px), (pointer: coarse) {
+  .remove-btn {
+    display: none;
+  }
+  .track-menu .menu-remove {
+    display: flex;
+  }
 }
 
 /* 手机：只留封面、歌名、时长 */

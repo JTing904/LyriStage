@@ -86,6 +86,8 @@ async function leaveAndPlay() {
 }
 .box {
   display: grid;
+  /* minmax(0, …)：名字、歌名很长时截短，不要把面板撑宽 */
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   padding: 22px 20px 20px;
 }

@@ -21,16 +21,23 @@ export async function listLikedTracks({ limit = 1000, offset = 0 } = {}) {
   const rows = unwrap(
     await requireSupabase()
       .from('liked_tracks')
-      .select('track')
+      .select('track, liked_at')
       .order('liked_at', { ascending: false })
       .range(offset, offset + limit - 1)
   );
-  return rows.map(fromRow);
+  // likedAt：取消喜欢后按「复原」，用原本的时间放回去（排序才会回到原位）
+  return rows.map(row => ({ ...fromRow(row), likedAt: row.liked_at }));
 }
 
-export async function likeTrack(track, source = DEFAULT_SOURCE) {
+/**
+ * @param {Record<string, any>} track
+ * @param {string} [source]
+ * @param {string} [likedAt] 复原时用原本喜欢的时间（不给就是现在）
+ */
+export async function likeTrack(track, source = DEFAULT_SOURCE, likedAt) {
+  const row = likedAt ? { ...toRow(track, source), liked_at: likedAt } : toRow(track, source);
   unwrap(
-    await requireSupabase().from('liked_tracks').upsert(toRow(track, source), {
+    await requireSupabase().from('liked_tracks').upsert(row, {
       onConflict: 'user_id,source,track_id',
       ignoreDuplicates: true,
     })
@@ -108,7 +115,8 @@ export async function getPlaylist(id) {
     ...playlist,
     userId: user_id,
     shareCode: share_code ?? null,
-    tracks: rows.map(row => ({ ...fromRow(row), addedBy: row.added_by ?? null })),
+    // position：移除后按「复原」放回原位
+    tracks: rows.map(row => ({ ...fromRow(row), addedBy: row.added_by ?? null, position: row.position })),
   };
 }
 
@@ -214,6 +222,27 @@ export async function addTracksToPlaylist(
     await requireSupabase().from('playlist_tracks').upsert(rows, {
       onConflict: 'playlist_id,source,track_id',
       ignoreDuplicates: true,
+    })
+  );
+}
+
+/**
+ * 复原刚移除的歌：放回原本的 position；共同歌单记回原本是谁加的
+ * @param {Array<Record<string, any> & { position: number, addedBy?: string | null }>} tracks
+ */
+export async function restoreTracksToPlaylist(playlistId, tracks, source = DEFAULT_SOURCE) {
+  const rows = tracks.map(track => ({
+    playlist_id: playlistId,
+    position: track.position,
+    ...toRow(track, source),
+    ...(track.addedBy ? { added_by: track.addedBy } : {}),
+  }));
+  unwrap(
+    await requireSupabase().from('playlist_tracks').upsert(rows, {
+      onConflict: 'playlist_id,source,track_id',
+      ignoreDuplicates: true,
+      // 没写 added_by 的用默认值（自己），不要变成空的
+      defaultToNull: false,
     })
   );
 }

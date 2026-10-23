@@ -127,6 +127,18 @@ function MOCK_GUEST() {
   room.role = 'guest';
 }
 
+/** 一起听：房间里多几个人（名字很长），看关闭房间、换房主的面板 */
+function MOCK_MEMBERS() {
+  const room = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('room');
+  const fake = [
+    { id: 'lc-m1', name: '名字超级无敌长的朋友 Christopher', avatar: '', role: 'guest' },
+    { id: 'lc-m2', name: 'Ivy', avatar: '', role: 'guest' },
+    { id: 'lc-m3', name: 'Edward Lee Jun Hao', avatar: '', role: 'guest' },
+    { id: 'lc-m4', name: '小明', avatar: '', role: 'guest' },
+  ];
+  room.members = [...room.members.filter(m => !m.id.startsWith('lc-m')), ...fake];
+}
+
 /**
  * 要检查的页面
  * - hash：网址；stage：打开全屏歌词；room：先开一个测试房间
@@ -205,6 +217,25 @@ const PAGES = [
     close: () => click('.stage .topbar .pill[aria-expanded="true"]'),
     fits: [['.stage-panel .picker', '.stage-panel']],
   },
+  // 房主按「关闭房间」：先确认；可以先交给别人当房主
+  {
+    id: 'room-close',
+    hash: '#/room',
+    room: true,
+    mock: MOCK_MEMBERS,
+    open: () => click('.more-wrap .round-btn') && setTimeout(() => click('.more-wrap .menu button'), 300),
+    close: () => document.querySelector('dialog.host-sheet')?.close(),
+    fits: [['dialog.host-sheet[open]', 'viewport']],
+  },
+  {
+    id: 'room-handover',
+    hash: '#/room',
+    room: true,
+    mock: MOCK_MEMBERS,
+    open: () => click('.more-wrap .round-btn') && setTimeout(() => click('.more-wrap .menu button') && setTimeout(() => click('dialog.host-sheet .btn'), 300), 300),
+    close: () => document.querySelector('dialog.host-sheet')?.close(),
+    fits: [['dialog.host-sheet[open]', 'viewport']],
+  },
   // 一起听的成员：播放键变灰、按了跳提示、在歌单点歌会问要点给房主还是离开房间
   { id: 'room-guest', hash: '#/', room: true, mock: MOCK_GUEST, close: () => UNGUEST() },
   {
@@ -221,7 +252,7 @@ const PAGES = [
     wait: 4000,
     room: true,
     mock: MOCK_GUEST,
-    open: () => click('.track', 1),
+    open: () => click('.track:not(.head):not(.current)', 1),
     close: () => (document.querySelector('dialog.guest-sheet')?.close(), UNGUEST()),
     fits: [['dialog.guest-sheet[open]', 'viewport']],
   },
@@ -328,7 +359,8 @@ function CHECK({ reach, see, fits }) {
   }
 
   // 2. 短字被挤成两行、被切掉
-  const LABELS = 'button, a, [role="tab"], [role="menuitem"], label, h1, h2, h3, h4, th, nav, [class*="chip"], [class*="badge"], [class*="tag"], [class*="label"]';
+  // tag 不能只看有没有这三个字：stage（歌词画面）也含 tag，整段歌词会被当成标签
+  const LABELS = 'button, a, [role="tab"], [role="menuitem"], label, h1, h2, h3, h4, th, nav, [class*="chip"], [class*="badge"], [class~="tag"], [class*="-tag"], [class*="tag-"], [class*="label"]';
   const wrapped = new Set();
   for (const node of textNodes()) {
     const text = node.textContent.trim();
@@ -374,6 +406,14 @@ function CHECK({ reach, see, fits }) {
     if (app + tabsPad > inset + 2) {
       mark(tabs);
       issues.push({ kind: '底部空白', text: `底部垫了 ${app + tabsPad}px，导航列只要 ${inset}px（多了 ${app + tabsPad - inset}px）` });
+    }
+  }
+
+  // 5. 打开的面板不能左右滑（里面的东西被长名字撑宽，按钮被挤到面板外面）
+  for (const d of document.querySelectorAll('dialog[open]')) {
+    if (d.scrollWidth > d.clientWidth + 1) {
+      mark(d);
+      issues.push({ kind: '跑出画面', text: `${describe(d)} 里面的东西比面板宽（内容宽 ${d.scrollWidth}，面板 ${d.clientWidth}）` });
     }
   }
 
@@ -434,6 +474,8 @@ function CHECK({ reach, see, fits }) {
   for (const node of textNodes()) {
     const el = node.parentElement;
     if (faint.has(el) || !visible(el) || el.closest(':disabled, [disabled]')) continue;
+    // 正在淡入、淡出的（例如刚消失的提示）：半透明是动画的一半，不是真的看不清
+    if (el.closest('[class*="-enter-active"], [class*="-leave-active"]')) continue;
     const r = el.getBoundingClientRect();
     if (r.bottom < 0 || r.top > H) continue;
     const cs = getComputedStyle(el);

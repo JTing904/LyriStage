@@ -370,9 +370,12 @@ export const useRoomStore = defineStore('room', () => {
     hostId.value = newHostId;
   }
 
-  /** 房主把房间交给另一个成员；自己变成普通成员继续听 */
-  async function transferHost(memberId) {
-    if (role.value !== 'host' || !memberId || memberId === auth.user?.id) return;
+  /**
+   * 房主把房间交给另一个成员；自己变成普通成员继续听（stay = false：交出去就离开）
+   * @returns {Promise<boolean>} 有没有交出去
+   */
+  async function transferHost(memberId, { stay = true } = {}) {
+    if (role.value !== 'host' || !memberId || memberId === auth.user?.id) return false;
     const { data, error: err } = await getSupabase()
       .from('rooms')
       .update({ host_id: memberId })
@@ -380,15 +383,22 @@ export const useRoomStore = defineStore('room', () => {
       .select('code');
     if (err || !data?.length) {
       useNoticeStore().show(t('转让失败：{error}', { error: err?.message ?? t('没有权限') }));
-      return;
+      return false;
     }
     const name = nameOf(memberId);
+    if (!stay) {
+      role.value = 'guest'; // 已经不是房主：leave() 不会把房间删掉
+      await leave();
+      useNoticeStore().show(t('已经把房主交给 {name}', { name }));
+      return true;
+    }
     try {
       await reconnect('guest', memberId);
       useNoticeStore().show(t('已经把房主交给 {name}', { name }));
     } catch (e) {
       fail(e);
     }
+    return true;
   }
 
   /** 收到"房主换人了" */
@@ -531,10 +541,19 @@ export const useRoomStore = defineStore('room', () => {
         : (await supabase.rpc('join_room', { room: saved.code })).data;
     if (!still || inRoom.value) return forgetRoom();
     lastRoom.value = { code: saved.code, role: saved.role };
-    useNoticeStore().show(t('你刚才在房间 {code}', { code: saved.code }), {
+    const notices = useNoticeStore();
+    notices.show(t('你刚才在房间 {code}', { code: saved.code }), {
       action: { label: t('回到房间'), run: rejoinLast },
       duration: 15000,
     });
+    // 自己开了新房间、加入了别的房间：这个提示就没用了（不然会一直盖在聊天框上）
+    const offer = notices.current;
+    const stop = watch(inRoom, joined => {
+      if (!joined) return;
+      if (notices.current === offer) notices.dismiss();
+      stop();
+    });
+    setTimeout(stop, 15000);
   }
   /** 按「回到房间」：房主就继续当房主（房间还是同一间），成员就重新加入 */
   async function rejoinLast() {

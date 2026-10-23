@@ -282,8 +282,17 @@ export default {
   '有新版本会自动下载，下载好会提示你重启': "New versions download automatically. You'll be asked to restart when one is ready.",
   // ---- 房主转让 ----
   设为房主: 'Make host',
-  '把房主交给 {name}？之后由 {name} 决定播什么，你会变成普通成员继续听。':
-    'Make {name} the host? {name} will choose what plays, and you will keep listening as a member.',
+  // 关闭房间、换房主的确认面板
+  '关闭房间？': 'Close the room?',
+  '房间会关掉，聊天记录也会清掉。': 'The room and its chat will be gone.',
+  '{names} 会一起离开，聊天记录也会清掉。': '{names} will be removed, and the chat will be gone.',
+  '{names} 等 {n} 个人会一起离开，聊天记录也会清掉。': '{names} and others ({n} people) will be removed, and the chat will be gone.',
+  '、': ', ',
+  交给别人当房主: 'Make someone else host',
+  '交给谁当房主？': 'Who should be host?',
+  '之后由新房主决定大家听什么。': 'The new host picks what everyone hears.',
+  交出去以后我也离开: 'Leave after handing over',
+  返回: 'Back',
   '已经把房主交给 {name}': '{name} is now the host',
   '你现在是房主了，你播什么大家就听什么': "You're the host now. Everyone hears what you play.",
   '{name} 现在是房主': '{name} is now the host',
@@ -411,4 +420,11 @@ export default {
   '删除中…': 'Deleting…',
   永久删除: 'Delete forever',
   账号和所有资料已经删除: 'Your account and all of its data have been deleted',
+  // 移除、取消喜欢、清空之后可以复原
+  复原: 'Undo',
+  '已移除《{name}》': 'Removed "{name}"',
+  '已移除 {n} 首': 'Removed {n} songs',
+  '复原失败：{error}': 'Couldn’t undo: {error}',
+  '已取消喜欢《{name}》': 'Removed "{name}" from Liked Songs',
+  '已清空你加入的 {n} 首': 'Cleared {n} songs you added',
 };

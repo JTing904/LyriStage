@@ -7,6 +7,7 @@ import { getPlaylist, leaveSharedPlaylist, listPlaylistPeople, sharePlaylist, un
 import { useAuthStore } from '../stores/auth';
 import { applyPrivileges, fetchPrivileges } from '../services';
 import { useLibraryStore } from '../stores/library';
+import { useNoticeStore } from '../stores/notice';
 import { usePlayCollection } from '../composables/usePlayCollection';
 import { totalLength } from '../utils/format';
 import { t } from '../i18n';
@@ -63,16 +64,36 @@ const meta = computed(() =>
     : t('还没有歌')
 );
 
-/** 从歌单移除（一首或多选的好几首） */
+/** 从歌单移除（一首或多选的好几首）；6 秒内可以按「复原」放回原位 */
 async function remove(list) {
   const ids = new Set(list.map(t => t.id));
   const before = playlist.value.tracks;
+  const removed = before.filter(t => ids.has(t.id));
+  const playlistId = playlist.value.id;
   playlist.value.tracks = before.filter(t => !ids.has(t.id));
   try {
-    await library.removeFromPlaylist(playlist.value.id, [...ids]);
+    await library.removeFromPlaylist(playlistId, [...ids]);
   } catch (err) {
     playlist.value.tracks = before;
     library.say(t('移除失败：{error}', { error: err.message || err }));
+    return;
+  }
+  useNoticeStore().undo(
+    removed.length === 1 ? t('已移除《{name}》', { name: removed[0].name }) : t('已移除 {n} 首', { n: removed.length }),
+    () => restore(playlistId, removed)
+  );
+}
+// 没有 position 的（刚加进来、还没重新载入）排在最后
+const order = track => track.position ?? Number.MAX_SAFE_INTEGER;
+async function restore(playlistId, removed) {
+  const showing = () => playlist.value?.id === playlistId;
+  if (showing()) playlist.value.tracks = [...playlist.value.tracks, ...removed].sort((a, b) => order(a) - order(b));
+  try {
+    await library.restoreToPlaylist(playlistId, removed);
+  } catch (err) {
+    const ids = new Set(removed.map(t => t.id));
+    if (showing()) playlist.value.tracks = playlist.value.tracks.filter(t => !ids.has(t.id));
+    library.say(t('复原失败：{error}', { error: err.message || err }));
   }
 }
 

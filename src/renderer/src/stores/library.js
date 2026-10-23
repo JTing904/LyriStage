@@ -10,6 +10,7 @@ import {
   listLikedTrackIds,
   listPlaylists,
   removeTracksFromPlaylist,
+  restoreTracksToPlaylist,
   unlikeTrack,
   updatePlaylist,
   uploadPlaylistCover,
@@ -70,6 +71,22 @@ export const useLibraryStore = defineStore('library', () => {
       version.value++;
     } catch (err) {
       likedIds.value = before;
+      say(t('操作失败：{error}', { error: err.message || err }));
+      return;
+    }
+    // 在「我喜欢的音乐」里取消（歌会从列表消失）：可以复原，用原本喜欢的时间放回原位
+    if (liked && track.likedAt) {
+      useNoticeStore().undo(t('已取消喜欢《{name}》', { name: track.name }), () => relike(track));
+    }
+  }
+  async function relike(track) {
+    const id = Number(track.id);
+    if (!isLiked(id)) likedIds.value = [id, ...likedIds.value];
+    try {
+      await likeTrack(track, undefined, track.likedAt);
+      version.value++;
+    } catch (err) {
+      likedIds.value = likedIds.value.filter(x => x !== id);
       say(t('操作失败：{error}', { error: err.message || err }));
     }
   }
@@ -141,6 +158,13 @@ export const useLibraryStore = defineStore('library', () => {
     version.value++;
   }
 
+  /** 按「复原」：刚移除的歌放回原位（tracks 要带 position） */
+  async function restoreToPlaylist(playlistId, tracks) {
+    await restoreTracksToPlaylist(playlistId, tracks);
+    await refreshPlaylists();
+    version.value++;
+  }
+
   // ---- 「加到歌单」对话框（App 外框里只有一个，哪里都能叫出来）----
   /** 要加的歌；null = 对话框关着 */
   const pendingTracks = ref(null);
@@ -165,6 +189,7 @@ export const useLibraryStore = defineStore('library', () => {
     addToPlaylist,
     addToPlaylists,
     removeFromPlaylist,
+    restoreToPlaylist,
     pendingTracks,
     openAddDialog,
     closeAddDialog,

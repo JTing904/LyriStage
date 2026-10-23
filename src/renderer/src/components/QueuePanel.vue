@@ -38,6 +38,26 @@ watch(
   { immediate: true }
 );
 const close = () => (ui.queueOpen = false);
+
+// ---- 清空「你加入的」：6 秒内可以复原（面板会盖住画面下方的提示，所以提示放在面板里） ----
+const cleared = ref(null);
+let clearedTimer = 0;
+function clearQueued() {
+  cleared.value = [...view.value.queued];
+  player.clearQueued();
+  clearTimeout(clearedTimer);
+  clearedTimer = setTimeout(() => (cleared.value = null), 6000);
+}
+function undoClear() {
+  const tracks = cleared.value ?? [];
+  cleared.value = null;
+  clearTimeout(clearedTimer);
+  // 清空之后又加的排在后面
+  const addedSince = [...view.value.queued];
+  player.clearQueued();
+  [...tracks, ...addedSince].forEach(track => player.addToQueue(track));
+}
+onBeforeUnmount(() => clearTimeout(clearedTimer));
 function openWall() {
   close();
   ui.wallOpen = true;
@@ -168,11 +188,16 @@ const SLEEP_OPTIONS = [15, 30, 60];
           }}
         </p>
 
+        <p v-if="cleared" class="undo-row" role="status">
+          {{ $t('已清空你加入的 {n} 首', { n: cleared.length }) }}
+          <button class="undo-btn" @click="undoClear">{{ $t('复原') }}</button>
+          <span class="undo-line" aria-hidden="true" />
+        </p>
         <!-- 你加入的 -->
         <section v-if="view.queued.length">
           <h3>
             {{ $t('接下来（你加入的）') }}
-            <button class="text-btn" @click="player.clearQueued()">{{ $t('清空') }}</button>
+            <button class="text-btn" @click="clearQueued">{{ $t('清空') }}</button>
           </h3>
           <div :ref="el => (lists.queued.value = el)">
             <div
@@ -336,6 +361,48 @@ h3 {
   margin: 10px 12px 6px;
   font-size: 13px;
   color: var(--text-dim);
+}
+.undo-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 12px;
+  padding: 8px 8px 8px 16px;
+  border-radius: 14px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 14px;
+  font-weight: 700;
+}
+.undo-btn {
+  flex: none;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.undo-line {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  transform-origin: left;
+  animation: undo-countdown 6s linear forwards;
+}
+@keyframes undo-countdown {
+  to {
+    transform: scaleX(0);
+  }
 }
 .hint {
   margin: 8px 12px;
