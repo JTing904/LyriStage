@@ -88,6 +88,8 @@ function play(index) {
 
 // ---- 每首右边的「⋯」：下一首播放、加入播放队列、相似歌曲电台、加到歌单（在别人的房间里多一个「点歌给房主」）----
 const notice = useNoticeStore();
+const explainSource = () =>
+  notice.show(tr('网易云没有这首的版权，会改用 B 站等其他来源播放，音质可能不一样'), { duration: 6000 });
 const room = useRoomStore();
 const roomLocked = useRoomLocked();
 /** @type {import('vue').Ref<{ track: any, x: number, y: number } | null>} */
@@ -193,7 +195,16 @@ onBeforeUnmount(() => {
             {{ t.name }}
           </button>
           <span class="artists">
-            <span v-if="isUnavailable(t)" class="tag" :title="$t('网易云没有这首歌的版权，播放时会改用其他音源（例如 B 站）')">{{ $t('其他音源') }}</span>
+            <!-- 按了说明是什么意思（手机没有滑鼠提示） -->
+            <button
+              v-if="isUnavailable(t)"
+              type="button"
+              class="tag"
+              :title="$t('网易云没有这首歌的版权，播放时会改用其他音源（例如 B 站）')"
+              @click.stop="explainSource"
+            >
+              {{ $t('其他音源') }}
+            </button>
             <template v-for="(a, j) in t.ar ?? []" :key="a.id || j">
               <template v-if="j"> / </template>
               <RouterLink v-if="a.id" :to="`/artist/${a.id}`" @click.stop>{{ a.name }}</RouterLink>
@@ -530,9 +541,24 @@ onBeforeUnmount(() => {
   padding: 0 6px;
   border: 1px solid currentColor;
   border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
   font-size: 11px;
   line-height: 16px;
   vertical-align: 1px;
+  cursor: help;
+}
+/* 手指：标签很小，往上下多一点感应范围 */
+@media (pointer: coarse) {
+  .tag {
+    position: relative;
+  }
+  .tag::after {
+    content: '';
+    position: absolute;
+    inset: -10px -6px;
+  }
 }
 
 /* 「从歌单移除」：电脑版是每首右边的按钮；手机、平板收进「⋯」选单（紧贴着 ⋯ 很容易误按，一按就没了） */

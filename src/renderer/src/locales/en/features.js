@@ -501,4 +501,6 @@ export default {
   // 歌词舞台的睡眠定时
   这首: 'Song',
   关掉睡眠定时: 'Turn off sleep timer',
+  // 其他音源标签
+  '网易云没有这首的版权，会改用 B 站等其他来源播放，音质可能不一样': 'NetEase doesn’t have the rights to this song, so it plays from another source such as Bilibili. Quality may differ.',
 };
