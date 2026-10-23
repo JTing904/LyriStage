@@ -96,7 +96,8 @@ export function fcmMessage(token, kind, params, message, supabaseUrl) {
       body: message.body,
       url: message.url,
       kind,
-      from: String(params?.from ?? ''),
+      // 注意：from 是 FCM 保留的名字，不能当资料的 key
+      sender: String(params?.from ?? ''),
       avatar: safeAvatar(params?.avatar, supabaseUrl),
     },
     // 高优先：App 整个关掉、手机待机也会马上收到
@@ -104,10 +105,14 @@ export function fcmMessage(token, kind, params, message, supabaseUrl) {
   };
 }
 
-/** FCM 说这个代号已经没用了（App 删掉、换手机）：从数据库删掉 */
+/**
+ * FCM 说这个代号已经没用了（App 删掉、换手机）：从数据库删掉。
+ * INVALID_ARGUMENT 也可能是我们送的内容格式不对，只有错误讯息讲明是代号的问题才删
+ */
 export function isDeadToken(status, body) {
   const code = body?.error?.details?.find(d => d.errorCode)?.errorCode ?? body?.error?.status;
-  return status === 404 || code === 'UNREGISTERED' || (status === 400 && code === 'INVALID_ARGUMENT');
+  if (status === 404 || code === 'UNREGISTERED') return true;
+  return code === 'INVALID_ARGUMENT' && /registration token/i.test(body?.error?.message ?? '');
 }
 
 // ---- Firebase 的登入（服务账号签一张 JWT 换 access token，一小时有效） ---------------------

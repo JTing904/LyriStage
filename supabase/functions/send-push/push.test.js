@@ -22,7 +22,9 @@ describe('fcmMessage', () => {
     const m = fcmMessage('tok', 'reaction', { from: 'u2', avatar: 'https://evil.example/a.png' }, { title: 'T', body: 'B', url: '#/friends' }, SUPABASE);
     expect(m.notification).toBeUndefined();
     expect(m.android.priority).toBe('high');
-    expect(m.data).toEqual({ title: 'T', body: 'B', url: '#/friends', kind: 'reaction', from: 'u2', avatar: '' });
+    expect(m.data).toEqual({ title: 'T', body: 'B', url: '#/friends', kind: 'reaction', sender: 'u2', avatar: '' });
+    // FCM 保留的 key 不能出现
+    expect(Object.keys(m.data).some(k => k === 'from' || k.startsWith('google.') || k.startsWith('gcm.'))).toBe(false);
   });
 });
 
@@ -57,7 +59,9 @@ describe('buildMessage', () => {
 describe('isDeadToken', () => {
   it('App 删掉了（UNREGISTERED、404）要删代号；其他错误不删', () => {
     expect(isDeadToken(404, null)).toBe(true);
-    expect(isDeadToken(400, { error: { status: 'INVALID_ARGUMENT' } })).toBe(true);
+    expect(isDeadToken(400, { error: { status: 'INVALID_ARGUMENT', message: 'The registration token is not a valid FCM registration token' } })).toBe(true);
+    // 内容格式不对（例如用了保留的 key）：不是手机的问题，不能删
+    expect(isDeadToken(400, { error: { status: 'INVALID_ARGUMENT', message: 'Invalid data payload key: from' } })).toBe(false);
     expect(isDeadToken(404, { error: { details: [{ errorCode: 'UNREGISTERED' }] } })).toBe(true);
     expect(isDeadToken(500, { error: { status: 'INTERNAL' } })).toBe(false);
     expect(isDeadToken(429, null)).toBe(false);

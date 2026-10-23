@@ -24,7 +24,7 @@ import java.util.Map;
 
 /**
  * 自己显示推送通知（取代推送插件原本的）：右边放朋友的头像（像 WhatsApp），没有头像就放 LyriStage 的 Logo。
- * 服务器（supabase/functions/send-push）只送资料：title、body、url、kind、avatar。
+ * 服务器（supabase/functions/send-push）只送资料：title、body、url、kind、sender、avatar。
  * - App 在前面：不跳系统通知（App 里本来就有提示），照样交给插件给网页那边
  * - App 在后面、或整个关掉：在这里组好通知；点了打开 App，插件会把 url 交给 push.js 换到那一页
  */
@@ -67,7 +67,7 @@ public class PushMessagingService extends MessagingService {
 
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         // 同一种通知、同一个人：新的盖掉旧的
-        manager.notify(kind + ":" + data.get("from"), 0, builder.build());
+        manager.notify(kind + ":" + data.get("sender"), 0, builder.build());
     }
 
     /** App 正显示在画面上 */
