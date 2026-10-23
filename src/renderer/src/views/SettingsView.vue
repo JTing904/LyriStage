@@ -1278,7 +1278,8 @@ h1 {
   color: #30a46c;
 }
 .big.warn {
-  color: #f5a524;
+  /* 橘色字：浅色主题要深一点才看得清（跟字的颜色混） */
+  color: color-mix(in srgb, #f5a524 62%, var(--text));
 }
 .tile-meta {
   margin: 0;
@@ -1374,7 +1375,8 @@ h1 {
   text-overflow: ellipsis;
 }
 .value.warn {
-  color: #f5a524;
+  /* 橘色字：浅色主题要深一点才看得清（跟字的颜色混） */
+  color: color-mix(in srgb, #f5a524 62%, var(--text));
 }
 
 @media (max-width: 899px) {
