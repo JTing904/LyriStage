@@ -115,7 +115,12 @@ const clock = ms => {
     <header class="hello">
       <div class="hello-text">
         <h1 class="display">
-          {{ greeting }}<template v-if="auth.displayName">{{ $t('，{name}', { name: auth.displayName }) }}</template>
+          <!-- 放不下时整个名字换到下一行（「晚上好」不要被拆开），名字太长就截短 -->
+          <span class="nowrap">{{ greeting }}<template v-if="auth.displayName">{{ $t('，{name}', { name: '' }) }}</template></span><span
+            v-if="auth.displayName"
+            class="hello-name"
+            >{{ auth.displayName }}</span
+          >
         </h1>
         <p>{{ $t('今天也有歌想听吗？') }}</p>
       </div>
@@ -330,8 +335,21 @@ const clock = ms => {
   font-size: clamp(30px, 4vw, 44px);
   line-height: 1.15;
 }
+.hello h1 .nowrap {
+  white-space: nowrap;
+}
+.hello-name {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
 .hello p {
   margin: 6px 0 0;
+  /* 字放大时排成两行：两行差不多长，不要只剩一个字掉到下一行 */
+  text-wrap: balance;
   color: var(--text-dim);
 }
 

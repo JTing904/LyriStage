@@ -11,6 +11,7 @@ import { useAuthStore } from '../stores/auth';
 import { useRoomStore } from '../stores/room';
 import { t as tr } from '../i18n';
 import { usePlayer } from '../composables/usePlayer';
+import { useRoomLocked } from '../composables/useRoomLock';
 import { useLibraryStore } from '../stores/library';
 import { createSongRadio } from '../services';
 import LikeButton from './LikeButton.vue';
@@ -88,6 +89,7 @@ function play(index) {
 // ---- 每首右边的「⋯」：下一首播放、加入播放队列、相似歌曲电台、加到歌单（在别人的房间里多一个「点歌给房主」）----
 const notice = useNoticeStore();
 const room = useRoomStore();
+const roomLocked = useRoomLocked();
 /** @type {import('vue').Ref<{ track: any, x: number, y: number } | null>} */
 const menu = ref(null);
 function openMenu(event, track) {
@@ -103,8 +105,8 @@ async function menuAction(action) {
   const track = menu.value?.track;
   closeMenu();
   if (!track) return;
-  // 没登录时 player 会弹出登录提示，就不要再说"已加入"
-  const allowed = useAuthStore().allowed;
+  // 没登录时 player 会弹出登录提示、一起听的成员会问要不要点给房主，就不要再说"已加入"
+  const allowed = useAuthStore().allowed && !roomLocked();
   if (action === 'request') {
     if (await room.sendRequest(track)) notice.show(tr('点了《{name}》，等房主加进队列', { name: track.name }));
   } else if (action === 'next') {

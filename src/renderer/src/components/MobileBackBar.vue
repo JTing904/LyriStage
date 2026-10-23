@@ -61,12 +61,17 @@ function back() {
   height: 44px;
   border: 0;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  /* 几乎实心再加模糊：卷动时底下的字（例如设置的卡片标题）不会透出来跟箭头叠在一起 */
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.12);
   color: var(--text);
   cursor: pointer;
 }
 .scrolled .back {
   background: none;
+  backdrop-filter: none;
+  box-shadow: none;
 }
 .title {
   min-width: 0;

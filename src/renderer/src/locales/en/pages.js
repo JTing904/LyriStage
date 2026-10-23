@@ -152,7 +152,7 @@ export default {
   // 歌词风格名称、说明（lyric-stage/styles.js）
   单行大字: 'Big Line',
   '一次一句，超大做旧字体，一段一段浮现': 'One line at a time in huge distressed type, fading in phrase by phrase',
-  '3D 透视': '3D Perspective',
+  '3D 透视': '3D Tilt',
   '清晰封面做背景，整列歌词立体倾斜，花瓣飘落':
     'Sharp cover art behind tilted 3D lyrics, with falling petals',
   滚动歌词: 'Scrolling',
@@ -194,7 +194,7 @@ export default {
   '喜欢的歌、歌单和听歌记录': 'Liked songs, playlists and listening history',
   'LyriStage 收集什么、怎么用': 'What LyriStage collects and how it’s used',
   '听歌排行和每日推荐会重新开始，不能复原': 'Your rankings and daily mix start over. This can’t be undone',
-  '永久删除账号和所有资料，不能复原': 'Permanently delete your account and all of its data. This can’t be undone',
+  '资料会一起删掉，不能复原': 'Deletes all your data for good',
   '个还没用': 'unused',
   '一共发过 {n} 个': '{n} created in total',
   '已复制：{code}': 'Copied: {code}',

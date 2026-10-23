@@ -128,8 +128,11 @@ const emit = defineEmits(['select', 'update:showTranslation', 'update:showRomaji
   outline-color: rgba(255, 255, 255, 0.7);
 }
 .name {
+  overflow: hidden;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.72);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .option.active .name {
   color: #fff;

@@ -177,7 +177,7 @@ onBeforeUnmount(() => {
         :title="$t('把歌词做成图片分享')"
         @click="shareOpen = true"
       >
-        {{ $t('分享歌词') }}
+        {{ embedded ? $t('分享') : $t('分享歌词') }}
       </button>
       <button
         class="pill"
@@ -198,7 +198,7 @@ onBeforeUnmount(() => {
       :current="style.id"
       :show-translation="settings.showTranslation"
       :show-romaji="settings.showRomaji"
-      @select="settings.style = $event"
+      @select="(settings.style = $event), (pickerOpen = false)"
       @update:show-translation="settings.showTranslation = $event"
       @update:show-romaji="settings.showRomaji = $event"
       @pointerdown.stop
@@ -354,13 +354,23 @@ onBeforeUnmount(() => {
 .embedded .topbar {
   top: auto;
   bottom: 12px;
-  left: auto;
+  left: 0;
   height: auto;
   padding: 0 14px;
   -webkit-app-region: no-drag;
 }
 .spacer {
   flex: 1;
+}
+/* 房间里的歌词框窄（英文、字放大）：放不下就截短风格名字，「分享」「全屏」保持完整 */
+.embedded .pill {
+  flex: none;
+}
+.embedded .pill[aria-expanded] {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 button {
@@ -410,6 +420,38 @@ button:focus-visible {
   z-index: 11;
   top: calc(env(safe-area-inset-top) + var(--titlebar-height) + 20px);
   right: calc(12px + env(safe-area-inset-right));
+  /* 不要超出歌词画面（横屏、一起听的房间里画面很矮）：放不下就在面板里卷 */
+  max-height: calc(100% - env(safe-area-inset-top) - var(--titlebar-height) - 36px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* 一起听的房间：按钮在右下角，面板从上面开到按钮上方 */
+.embedded .picker {
+  top: 12px;
+  max-height: calc(100% - 76px);
+}
+/* 矮的画面（手机横屏、房间）：面板变宽变扁，风格排成两排往右卷，不用上下卷那么多 */
+@container (max-height: 520px) {
+  /* .stage 开头：要比 StylePicker 自己的宽度规则更优先 */
+  .stage .picker {
+    width: min(600px, calc(100cqw - 24px));
+  }
+  /* 两排、往右卷（窄的房间里一排塞 5 个，缩图会叠在一起、名字被挤断） */
+  .stage .picker :deep(.grid) {
+    grid-template-columns: none;
+    grid-template-rows: repeat(2, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: 92px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+}
+/* 更矮（手机横屏的房间）：两排只露得出半排，改成一排 */
+@container (max-height: 320px) {
+  .stage .picker :deep(.grid) {
+    grid-template-rows: auto;
+  }
 }
 
 /* PlayerBar 自己有 position: relative（给进度条定位用），

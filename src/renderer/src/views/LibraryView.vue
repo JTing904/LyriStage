@@ -129,7 +129,7 @@ async function create() {
       <span class="title-links">
         <!-- 离线听歌：存在手机里的歌 -->
         <RouterLink v-if="offlineSupported" to="/offline" class="report-link">
-          <Icon name="offline" :size="18" />{{ $t('存在手机') }}<span v-if="offlineTracks.length" class="count">{{ offlineTracks.length }}</span>
+          <Icon name="offline" :size="18" />{{ $t('存在手机') }}<span v-if="offlineTracks.length" class="link-count">{{ offlineTracks.length }}</span>
         </RouterLink>
         <RouterLink to="/report" class="report-link">
           <Icon name="chart" :size="18" />{{ $t('听歌报告') }}
@@ -140,7 +140,7 @@ async function create() {
     <div class="top">
       <!-- 我喜欢的音乐 -->
       <RouterLink to="/liked" class="liked-card">
-        <span class="label"><Icon name="heart-fill" :size="18" />{{ $t('我喜欢的音乐') }}</span>
+        <span class="liked-label"><Icon name="heart-fill" :size="18" />{{ $t('我喜欢的音乐') }}</span>
         <p class="names display">
           <template v-if="!likedReady">&nbsp;</template>
           <template v-else-if="liked.length">
@@ -250,8 +250,8 @@ async function create() {
   font-size: 14px;
   font-weight: 700;
 }
-/* 存在手机里几首 */
-.count {
+/* 存在手机里几首（不要叫 .count：「我喜欢的音乐」卡片已经用了） */
+.link-count {
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--surface-hover);
@@ -289,7 +289,7 @@ async function create() {
   color: #fff;
   overflow: hidden;
 }
-.label {
+.liked-label {
   position: absolute;
   top: 24px;
   left: 26px;

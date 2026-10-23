@@ -10,7 +10,9 @@ export const useUiStore = defineStore('ui', () => {
   const pageTitle = ref('');
   /** 全屏歌词（播放条、迷你播放条、一起听的房间都能打开） */
   const stageOpen = ref(false);
-  return { queueOpen, wallOpen, pageTitle, stageOpen };
+  /** 一起听的成员在歌单里点了歌：问要点给房主还是离开房间自己播（GuestPlaySheet）。{ track, replay } */
+  const guestPick = ref(null);
+  return { queueOpen, wallOpen, pageTitle, stageOpen, guestPick };
 });
 
 if (import.meta.hot) import.meta.hot.accept(acceptHMRUpdate(useUiStore, import.meta.hot));

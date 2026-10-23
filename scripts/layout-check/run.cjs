@@ -1,16 +1,18 @@
-// 发布前检查手机排版：在接着电脑的 Android 设备（平板也可以）上，把画面调成几种手机尺寸，
-// 中文、英文各跑一遍主要页面，自动找出：
-//   - 字被挤成两行（按钮、分页、标题这些短字）
-//   - 东西跑出画面（页面可以左右滑、元素超出画面）
+// 发布前检查手机排版：在接着电脑的 Android 设备（平板也可以）上，把画面调成几种手机尺寸、
+// 放大字体、中英文、深浅色，跑一遍主要页面和「打开以后」的样子（选单、面板、对话框），自动找出：
+//   - 字被挤成两行、字被切掉（按钮、分页、标题这些短字）
+//   - 东西跑出画面（页面可以左右滑、元素超出画面）、面板超出它的外框
 //   - 底部多一截空白（导航列的空间垫了两次）
-//   - 重要的按钮被盖住或碰不到（例如横屏时聊天输入框）
-// 每一页都截图（有问题的地方框红色），最后产生 out/report.html。
+//   - 重要的按钮被盖住、碰不到、横屏时要卷才看得到
+//   - 字看不清（字和底色太接近）、字被别的东西压住
+// 每一页都截图（有问题的地方框红色），最后产生 out/report.html。规则抓不到的（好不好看），还是要人看截图。
 //
 // 用法：
 //   npm run layout:check              设备上已经装了可以调试的版本
 //   npm run layout:check -- --install 先打包一个可以调试的版本装上去（签名跟正式版一样，不用删 App、登录还在）
-//   其他选项：--profiles phone-412,phone-360  --locales zh-CN,en  --pages home,room
-// 需要：adb、设备上的 App 已登录成员账号；跑完会把设备的画面尺寸、方向、导航列改回原样。
+//   其他选项：--profiles phone-412,phone-360  --locales zh-CN,en  --themes light,dark  --pages home,room
+// 需要：adb、设备上的 App 已登录成员账号。跑完会把设备的画面尺寸、方向、字体大小、导航列，
+// App 的语言、主题、离线听歌清单改回原样（检查时会塞几首假的「存在手机」的歌，名字特别长）。
 // 注意：--install 装的版本开着 WebView 调试，发布时照 release-process 重新打包（cap copy 会把调试关掉）。
 const { execFileSync, execSync } = require('child_process');
 const fs = require('fs');
@@ -27,48 +29,223 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const arg = name => {
   const i = process.argv.indexOf(`--${name}`);
-  return i > 0 ? process.argv[i + 1] : null;
+  return i > 0 ? process.argv[i + 1].split(',') : null;
 };
 
-/** 手机尺寸：size / density 换算成 CSS 宽度（1080/2.625 ≈ 411、720/2 = 360） */
-const PROFILES = [
-  { id: 'phone-412', label: '手机 412 直屏', size: '1080x2400', density: 420, rotation: 0 },
-  { id: 'phone-360', label: '小手机 360 直屏', size: '720x1560', density: 320, rotation: 0 },
-  { id: 'phone-land', label: '手机横屏', size: '1080x2400', density: 420, rotation: 1 },
-  { id: 'tablet-land', label: '平板横屏（电脑版排版）', size: null, density: null, rotation: 1 },
+/**
+ * 手机尺寸：size / density 换算成 CSS 宽度（1080/2.625 ≈ 411、720/2 = 360）。
+ * fontScale：系统字体放大（有的手机字比较宽，例如 OPPO，平板上放得下的字在那边会换行）
+ */
+const PROFILES = {
+  'phone-412': { label: '手机 412 直屏', size: '1080x2400', density: 420, rotation: 0 },
+  'phone-360': { label: '小手机 360 直屏', size: '720x1560', density: 320, rotation: 0 },
+  'phone-360-big': { label: '小手机 360、字体放大', size: '720x1560', density: 320, rotation: 0, fontScale: 1.15 },
+  'phone-land': { label: '手机横屏', size: '1080x2400', density: 420, rotation: 1 },
+  'tablet-land': { label: '平板横屏（电脑版排版）', size: null, density: null, rotation: 1 },
+};
+/** 要跑哪几组（尺寸 × 语言 × 主题）：不是每一种都排列组合，挑最容易出问题的 */
+const RUNS = [
+  ['phone-412', 'zh-CN', 'light'],
+  ['phone-412', 'zh-CN', 'dark'],
+  ['phone-412', 'en', 'light'],
+  ['phone-360', 'zh-CN', 'light'],
+  ['phone-360', 'en', 'dark'],
+  ['phone-360-big', 'zh-CN', 'light'],
+  ['phone-360-big', 'en', 'light'],
+  ['phone-land', 'zh-CN', 'dark'],
+  ['phone-land', 'en', 'light'],
+  ['tablet-land', 'zh-CN', 'light'],
+  ['tablet-land', 'en', 'dark'],
 ];
-const LOCALES = ['zh-CN', 'en'];
+
+// ---- 打开以后的样子（在页面里跑，不能用外面的变数）-----------------------------------------
+const STORE = name => document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get(name);
+const click = (selector, nth = 0) => {
+  const list = [...document.querySelectorAll(selector)].filter(e => e.getBoundingClientRect().width > 0);
+  list[nth]?.click();
+  return Boolean(list[nth]);
+};
+
+/** 一起听的成员画面检查完：变回房主（测试房间是自己开的，离开时才会把房间删掉） */
+const UNGUEST = () => {
+  const room = STORE('room');
+  if (!window.__lcHost) return;
+  room.role = 'host';
+  room.hostId = window.__lcHost;
+  room.members = room.members.filter(m => m.id !== 'lc-host');
+  window.__lcHost = null;
+};
+
+/** 交给页面的工具函式（箭头函式的 toString 没有名字，要包成 const 才叫得到） */
+const HELPERS = `const STORE = ${STORE.toString()}; const click = ${click.toString()}; const UNGUEST = ${UNGUEST.toString()};`;
+
+/** 好友：塞几个名字很长的好友、便签、正在听 */
+function MOCK_FRIENDS() {
+  const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia;
+  const f = pinia._s.get('friends');
+  const me = pinia._s.get('auth').user?.id;
+  const now = Date.now();
+  const iso = ms => new Date(now - ms).toISOString();
+  const song = (id, name, ar) => ({ id, name, ar: [{ id: 1, name: ar }], al: { id: 1, name: '', picUrl: 'https://p1.music.126.net/6y-UleORITEDbvrOLV0Q8A==/5639395138885805.jpg' }, dt: 240000 });
+  const long = song(1, '一首名字特别特别长的歌（Live 现场版 Remastered 2024）', '一个名字也很长的歌手 feat. 另一个歌手');
+  f.friends = [
+    { id: 'lc-a', name: '名字超级无敌长的朋友 Christopher', avatar: null },
+    { id: 'lc-b', name: 'Ivy', avatar: null },
+    { id: 'lc-c', name: 'Edward', avatar: null },
+  ];
+  f.listening = new Map([
+    ['lc-a', { userId: 'lc-a', track: long, playing: true, updatedAt: iso(20000) }],
+    ['lc-c', { userId: 'lc-c', track: long, playing: false, updatedAt: iso(3 * 3600000) }],
+  ]);
+  f.notes = new Map([
+    [me, { userId: me, body: '今天只想听慢歌，谁都不要找我 🌧🌧🌧 真的', track: long, createdAt: iso(3600000), expiresAt: iso(-20 * 3600000) }],
+    ['lc-b', { userId: 'lc-b', body: 'Exams are finally over!!! Listening all night long tonight', track: long, createdAt: iso(600000), expiresAt: iso(-23 * 3600000) }],
+  ]);
+  f.reactions = [{ id: -1, from: 'lc-a', emoji: '❤️‍🔥', target: 'note', context: '今天只想听慢歌，谁都不要找我 🌧🌧🌧 真的', seen: false, at: iso(60000) }];
+  f.notesAvailable = true;
+}
+
+/** 一起听：塞几则很长的聊天、一张点歌卡片、一个敲门 */
+function MOCK_ROOM() {
+  const room = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('room');
+  const now = new Date().toISOString();
+  const long = { id: 1, name: '一首名字特别特别长的歌（Live 现场版 Remastered 2024）', ar: [{ id: 1, name: '一个名字也很长的歌手' }], al: { picUrl: '' }, dt: 240000 };
+  room.messages = [
+    { id: -1, userId: room.selfId, kind: 'chat', body: 'thisisaverylongwordwithoutanyspacesthatmightoverflowthechatbubble 还有中文', at: now },
+    { id: -2, userId: 'lc-x', kind: 'request', body: '', track: long, at: now },
+    { id: -3, userId: 'lc-x', kind: 'chat', body: '好', at: now },
+  ];
+  room.knocks = [{ id: -9, userId: 'lc-y', name: '名字超级无敌长的朋友 Christopher', avatar: '' }];
+}
+
+/** 一起听：假装自己是成员（房主是一个名字很长的朋友），播放键会变灰 */
+function MOCK_GUEST() {
+  const room = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('room');
+  if (!window.__lcHost) window.__lcHost = room.hostId;
+  room.hostId = 'lc-host';
+  room.members = [...room.members.filter(m => m.id !== 'lc-host'), { id: 'lc-host', name: '名字超级无敌长的朋友 Christopher', avatar: '', role: 'host' }];
+  room.role = 'guest';
+}
 
 /**
  * 要检查的页面
+ * - hash：网址；stage：打开全屏歌词；room：先开一个测试房间
+ * - mock：先塞假资料（上面的 MOCK_*）；open：打开以后的样子（在页面里跑）；close：检查完关掉
  * - reach：一定要按得到的东西（会卷过去，看有没有被盖住）
  * - seeLandscape：横屏时不用卷就要看得到的东西（例如一起听的聊天输入框）
+ * - fits：[里面的东西, 外框]，里面的东西不能超出外框（外框写 viewport = 整个画面）
  */
 const PAGES = [
   { id: 'home', hash: '#/', reach: ['.search input'] },
-  { id: 'search', hash: '#/search?q=%E5%91%A8%E6%9D%B0%E4%BC%A6', wait: 4000 },
-  { id: 'friends', hash: '#/friends', reach: ['.add-btn'] },
+  // 晴天：网易云只搜得到翻唱，原唱（周杰伦）要等服务器找回来补在最前面（几秒）
+  { id: 'search', hash: '#/search?q=%E6%99%B4%E5%A4%A9', wait: 9000 },
+  { id: 'friends', hash: '#/friends', mock: MOCK_FRIENDS, reach: ['.add-btn'] },
+  {
+    id: 'friends-note',
+    hash: '#/friends',
+    mock: MOCK_FRIENDS,
+    open: () => click('.notes .note', 1),
+    close: () => document.querySelector('dialog.sheet')?.close(),
+    fits: [['dialog.sheet[open]', 'viewport']],
+  },
+  {
+    id: 'friends-mine',
+    hash: '#/friends',
+    mock: MOCK_FRIENDS,
+    open: () => click('.notes .note', 0),
+    close: () => document.querySelector('dialog.sheet')?.close(),
+    fits: [['dialog.sheet[open]', 'viewport']],
+  },
   { id: 'library', hash: '#/library' },
+  { id: 'offline', hash: '#/offline' },
   { id: 'liked', hash: '#/liked' },
   { id: 'playlist', hash: '#/playlist/3778678', wait: 4000 },
+  {
+    id: 'track-menu',
+    hash: '#/playlist/3778678',
+    wait: 4000,
+    open: () => click('.track .act[aria-haspopup]'),
+    close: () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })),
+    fits: [['.track-menu', 'viewport']],
+  },
+  {
+    id: 'add-to-playlist',
+    hash: '#/playlist/3778678',
+    wait: 4000,
+    open: () => click('.track .act[aria-haspopup]') && setTimeout(() => click('.track-menu button', 4), 300),
+    close: () => document.querySelector('dialog.add-dialog')?.close(),
+    fits: [['dialog.add-dialog[open]', 'viewport']],
+  },
   { id: 'artist', hash: '#/artist/6452', wait: 4000 },
   { id: 'settings', hash: '#/settings' },
   { id: 'settings-account', hash: '#/settings?c=account' },
   { id: 'settings-appearance', hash: '#/settings?c=appearance' },
+  { id: 'settings-playback', hash: '#/settings?c=playback' },
+  {
+    id: 'queue',
+    hash: '#/',
+    open: () => (STORE('ui').queueOpen = true),
+    close: () => (STORE('ui').queueOpen = false),
+    fits: [['dialog.queue-panel[open] .panel', 'viewport']],
+  },
+  { id: 'queue-wall', hash: '#/', open: () => (STORE('ui').wallOpen = true), close: () => (STORE('ui').wallOpen = false) },
   {
     id: 'room',
     hash: '#/room',
     room: true,
+    mock: MOCK_ROOM,
     reach: ['.composer input', '.room-top .round-btn', '.voice-btn'],
     seeLandscape: ['.composer input'],
   },
+  {
+    id: 'room-styles',
+    hash: '#/room',
+    room: true,
+    open: () => click('.stage .topbar .pill[aria-expanded]'),
+    close: () => click('.stage .topbar .pill[aria-expanded="true"]'),
+    fits: [['.stage-panel .picker', '.stage-panel']],
+  },
+  // 一起听的成员：播放键变灰、按了跳提示、在歌单点歌会问要点给房主还是离开房间
+  { id: 'room-guest', hash: '#/', room: true, mock: MOCK_GUEST, close: () => UNGUEST() },
+  {
+    id: 'room-guest-toast',
+    hash: '#/',
+    room: true,
+    mock: MOCK_GUEST,
+    open: () => click('.mini .icon-btn.locked') || click('.transport.locked .play'),
+    close: () => (STORE('notice').dismiss(), UNGUEST()),
+  },
+  {
+    id: 'room-guest-sheet',
+    hash: '#/playlist/3778678',
+    wait: 4000,
+    room: true,
+    mock: MOCK_GUEST,
+    open: () => click('.track', 1),
+    close: () => (document.querySelector('dialog.guest-sheet')?.close(), UNGUEST()),
+    fits: [['dialog.guest-sheet[open]', 'viewport']],
+  },
+  { id: 'room-guest-stage', stage: true, room: true, mock: MOCK_GUEST, close: () => UNGUEST() },
   { id: 'lyrics', stage: true },
+  {
+    id: 'lyrics-styles',
+    stage: true,
+    open: () => click('.stage .topbar .pill[aria-expanded]'),
+    close: () => click('.stage .topbar .pill[aria-expanded="true"]'),
+    fits: [['.stage .picker', '.stage']],
+  },
+  {
+    id: 'lyrics-share',
+    stage: true,
+    open: () => click('.stage .topbar .pill:not([aria-expanded])'),
+    close: () => document.querySelector('dialog.share-dialog')?.close(),
+    fits: [['dialog.share-dialog[open]', 'viewport']],
+  },
 ];
 
-// ---------------------------------------------------------------------------------------------
-// 在页面里跑的检查（不能用外面的变数）
+// ---- 检查（在页面里跑，不能用外面的变数）-------------------------------------------------------
 
-function CHECK({ reach, see }) {
+function CHECK({ reach, see, fits }) {
   const issues = [];
   const W = innerWidth;
   const H = innerHeight;
@@ -103,7 +280,9 @@ function CHECK({ reach, see }) {
   const inScroller = el => {
     for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
       if (p.matches(MAIN)) return false;
-      if (/(auto|scroll)/.test(getComputedStyle(p).overflowX)) return true;
+      // 只能上下卷的（例如侧边栏的歌单）overflow-x 也会算成 auto：真的能左右卷才算
+      const cs = getComputedStyle(p);
+      if (/(auto|scroll)/.test(cs.overflowX) && (cs.overflowY !== cs.overflowX || p.scrollWidth > p.clientWidth + 1)) return true;
     }
     return false;
   };
@@ -117,6 +296,17 @@ function CHECK({ reach, see }) {
     }
     return false;
   };
+  /** 开着对话框（选歌、便签…）时只检查对话框里面：后面的本来就被盖住 */
+  const modal = [...document.querySelectorAll('dialog[open]')].find(d => d.matches(':modal'));
+  const inScope = el => !modal || modal.contains(el);
+  const textNodes = () => {
+    const out = [];
+    const walker = document.createTreeWalker(modal ?? document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (node.textContent.trim() && node.parentElement && !node.parentElement.closest('script, style, [aria-hidden="true"]')) out.push(node);
+    }
+    return out;
+  };
 
   // 1. 东西跑出画面
   const scrollWidth = document.scrollingElement.scrollWidth;
@@ -128,7 +318,7 @@ function CHECK({ reach, see }) {
   }
   const overflowing = [];
   for (const el of document.querySelectorAll('button, a, input, h1, h2, h3, p, img, li, label, [class*="chip"], [class*="card"]')) {
-    if (!visible(el) || inScroller(el) || clippedInside(el)) continue;
+    if (!inScope(el) || !visible(el) || inScroller(el) || clippedInside(el)) continue;
     const r = el.getBoundingClientRect();
     if (r.right <= W + 2 && r.left >= -2) continue;
     if (overflowing.some(o => o.contains(el))) continue;
@@ -137,18 +327,20 @@ function CHECK({ reach, see }) {
     issues.push({ kind: '跑出画面', text: `${describe(el)} 超出画面（左 ${Math.round(r.left)}、右 ${Math.round(r.right)}，画面宽 ${W}）` });
   }
 
-  // 2. 短字被挤成两行：一段字（同一个文字节点）跨了两行以上
-  const LABELS = 'button, a, [role="tab"], [role="menuitem"], label, h1, h2, h3, th, nav, [class*="chip"], [class*="badge"], [class*="tag"]';
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  // 2. 短字被挤成两行、被切掉
+  const LABELS = 'button, a, [role="tab"], [role="menuitem"], label, h1, h2, h3, h4, th, nav, [class*="chip"], [class*="badge"], [class*="tag"], [class*="label"]';
   const wrapped = new Set();
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+  for (const node of textNodes()) {
     const text = node.textContent.trim();
-    if (!text || [...text].length > 18) continue;
-    const owner = node.parentElement?.closest(LABELS);
+    if ([...text].length > 18) continue;
+    const owner = node.parentElement.closest(LABELS);
     if (!owner || wrapped.has(owner) || !visible(owner) || inScroller(owner)) continue;
     // 本来就允许换行的（例如便签泡泡、歌名）跳过
     const ws = getComputedStyle(node.parentElement);
     if (ws.webkitLineClamp && ws.webkitLineClamp !== 'none') continue;
+    // 设了 text-wrap: balance 的（例如首页问候语带名字）：本来就打算排成两行
+    const os = getComputedStyle(owner);
+    if ([os.textWrapStyle, os.textWrap].some(v => v && v.includes('balance'))) continue;
     // 被切掉、又没有「…」：例如底部分页的 Listen Togethe（有「…」的是歌名那种，本来就会切）
     const box = node.parentElement;
     const bs = getComputedStyle(box);
@@ -162,7 +354,7 @@ function CHECK({ reach, see }) {
     range.selectNodeContents(node);
     const tops = new Set([...range.getClientRects()].filter(r => r.width > 0).map(r => Math.round(r.top / 4)));
     // 英文标题在空格换行是正常的；按钮、分页上的字换行就不行，中文标题一个词被拆开也不行
-    if (tops.size > 1 && !(owner.matches('h1, h2, h3') && /\s/.test(text))) {
+    if (tops.size > 1 && !(owner.matches('h1, h2, h3, h4') && /\s/.test(text))) {
       wrapped.add(owner);
       mark(owner);
       issues.push({ kind: '挤成两行', text: `${describe(owner)}：「${text}」被挤成 ${tops.size} 行` });
@@ -185,7 +377,20 @@ function CHECK({ reach, see }) {
     }
   }
 
-  // 4. 不用卷就要看得到（横屏时的聊天输入框这种）
+  // 4. 面板不能超出它的外框（例如歌词风格面板被歌词画面截掉、选单跑出画面）
+  for (const [inner, outer] of fits) {
+    const el = [...document.querySelectorAll(inner)].find(visible);
+    if (!el) continue;
+    const b = outer === 'viewport' ? { top: 0, left: 0, right: W, bottom: H } : el.parentElement?.closest(outer)?.getBoundingClientRect();
+    if (!b) continue;
+    const r = el.getBoundingClientRect();
+    if (r.top < b.top - 2 || r.bottom > b.bottom + 2 || r.left < b.left - 2 || r.right > b.right + 2) {
+      mark(el);
+      issues.push({ kind: '超出框', text: `${describe(el)} 超出 ${outer}（面板 ${Math.round(r.left)},${Math.round(r.top)}~${Math.round(r.right)},${Math.round(r.bottom)}，外框 ${Math.round(b.left)},${Math.round(b.top)}~${Math.round(b.right)},${Math.round(b.bottom)}）` });
+    }
+  }
+
+  // 5. 不用卷就要看得到（横屏时的聊天输入框这种）
   for (const selector of see) {
     const el = [...document.querySelectorAll(selector)].find(visible);
     if (!el) continue;
@@ -197,7 +402,103 @@ function CHECK({ reach, see }) {
     }
   }
 
-  // 5. 重要的东西：卷过去以后看得到、没被别的东西盖住
+  // 6. 字看不清：字的颜色和底色太接近（底下是图片、渐层的不算，量不准）
+  const parse = c => {
+    let m = /^rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?\)/.exec(c);
+    if (m) return [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : +m[4]];
+    m = /^color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)(?: \/ ([\d.]+))?\)/.exec(c);
+    if (m) return [m[1] * 255, m[2] * 255, m[3] * 255, m[4] === undefined ? 1 : +m[4]];
+    return null;
+  };
+  const over = (top, bottom) => [0, 1, 2].map(i => top[i] * top[3] + bottom[i] * (1 - top[3])).concat(1);
+  const luminance = ([r, g, b]) =>
+    [r, g, b].map(v => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+  /** 字后面的底色（一层一层往上找）；碰到图片、渐层、模糊就回传 null（量不准） */
+  const backgroundOf = el => {
+    const layers = [];
+    for (let p = el; p; p = p.parentElement) {
+      const cs = getComputedStyle(p);
+      if (cs.backgroundImage !== 'none' || cs.backdropFilter !== 'none' || /^(IMG|VIDEO|CANVAS)$/.test(p.tagName)) return null;
+      if (p.querySelector(':scope > img, :scope > canvas, :scope > video')) return null;
+      const bg = parse(cs.backgroundColor);
+      if (bg && bg[3] > 0) {
+        layers.push(bg);
+        if (bg[3] >= 0.99) break;
+      }
+      if (p === document.documentElement && !layers.length) return null;
+    }
+    if (!layers.length) return null;
+    return layers.reduceRight((below, layer) => (below ? over(layer, below) : layer), null);
+  };
+  const faint = new Set();
+  for (const node of textNodes()) {
+    const el = node.parentElement;
+    if (faint.has(el) || !visible(el) || el.closest(':disabled, [disabled]')) continue;
+    const r = el.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > H) continue;
+    const cs = getComputedStyle(el);
+    const fg = parse(cs.color);
+    const bg = backgroundOf(el);
+    if (!fg || !bg) continue;
+    let opacity = fg[3];
+    for (let p = el; p; p = p.parentElement) opacity *= Number(getComputedStyle(p).opacity);
+    const shown = over([fg[0], fg[1], fg[2], opacity], bg);
+    const [l1, l2] = [luminance(shown), luminance(bg)].sort((a, b) => b - a);
+    const ratio = (l1 + 0.05) / (l2 + 0.05);
+    if (ratio < 2.5) {
+      faint.add(el);
+      mark(el);
+      issues.push({ kind: '看不清', text: `${describe(el)} 字和底色太接近（对比 ${ratio.toFixed(1)}，至少要 2.5）` });
+    }
+  }
+
+  // 7. 字被压住：字的位置上，最上面的是别的东西（例如按钮压在字上）。
+  //    固定在画面上的（返回键、提示、底部播放条）、大面板（风格面板、选单）是故意盖在上面的，不算
+  const floating = el => {
+    for (let p = el; p && p !== document.body; p = p.parentElement) {
+      const cs = getComputedStyle(p);
+      if (cs.position === 'fixed' || cs.position === 'sticky') return true;
+      if (cs.position === 'absolute') {
+        const r = p.getBoundingClientRect();
+        if (r.width * r.height > W * H * 0.15) return true;
+      }
+    }
+    return false;
+  };
+  /** 这个元素实际看得到的范围：被卷动区块、裁切的外框挡掉的部分不算 */
+  const clipOf = el => {
+    let box = { top: 0, left: 0, right: W, bottom: H };
+    // 从自己开始算：收合起来的说明文字（只显示两行）后面几行的位置不算
+    for (let p = el; p && p !== document.documentElement; p = p.parentElement) {
+      const cs = getComputedStyle(p);
+      if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+      const r = p.getBoundingClientRect();
+      box = { top: Math.max(box.top, r.top), left: Math.max(box.left, r.left), right: Math.min(box.right, r.right), bottom: Math.min(box.bottom, r.bottom) };
+    }
+    return box;
+  };
+  const covered = new Set();
+  for (const node of textNodes()) {
+    const el = node.parentElement;
+    if (covered.has(el) || !visible(el)) continue;
+    const clip = clipOf(el);
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    for (const r of range.getClientRects()) {
+      if (r.width < 4 || r.top < clip.top || r.bottom > clip.bottom || r.left < clip.left || r.right > clip.right) continue;
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      if (!hit || hit === el || el.contains(hit) || hit.contains(el) || floating(hit)) continue;
+      // 同一个按钮、连结里面的（例如图示和字）不算
+      const group = el.closest('button, a, label, li');
+      if (group && group.contains(hit)) continue;
+      covered.add(el);
+      mark(el);
+      issues.push({ kind: '字被压住', text: `${describe(el)} 被 ${describe(hit)} 压住` });
+      break;
+    }
+  }
+
+  // 8. 重要的东西：卷过去以后看得到、没被别的东西盖住（会卷动页面，放最后）
   for (const selector of reach) {
     const el = [...document.querySelectorAll(selector)].find(visible);
     if (!el) continue;
@@ -248,6 +549,7 @@ function saveDisplay() {
   return {
     rotation: adb('shell', 'settings', 'get', 'system', 'user_rotation').trim(),
     auto: adb('shell', 'settings', 'get', 'system', 'accelerometer_rotation').trim(),
+    fontScale: adb('shell', 'settings', 'get', 'system', 'font_scale').trim(),
     navbar: navbar?.replace(/.*\]\s*/, '').trim() ?? null,
   };
 }
@@ -256,6 +558,7 @@ function restoreDisplay(saved) {
   adb('shell', 'wm', 'density', 'reset');
   adb('shell', 'settings', 'put', 'system', 'user_rotation', saved.rotation === 'null' ? '0' : saved.rotation);
   adb('shell', 'settings', 'put', 'system', 'accelerometer_rotation', saved.auto === 'null' ? '1' : saved.auto);
+  adb('shell', 'settings', 'put', 'system', 'font_scale', saved.fontScale === 'null' ? '1.0' : saved.fontScale);
   if (saved.navbar) adb('shell', 'cmd', 'overlay', 'enable-exclusive', '--category', saved.navbar);
 }
 function applyProfile(p) {
@@ -263,6 +566,7 @@ function applyProfile(p) {
   else adb('shell', 'wm', 'size', 'reset');
   if (p.density) adb('shell', 'wm', 'density', String(p.density));
   else adb('shell', 'wm', 'density', 'reset');
+  adb('shell', 'settings', 'put', 'system', 'font_scale', String(p.fontScale ?? 1.0));
   adb('shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0');
   adb('shell', 'settings', 'put', 'system', 'user_rotation', String(p.rotation));
   // 三个按钮的导航列（最高、最容易出问题）；有的平板会改用工作列，也一样有底部空间
@@ -295,7 +599,29 @@ async function connect() {
   throw new Error('连不上 App 的 WebView：设备上要装可以调试的版本（加 --install）');
 }
 
-const store = name => `document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('${name}')`;
+/** 「存在手机」的假歌（名字特别长；档案不存在，只拿来看排版，检查完换回原本的清单） */
+const MOCK_OFFLINE = JSON.stringify(
+  Object.fromEntries(
+    [1, 2, 3].map(i => [
+      `90000000${i}`,
+      {
+        file: `offline/90000000${i}.mp3`,
+        lyricsFile: null,
+        size: 9_800_000,
+        savedAt: Date.now(),
+        lastPlayed: Date.now() - i,
+        track: {
+          id: 900000000 + i,
+          name: i === 1 ? '一首名字特别特别长的歌（Live 现场版 Remastered 2024）' : `Offline song ${i}`,
+          ar: [{ id: 1, name: '一个名字也很长的歌手 feat. 另一个歌手' }],
+          al: { id: 1, name: '', picUrl: '' },
+          dt: 240000,
+        },
+      },
+    ])
+  )
+);
+const KEYS = ['lyristage:locale', 'lyristage:theme', 'lyristage:offline'];
 
 async function main() {
   try {
@@ -307,60 +633,80 @@ async function main() {
   fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(OUT, { recursive: true });
 
-  const profiles = arg('profiles') ? PROFILES.filter(p => arg('profiles').split(',').includes(p.id)) : PROFILES;
-  const locales = arg('locales') ? arg('locales').split(',') : LOCALES;
-  const pages = arg('pages') ? PAGES.filter(p => arg('pages').split(',').includes(p.id)) : PAGES;
+  const runs = RUNS.filter(
+    ([profile, locale, theme]) =>
+      (!arg('profiles') || arg('profiles').includes(profile)) &&
+      (!arg('locales') || arg('locales').includes(locale)) &&
+      (!arg('themes') || arg('themes').includes(theme))
+  );
+  const pages = arg('pages') ? PAGES.filter(p => arg('pages').includes(p.id)) : PAGES;
   const saved = saveDisplay();
   adb('shell', 'am', 'start', '-n', `${APP}/.MainActivity`);
   await sleep(4000);
   let { browser, page } = await connect();
-  const originalLocale = await page.evaluate(() => localStorage.getItem('lyristage:locale'));
+  const original = await page.evaluate(keys => keys.map(k => localStorage.getItem(k)), KEYS);
   const results = [];
   let openedRoom = false;
+  let currentProfile = null;
 
   try {
-    for (const profile of profiles) {
-      applyProfile(profile);
-      await sleep(5000);
-      for (const locale of locales) {
-        await browser.close().catch(() => {});
-        ({ browser, page } = await connect());
-        await page.evaluate(l => localStorage.setItem('lyristage:locale', l), locale);
-        await page.evaluate(() => location.reload());
+    for (const [profileId, locale, theme] of runs) {
+      const profile = PROFILES[profileId];
+      if (currentProfile !== profileId) {
+        applyProfile(profile);
+        currentProfile = profileId;
         await sleep(5000);
-        ({ browser, page } = await connect());
-        for (const p of pages) {
-          const name = `${profile.id}-${locale}-${p.id}`;
-          if (p.stage) {
-            // 全屏歌词（设备上最好有一首正在播的歌，不然只看得到空的舞台）
-            await page.evaluate(`${store('ui')}.stageOpen = true`);
-          } else {
-            if (p.room && !(await page.evaluate(`${store('room')}.inRoom`))) {
-              await page.evaluate(`${store('room')}.createRoom()`);
-              openedRoom = true;
-            }
-            await page.evaluate(h => (location.hash = h), p.hash);
-          }
-          await sleep(p.wait ?? 2500);
-          const see = profile.rotation === 1 ? p.seeLandscape ?? [] : [];
-          const { issues, width, height } = await page.evaluate(CHECK, { reach: p.reach ?? [], see });
-          await page.evaluate(() => document.scrollingElement && (document.querySelector('.area-main') ?? document.scrollingElement).scrollTo(0, 0)).catch(() => {});
-          fs.writeFileSync(path.join(OUT, `${name}.png`), execFileSync(ADB, ['exec-out', 'screencap', '-p'], { maxBuffer: 64 << 20 }));
-          await page.evaluate(() => document.querySelectorAll('[data-lc]').forEach(el => ((el.style.outline = ''), el.removeAttribute('data-lc'))));
-          if (p.stage) await page.evaluate(`${store('ui')}.stageOpen = false`);
-          results.push({ name, profile: profile.label, locale, page: p.id, width, height, issues });
-          const mark = issues.length ? `✗ ${issues.length}` : '✓';
-          console.log(`${mark.padEnd(4)} ${profile.id.padEnd(12)} ${locale.padEnd(6)} ${p.id}`);
-          for (const issue of issues) console.log(`       [${issue.kind}] ${issue.text}`);
+      }
+      await browser.close().catch(() => {});
+      ({ browser, page } = await connect());
+      await page.evaluate(([l, t, offline]) => {
+        localStorage.setItem('lyristage:locale', l);
+        localStorage.setItem('lyristage:theme', t);
+        localStorage.setItem('lyristage:offline', offline);
+      }, [locale, theme, MOCK_OFFLINE]);
+      await page.evaluate(() => location.reload());
+      await sleep(5000);
+      ({ browser, page } = await connect());
+      for (const p of pages) {
+        const name = `${profileId}-${locale}-${theme}-${p.id}`;
+        if (p.room && !(await page.evaluate(`${HELPERS}; STORE('room').inRoom`))) {
+          await page.evaluate(`${HELPERS}; STORE('room').createRoom()`);
+          openedRoom = true;
         }
+        if (p.stage) {
+          // 全屏歌词（设备上最好有一首正在播的歌，不然只看得到空的舞台）
+          await page.evaluate(`${HELPERS}; STORE('ui').stageOpen = true`);
+        } else {
+          await page.evaluate(h => (location.hash = h), p.hash);
+        }
+        await sleep(p.wait ?? 2500);
+        if (p.mock) await page.evaluate(p.mock);
+        if (p.open) {
+          await page.evaluate(`${HELPERS}; (${p.open.toString()})()`);
+          await sleep(1000);
+        }
+        const see = profile.rotation === 1 ? p.seeLandscape ?? [] : [];
+        const { issues, width, height } = await page.evaluate(CHECK, { reach: p.reach ?? [], see, fits: p.fits ?? [] });
+        fs.writeFileSync(path.join(OUT, `${name}.png`), execFileSync(ADB, ['exec-out', 'screencap', '-p'], { maxBuffer: 64 << 20 }));
+        await page.evaluate(() => document.querySelectorAll('[data-lc]').forEach(el => ((el.style.outline = ''), el.removeAttribute('data-lc'))));
+        if (p.close) await page.evaluate(`${HELPERS}; (${p.close.toString()})()`).catch(() => {});
+        if (p.stage) await page.evaluate(`${HELPERS}; STORE('ui').stageOpen = false`);
+        await page.evaluate(() => (document.querySelector('.area-main') ?? document.scrollingElement)?.scrollTo(0, 0)).catch(() => {});
+        results.push({ name, profile: profile.label, locale, theme, page: p.id, width, height, issues });
+        const markText = issues.length ? `✗ ${issues.length}` : '✓';
+        console.log(`${markText.padEnd(4)} ${profileId.padEnd(14)} ${locale.padEnd(6)} ${theme.padEnd(6)} ${p.id}`);
+        for (const issue of issues) console.log(`       [${issue.kind}] ${issue.text}`);
       }
     }
   } finally {
-    // 改回原本的语言、关掉测试房间、画面设定改回来
+    // 改回原本的语言、主题、离线清单，关掉测试房间，画面设定改回来
     try {
       ({ browser, page } = await connect());
-      if (openedRoom) await page.evaluate(`${store('room')}.leave()`).catch(() => {});
-      await page.evaluate(l => (l ? localStorage.setItem('lyristage:locale', l) : localStorage.removeItem('lyristage:locale')), originalLocale);
+      if (openedRoom) await page.evaluate(`${HELPERS}; UNGUEST(); STORE('room').leave()`).catch(() => {});
+      await page.evaluate(
+        ([keys, values]) => keys.forEach((k, i) => (values[i] === null ? localStorage.removeItem(k) : localStorage.setItem(k, values[i]))),
+        [KEYS, original]
+      );
       await page.evaluate(() => location.reload()).catch(() => {});
     } catch {
       // 连不上就算了
@@ -382,7 +728,7 @@ function writeReport(results) {
     .map(
       r => `<figure class="${r.issues.length ? 'bad' : ''}">
   <a href="${r.name}.png"><img src="${r.name}.png" loading="lazy" alt=""></a>
-  <figcaption><b>${esc(r.page)}</b> · ${esc(r.profile)} · ${esc(r.locale)} · ${r.width}×${r.height}
+  <figcaption><b>${esc(r.page)}</b> · ${esc(r.profile)} · ${esc(r.locale)} · ${esc(r.theme)} · ${r.width}×${r.height}
   ${r.issues.map(i => `<div class="issue">[${esc(i.kind)}] ${esc(i.text)}</div>`).join('')}</figcaption>
 </figure>`
     )

@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/auth';
 import { useLibraryStore } from '../stores/library';
 import { useRoomStore } from '../stores/room';
 import { useFriendsStore } from '../stores/friends';
+import { locale } from '../i18n';
 
 const auth = useAuthStore();
 const library = useLibraryStore();
@@ -18,7 +19,8 @@ const NAV = [
   { to: '/search', icon: 'search', label: '搜索' },
   { to: '/friends', icon: 'friends', label: '好友' },
   { to: '/library', icon: 'library', label: '我的音乐库' },
-  { to: '/room', icon: 'users', label: '一起听' },
+  // 英文「Listen Together」加上人数会挤成两行，跟底部分页一样只写 Together
+  { to: '/room', icon: 'users', label: '一起听', en: 'Together' },
 ];
 </script>
 
@@ -35,9 +37,9 @@ const NAV = [
         active-class=""
         exact-active-class="active"
       >
-        <Icon :name="item.icon" />{{ $t(item.label) }}
-        <!-- 在房间里：显示几个人在一起听 -->
-        <span v-if="item.to === '/room' && room.inRoom" class="live">{{ $t('{n} 人', { n: room.members.length }) }}</span>
+        <Icon :name="item.icon" />{{ locale === 'en' && item.en ? item.en : $t(item.label) }}
+        <!-- 在房间里：显示几个人在一起听（只写数字：英文「2 in room」会把「一起听」挤成两行） -->
+        <span v-if="item.to === '/room' && room.inRoom" class="live" :title="$t('{n} 人在听', { n: room.members.length })">{{ room.members.length }}</span>
         <!-- 新的好友邀请、还没看的回应 -->
         <span v-if="item.to === '/friends' && friendsStore.badge" class="live">{{ friendsStore.badge }}</span>
       </RouterLink>
@@ -140,6 +142,8 @@ const NAV = [
   font-weight: 700;
 }
 .live {
+  flex: none;
+  white-space: nowrap;
   margin-left: auto;
   padding: 2px 8px;
   border-radius: 999px;
@@ -152,9 +156,15 @@ const NAV = [
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-height: 0;
+  /* 歌单多、画面矮：歌单自己捲动，不要盖到下面的账号 */
+  min-height: 120px;
+  overflow-y: auto;
 }
 .mine-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--sidebar);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -219,6 +229,7 @@ const NAV = [
 }
 
 .account {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 12px;

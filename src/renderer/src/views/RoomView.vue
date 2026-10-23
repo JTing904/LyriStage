@@ -3,7 +3,7 @@
 // 房间里：左边是歌词（直接用歌词舞台的风格，大家同步），上面一条是房间码和谁在听；右边是聊天、成员
 // 成员可以「点歌」，房主在聊天里按「下一首播放 / 加入队列」；好友敲门时房主上面会出现「同意 / 拒绝」
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useRoomStore, normalizeCode, REACTIONS } from '../stores/room';
 import { useUiStore } from '../stores/ui';
 import { useVoiceStore } from '../stores/voice';
@@ -22,6 +22,7 @@ const voice = useVoiceStore();
 /** 语音里的人：id → { muted } */
 const inVoice = computed(() => new Map(voice.participants.map(p => [p.id, p])));
 const route = useRoute();
+const router = useRouter();
 const { state, player } = usePlayer();
 
 const input = ref('');
@@ -52,6 +53,34 @@ const scrollChat = () => nextTick(() => chatList.value && (chatList.value.scroll
 watch(() => room.messages.length, scrollChat);
 watch(tab, value => value === 'chat' && scrollChat());
 
+// 聊天面板可以收起来（歌词就能占满整个画面）；记住上次的选择。收起来时有新消息，按钮上显示几则
+const CHAT_KEY = 'lyristage:room-chat';
+const chatOpen = ref((() => {
+  try {
+    return localStorage.getItem(CHAT_KEY) !== 'closed';
+  } catch {
+    return true;
+  }
+})());
+const unread = ref(0);
+watch(chatOpen, open => {
+  try {
+    localStorage.setItem(CHAT_KEY, open ? 'open' : 'closed');
+  } catch {
+    // 存不了就只在这次生效
+  }
+  if (open) {
+    unread.value = 0;
+    scrollChat();
+  }
+});
+watch(
+  () => room.messages.length,
+  (n, before) => {
+    if (!chatOpen.value && n > before) unread.value += n - before;
+  }
+);
+
 // ---- 点歌 ----
 const picker = ref(null);
 const requesting = ref(false);
@@ -63,6 +92,15 @@ async function sendRequests(tracks) {
   requesting.value = false;
   tab.value = 'chat';
 }
+// 成员在别的地方按到灰色的播放键，提示上按了「点歌」：/room?pick=1
+async function openPickerFromQuery() {
+  if (!route.query.pick) return;
+  router.replace({ query: { ...route.query, pick: undefined } });
+  await nextTick();
+  if (room.role === 'guest') picker.value?.open();
+}
+onMounted(openPickerFromQuery);
+watch(() => route.query.pick, openPickerFromQuery);
 
 function handOver(member) {
   if (window.confirm(t('把房主交给 {name}？之后由 {name} 决定播什么，你会变成普通成员继续听。', { name: member.name }))) {
@@ -146,7 +184,7 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
     </div>
 
     <!-- 在房间里 -->
-    <div v-else class="room">
+    <div v-else class="room" :class="{ 'no-chat': !chatOpen }">
       <!-- 左边：房间资料一条 + 歌词（跟全屏歌词同一组风格和设置） -->
       <div class="left">
         <div class="room-top">
@@ -156,8 +194,9 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
             <button class="chip-btn" @click="copy(room.code, 'code')">
               {{ copied === 'code' ? $t('已复制 ✓') : $t('复制') }}
             </button>
-            <button class="chip-btn" @click="copy(shareLink, 'link')">
-              {{ copied === 'link' ? $t('已复制 ✓') : $t('邀请链接') }}
+            <button class="chip-btn link-btn" :aria-label="$t('邀请链接')" @click="copy(shareLink, 'link')">
+              <template v-if="copied === 'link'">{{ $t('已复制 ✓') }}</template>
+              <template v-else><Icon name="share" :size="14" class="link-icon" /><span class="link-text">{{ $t('邀请链接') }}</span></template>
             </button>
           </span>
           <span class="grow" />
@@ -206,6 +245,18 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
             </span>
           </span>
           <span class="listening"><i />{{ $t('{n} 人在听', { n: room.members.length }) }}</span>
+          <!-- 打开 / 收起聊天 -->
+          <button
+            class="round-btn chat-toggle"
+            :class="{ on: chatOpen }"
+            :aria-pressed="chatOpen"
+            :aria-label="chatOpen ? $t('收起聊天') : $t('打开聊天')"
+            :title="chatOpen ? $t('收起聊天') : $t('打开聊天')"
+            @click="chatOpen = !chatOpen"
+          >
+            <Icon name="chat" :size="16" />
+            <span v-if="!chatOpen && unread" class="unread">{{ unread > 9 ? '9+' : unread }}</span>
+          </button>
           <span class="more-wrap">
             <button class="round-btn" :aria-label="$t('更多')" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">⋯</button>
             <div v-if="menuOpen" class="menu" role="menu">
@@ -245,7 +296,7 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
       </div>
 
       <!-- 右边：聊天、成员 -->
-      <aside class="side-panel">
+      <aside v-show="chatOpen" class="side-panel">
         <div class="tabs" role="tablist">
           <button role="tab" :aria-selected="tab === 'chat'" :class="{ on: tab === 'chat' }" @click="tab = 'chat'">
             {{ $t('聊天') }}
@@ -542,6 +593,9 @@ header p {
   font-weight: 700;
   white-space: nowrap;
 }
+.link-icon {
+  display: none;
+}
 .chip-btn:hover {
   background: var(--line-strong);
 }
@@ -685,6 +739,30 @@ header p {
 }
 .more-wrap {
   position: relative;
+}
+.chat-toggle {
+  position: relative;
+  flex: none;
+}
+.chat-toggle.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.unread {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 2px solid var(--bg);
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 14px;
+  text-align: center;
 }
 .round-btn {
   display: grid;
@@ -1122,10 +1200,16 @@ header p {
     min-height: 180px;
   }
 }
-/* 很窄的手机：头像放不下就收起来（成员分页看得到） */
+/* 很窄的手机：头像放不下就收起来（成员分页看得到），「邀请链接」只留图标 */
 @media (max-width: 379px) {
   .avatars {
     display: none;
+  }
+  .link-btn .link-text {
+    display: none;
+  }
+  .link-btn .link-icon {
+    display: block;
   }
 }
 /* 手机横屏：画面矮，歌词在左、聊天在右，跟电脑版一样排，不用往下卷才看到聊天 */
@@ -1180,5 +1264,9 @@ header p {
   .composer .pick-btn {
     width: 38px;
   }
+}
+/* 聊天收起来：歌词占满 */
+.room.no-chat {
+  grid-template-columns: minmax(0, 1fr);
 }
 </style>

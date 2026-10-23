@@ -2,7 +2,7 @@
 // 只在 Electron 里载入（main.js）
 import { reactive } from 'vue';
 import { findLineIndex } from '@core/lyrics';
-import { player, getLyrics } from './services';
+import { controls, player, getLyrics } from './services';
 import { displayText, LINE_LEAD_MS } from './lyric-stage/useStage';
 
 /** 桌面歌词开着没有、锁定没有（播放条上的按钮用） */
@@ -12,9 +12,9 @@ export const desktopLyrics = reactive({ enabled: false, locked: false });
 export function connectDesktop(bridge) {
   // ---- 托盘按钮 ----
   bridge.onCommand(command => {
-    if (command === 'toggle') player.toggle();
-    else if (command === 'next') player.next();
-    else if (command === 'prev') player.prev();
+    if (command === 'toggle') controls.toggle();
+    else if (command === 'next') controls.next();
+    else if (command === 'prev') controls.prev();
   });
 
   // ---- 托盘显示正在播什么 ----

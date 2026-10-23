@@ -11,6 +11,7 @@ import { adminStorageUsage } from '@core/data';
 import { isUnavailable, isUnblockRateLimited } from '@core/netease';
 import { createFmSource, getEnglishTranslation, getLyrics } from './services';
 import { usePlayer } from './composables/usePlayer';
+import { installRoomLock } from './composables/useRoomLock';
 import { PULL_TRIGGER, attachPullRefresh } from './composables/usePullRefresh';
 import {
   findAndroidUpdate,
@@ -32,6 +33,7 @@ import AddToPlaylistDialog from './components/AddToPlaylistDialog.vue';
 import LoginPrompt from './components/LoginPrompt.vue';
 import AppSidebar from './components/AppSidebar.vue';
 import BottomTabs from './components/BottomTabs.vue';
+import GuestPlaySheet from './components/GuestPlaySheet.vue';
 import MiniPlayer from './components/MiniPlayer.vue';
 import MobileBackBar from './components/MobileBackBar.vue';
 import PlayerBar from './components/PlayerBar.vue';
@@ -83,6 +85,8 @@ const ui = useUiStore();
 const { stageOpen } = storeToRefs(ui);
 const route = useRoute();
 const router = useRouter();
+// 一起听的成员不能自己控制播放
+installRoomLock();
 
 // 退出登录（或成员身份没了）：停止播放；在个人页面（音乐库、设置…）的话回首页
 watch(
@@ -312,6 +316,7 @@ function onContentScroll() {
     </div>
 
     <AddToPlaylistDialog />
+    <GuestPlaySheet />
     <QueuePanel />
     <RoomReactions />
     <LoginPrompt />

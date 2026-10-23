@@ -207,10 +207,26 @@ export function duckMusic(on) {
   audio.setVolume(on ? volume * 0.35 : volume);
 }
 
+/**
+ * 一起听的成员不能自己控制播放（不然几秒后又被拉回房主播的地方）：App.vue 装上 check，
+ * 回传 true 就挡下来（由 check 自己跳提示）。房间照着房主播的时候直接用 player，不经过这里
+ * @type {{ check: ((action: string, args: any[]) => boolean) | null }}
+ */
+export const playbackLock = { check: null };
+const LOCKED = new Set(['play', 'pause', 'toggle', 'next', 'prev', 'seek', 'playList', 'playIndex', 'playFm', 'playFromQueue', 'playNext', 'addToQueue']);
+/** 界面、通知栏、小组件、托盘、键盘用这个：按的播放按钮先过 playbackLock */
+export const controls = new Proxy(player, {
+  get(target, key) {
+    const value = target[key];
+    if (typeof value !== 'function' || !LOCKED.has(key)) return value;
+    return (...args) => (playbackLock.check?.(key, args) ? undefined : value.apply(target, args));
+  },
+});
+
 // 预先载入下一首的歌词（存进歌词缓存，切过去时马上有）
 player.on('prefetch', track => getLyrics(track).catch(() => {}));
-connectMediaSession(player, { getLyrics });
-connectWidget(player, { getLyrics });
+connectMediaSession(controls, { getLyrics });
+connectWidget(controls, { getLyrics });
 
 // 开发时：这个文件或它用到的任何文件（core/ 里的播放器、歌词解析…）改了，
 // Vite 会重新执行这个文件、建一个新的播放器，旧的如果正在播放会继续响，变成两首歌一起播。

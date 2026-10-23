@@ -176,11 +176,9 @@ const initial = name => (name || '?').slice(0, 1).toUpperCase();
 .bubble.empty {
   color: var(--text-faint);
 }
+/* 歌名一行：用 block 才有「…」；太长时从开头显示（flex 置中会把前后都切掉，只剩中间） */
 .song {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  display: block;
   overflow: hidden;
   font-weight: 800;
   white-space: nowrap;
@@ -193,10 +191,7 @@ const initial = name => (name || '?').slice(0, 1).toUpperCase();
   opacity: 0.85;
 }
 .tiny {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
+  display: block;
   margin-top: 2px;
   overflow: hidden;
   font-size: 11px;
@@ -211,6 +206,8 @@ const initial = name => (name || '?').slice(0, 1).toUpperCase();
   align-items: flex-end;
   gap: 1.5px;
   height: 10px;
+  margin-right: 3px;
+  vertical-align: -1px;
 }
 .eq i {
   width: 2px;

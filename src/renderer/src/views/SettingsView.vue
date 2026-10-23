@@ -620,7 +620,7 @@ function summary(id) {
             <div class="row">
               <span class="label">
                 {{ $t('删除账号') }}
-                <small>{{ $t('永久删除账号和所有资料，不能复原') }}</small>
+                <small>{{ $t('资料会一起删掉，不能复原') }}</small>
               </span>
               <button class="ghost danger" @click="openDelete">{{ $t('删除账号') }}</button>
             </div>
@@ -1363,6 +1363,15 @@ h1 {
   font-size: 14px;
   white-space: nowrap;
 }
+.nav-row .label {
+  flex: 1 0 auto;
+  white-space: nowrap;
+}
+.nav-row .value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .value.warn {
   color: #f5a524;
 }
@@ -1545,9 +1554,19 @@ button {
 }
 .segmented {
   display: flex;
+  flex: none;
+  margin-left: auto;
   padding: 3px;
   border-radius: 999px;
   background: var(--surface-hover);
+  white-space: nowrap;
+}
+/* 有选项列的那一行：放不下就让选项列掉到下一行，不要把左边的字挤成一字一行 */
+.row:has(> .segmented) {
+  flex-wrap: wrap;
+}
+.row:has(> .segmented) > .label {
+  flex: 1 1 8em;
 }
 .segmented button {
   padding: 7px 14px;
@@ -1912,6 +1931,32 @@ code {
   }
   .row {
     flex-wrap: wrap;
+  }
+  /* 分类那几行：目前的设定放到名字下面（英文放在同一行会挤到只剩一个字） */
+  .nav-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'icon label chev' 'icon value chev';
+    column-gap: 14px;
+    row-gap: 1px;
+  }
+  .nav-row .cat-icon {
+    grid-area: icon;
+  }
+  .nav-row .label {
+    grid-area: label;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nav-row .value {
+    grid-area: value;
+    font-size: 13px;
+  }
+  .nav-row .value:empty {
+    display: none;
+  }
+  .nav-row .chev {
+    grid-area: chev;
   }
 }
 

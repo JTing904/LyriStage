@@ -292,6 +292,12 @@ export default {
   点歌: 'Request a song',
   点给房主: 'Send to host',
   点歌给房主: 'Request for the room',
+  // 成员不能控制播放
+  只有房主能控制播放: 'Only the host controls playback',
+  '{name} 控制播放': '{name} controls playback',
+  '你在 {name} 的房间里，大家听的歌由房主决定。': 'You’re in {name}’s room. The host picks what everyone hears.',
+  '离开房间，自己播': 'Leave the room and play it',
+  '点歌没送出去，再试一次': 'Couldn’t send the request. Try again',
   '点了《{name}》，等房主加进队列': 'Requested "{name}". The host will add it',
   '{name} 点了《{song}》': '{name} requested "{song}"',
   '房主把《{name}》加进队列了': 'The host added "{name}" to the queue',
@@ -310,6 +316,10 @@ export default {
   '{name} 没有让你进房间': "{name} didn't let you in",
   '{name} 没有回应，晚点再试试': "{name} didn't answer. Try again later",
   '找不到这个房间，可能已经关了': "Couldn't find that room. It may have closed",
+
+  // ---- 一起听：收起聊天 ----
+  收起聊天: 'Hide chat',
+  打开聊天: 'Show chat',
 
   // ---- 离线听歌 ----
   离线听歌: 'Offline listening',

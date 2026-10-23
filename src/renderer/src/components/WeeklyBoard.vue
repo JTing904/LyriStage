@@ -173,14 +173,15 @@ const nameOf = row => (row.isMe ? t('我') : row.name || t('好友'));
   text-align: center;
   color: var(--text-faint);
 }
+/* 金银铜：混一点字的颜色，浅色主题时变深、深色主题时变亮，才看得清楚 */
 .rank.r1 {
-  color: #f5b301;
+  color: color-mix(in srgb, #f5b301 70%, var(--text));
 }
 .rank.r2 {
-  color: #a8b3bd;
+  color: color-mix(in srgb, #a8b3bd 55%, var(--text));
 }
 .rank.r3 {
-  color: #cd7f4b;
+  color: color-mix(in srgb, #cd7f4b 70%, var(--text));
 }
 .avatar {
   flex: none;

@@ -13,11 +13,15 @@ import { useUiStore } from '../stores/ui';
 import { useSleepStore } from '../stores/sleep';
 import { useAuthStore } from '../stores/auth';
 import { useFmDislike } from '../composables/useFmDislike';
+import { useRoomLocked } from '../composables/useRoomLock';
+import HostLine from './HostLine.vue';
 
 const ui = useUiStore();
 const sleep = useSleepStore();
 const auth = useAuthStore();
 const dislike = useFmDislike();
+/** 一起听的成员：播放键、进度条变灰（还是按得到，按了会说只有房主能控制） */
+const locked = computed(useRoomLocked());
 
 const props = defineProps({
   state: { type: Object, required: true },
@@ -72,11 +76,13 @@ function ratioAt(event) {
 }
 function onPointerDown(event) {
   if (!duration.value) return;
+  if (locked.value) return props.player.seek(ratioAt(event) * duration.value);
   dragging.value = true;
   dragRatio.value = ratioAt(event);
   bar.value.setPointerCapture(event.pointerId);
 }
 function onPointerMove(event) {
+  if (locked.value) return;
   hoverRatio.value = ratioAt(event);
   if (dragging.value) dragRatio.value = hoverRatio.value;
 }
@@ -136,7 +142,8 @@ function toggleMute() {
       <img v-if="cover" class="cover" :src="cover" alt="" />
       <div class="meta">
         <strong>{{ track?.name ?? $t('没有在播放') }}</strong>
-        <span>{{ artists }}</span>
+        <HostLine v-if="locked" />
+        <span v-else>{{ artists }}</span>
       </div>
       <LikeButton v-if="track" :track="track" />
       <AddToPlaylistButton v-if="track" :track="track" />
@@ -146,7 +153,7 @@ function toggleMute() {
       <div
         ref="bar"
         class="scrubber"
-        :class="{ active: dragging }"
+        :class="{ active: dragging, locked }"
         role="slider"
         tabindex="0"
         :aria-label="$t('播放进度')"
@@ -207,7 +214,7 @@ function toggleMute() {
         </button>
       </div>
 
-      <div class="transport">
+      <div class="transport" :class="{ locked }">
         <button class="icon" :title="$t('上一首')" @click="player.prev()">
           <svg viewBox="0 0 24 24">
             <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
@@ -237,7 +244,8 @@ function toggleMute() {
         <img v-if="cover" class="cover" :src="cover" alt="" />
         <div class="meta">
           <strong>{{ track?.name ?? $t('没有在播放') }}</strong>
-          <span>{{ subtitle }}</span>
+          <HostLine v-if="locked" />
+          <span v-else>{{ subtitle }}</span>
         </div>
         <LikeButton v-if="track" :track="track" />
       <AddToPlaylistButton v-if="track" :track="track" />
@@ -605,6 +613,26 @@ button.icon.toggle.on {
 .meta span {
   font-size: 13px;
   color: var(--bar-dim);
+}
+.meta .host-line {
+  align-self: flex-start;
+  max-width: 100%;
+  margin-top: 1px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bar-accent) 16%, transparent);
+  color: var(--bar-accent);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 20px;
+}
+/* 一起听的成员：播放键和进度条变灰 */
+.transport.locked button.icon,
+.scrubber.locked {
+  opacity: 0.35;
+}
+.scrubber.locked .knob {
+  display: none;
 }
 
 /* 音量：滑过喇叭图标才展开滑杆 */

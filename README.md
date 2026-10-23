@@ -42,7 +42,7 @@ LyriStage is **invite-only** for now. Anyone can look around; playing music, lik
 
 | | | |
 |:-:|:-:|:-:|
-| <img src="docs/images/stage-perspective.webp" width="260" alt="3D Perspective"><br>**3D Perspective**<br>Sharp cover art behind tilted 3D lyrics | <img src="docs/images/stage-scroll.webp" width="260" alt="Scrolling"><br>**Scrolling**<br>Word-by-word highlight over flowing cover colors | <img src="docs/images/stage-karaoke.webp" width="260" alt="Karaoke"><br>**Karaoke**<br>KTV-style alternating lines |
+| <img src="docs/images/stage-perspective.webp" width="260" alt="3D Tilt"><br>**3D Tilt**<br>Sharp cover art behind tilted 3D lyrics | <img src="docs/images/stage-scroll.webp" width="260" alt="Scrolling"><br>**Scrolling**<br>Word-by-word highlight over flowing cover colors | <img src="docs/images/stage-karaoke.webp" width="260" alt="Karaoke"><br>**Karaoke**<br>KTV-style alternating lines |
 | <img src="docs/images/stage-vertical.webp" width="260" alt="Vertical Poetry"><br>**Vertical Poetry**<br>Calligraphy on rice paper, with a red seal | <img src="docs/images/stage-mv.webp" width="260" alt="Music Video"><br>**Music Video**<br>Each phrase pops in with its own size, angle and color | <img src="docs/images/stage-vinyl.webp" width="260" alt="Vinyl"><br>**Vinyl**<br>A spinning record and tonearm |
 | <img src="docs/images/stage-block.webp" width="260" alt="Color Block"><br>**Color Block**<br>The cover's main color with big bold text | <img src="docs/images/stage-typewriter.webp" width="260" alt="Typewriter"><br>**Typewriter**<br>A retro terminal that types each word | <img src="docs/images/stage-kinetic.webp" width="260" alt="Big Line"><br>**Big Line**<br>One line at a time in huge distressed type |
 
