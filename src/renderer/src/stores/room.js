@@ -201,7 +201,7 @@ export const useRoomStore = defineStore('room', () => {
   async function connectOnce(roomCode, asRole) {
     const supabase = getSupabase();
     if (!supabase || !auth.allowed) throw new Error(t('要先登录 LyriStage 才能一起听'));
-    await leave();
+    await teardown();
     code.value = roomCode;
     role.value = asRole;
     status.value = 'connecting';
@@ -249,18 +249,29 @@ export const useRoomStore = defineStore('room', () => {
         }, 3000);
       });
 
+    const thisChannel = channel;
+    let joinedOnce = false;
     await new Promise((resolve, reject) => {
-      channel.subscribe(async (state, err) => {
+      thisChannel.subscribe(async (state, err) => {
         if (state === 'SUBSCRIBED') {
-          await channel.track(me());
-          resolve();
+          await thisChannel.track(me());
+          if (!joinedOnce) {
+            joinedOnce = true;
+            resolve();
+          } else if (thisChannel === channel) {
+            // 网络断了一下、Realtime 自己连回来了：重新报到，房主马上广播一次让大家对齐
+            notice.value = '';
+            broadcast();
+          }
         } else if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT') {
-          reject(err ?? new Error(t('连不上房间')));
+          if (!joinedOnce) reject(err ?? new Error(t('连不上房间')));
+          else if (thisChannel === channel) checkConnection(5000);
         }
       });
     });
 
     status.value = 'joined';
+    rememberRoom();
     loadRecentMessages(roomCode);
     if (asRole === 'host') {
       offPlayer = [player.on('change', broadcast), player.on('track', broadcast)];
@@ -404,12 +415,9 @@ export const useRoomStore = defineStore('room', () => {
     leave();
   }
 
+  /** 自己按了「离开 / 关闭房间」（或房间关了）：房主的话把房间关掉；不再提示「回到房间」 */
   async function leave() {
-    clearInterval(heartbeat);
-    clearInterval(seenTimer);
-    seenTimer = 0;
-    clearTimeout(hostGoneTimer);
-    hostGoneTimer = 0;
+    forgetRoom();
     // 房主关房间：数据库里的房间也删掉
     if (role.value === 'host' && code.value) {
       // 先告诉大家房间关了（换房主时 reconnect 会先把自己改成成员，不会走到这里）
@@ -417,6 +425,17 @@ export const useRoomStore = defineStore('room', () => {
       const { error: err } = await getSupabase()?.from('rooms').delete().eq('code', code.value) ?? {};
       if (err) console.warn('[LyriStage] 删除房间失败', err);
     }
+    await teardown();
+  }
+
+  /** 断开这台设备的连线（房间留着：重新连线、换角色时用） */
+  async function teardown() {
+    clearInterval(heartbeat);
+    clearInterval(seenTimer);
+    seenTimer = 0;
+    clearTimeout(hostGoneTimer);
+    hostGoneTimer = 0;
+    clearTimeout(checkTimer);
     offPlayer.forEach(off => typeof off === 'function' && off());
     offPlayer = [];
     if (channel) {
@@ -433,6 +452,101 @@ export const useRoomStore = defineStore('room', () => {
     floating.value = [];
     accepted.value = new Set();
     knocks.value = [];
+  }
+
+  // ---- 断线自动连回来、App 被关掉后回到房间 ----
+
+  let checkTimer = 0;
+  let recovering = false;
+  /** 过一下看看连线还在不在；不在就整个重新连（Realtime 自己连得回来就不用） */
+  function checkConnection(delay = 0) {
+    clearTimeout(checkTimer);
+    checkTimer = setTimeout(() => {
+      if (status.value === 'joined' && channel?.state !== 'joined') recover();
+    }, delay);
+  }
+  async function recover(attempt = 1) {
+    if (recovering || status.value !== 'joined') return;
+    recovering = true;
+    const roomCode = code.value;
+    const asRole = role.value;
+    const hostBefore = hostId.value;
+    notice.value = t('网络断了，重新连线中…');
+    try {
+      await connect(roomCode, asRole);
+      hostId.value = hostBefore;
+      notice.value = '';
+    } catch (err) {
+      console.warn('[LyriStage] 重新连房间失败', err);
+      // 再试几次（每次等久一点）；都不行就放弃，房间留着可以按「回到房间」
+      if (attempt < 4) setTimeout(() => recover(attempt + 1), attempt * 5000);
+      else {
+        await teardown();
+        lastRoom.value = { code: roomCode, role: asRole };
+        useNoticeStore().show(t('连不回房间 {code}，网络好了再按「回到房间」', { code: roomCode }), { duration: 8000 });
+      }
+    } finally {
+      recovering = false;
+    }
+  }
+  // App 回到前面、网络恢复时：看一下房间连线还在不在
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && checkConnection(800));
+  window.addEventListener('online', () => checkConnection(800));
+
+  /** 上次在的房间（App 被系统关掉、断线连不回来时），可以按「回到房间」 */
+  const lastRoom = ref(null);
+  const SAVED_KEY = 'lyristage:room';
+  /** 回到房间的提示只给几个小时内的（太久的房间早就关了） */
+  const SAVED_MS = 6 * 60 * 60 * 1000;
+  function rememberRoom() {
+    lastRoom.value = null;
+    try {
+      localStorage.setItem(SAVED_KEY, JSON.stringify({ code: code.value, role: role.value, at: Date.now() }));
+    } catch {
+      // 存不了就不提示
+    }
+  }
+  function forgetRoom() {
+    lastRoom.value = null;
+    try {
+      localStorage.removeItem(SAVED_KEY);
+    } catch {
+      // 没关系
+    }
+  }
+  /** 打开 App 时：上次在房间里、而且房间还开着，就问要不要回去 */
+  async function offerLastRoom() {
+    let saved = null;
+    try {
+      saved = JSON.parse(localStorage.getItem(SAVED_KEY) || 'null');
+    } catch {
+      // 读不到就算了
+    }
+    if (!saved?.code || inRoom.value || Date.now() - saved.at > SAVED_MS) return forgetRoom();
+    const supabase = getSupabase();
+    const still =
+      saved.role === 'host'
+        ? (await supabase.from('rooms').select('code').eq('code', saved.code).eq('host_id', auth.user?.id).maybeSingle()).data
+        : (await supabase.rpc('join_room', { room: saved.code })).data;
+    if (!still || inRoom.value) return forgetRoom();
+    lastRoom.value = { code: saved.code, role: saved.role };
+    useNoticeStore().show(t('你刚才在房间 {code}', { code: saved.code }), {
+      action: { label: t('回到房间'), run: rejoinLast },
+      duration: 15000,
+    });
+  }
+  /** 按「回到房间」：房主就继续当房主（房间还是同一间），成员就重新加入 */
+  async function rejoinLast() {
+    const last = lastRoom.value;
+    if (!last) return;
+    location.hash = '#/room';
+    if (last.role !== 'host') return joinRoom(last.code);
+    try {
+      await connect(last.code, 'host');
+      hostId.value = auth.user.id;
+    } catch (err) {
+      fail(err);
+    }
   }
 
   // ---- 聊天、表情 ----
@@ -646,10 +760,14 @@ export const useRoomStore = defineStore('room', () => {
     }, KNOCK_WAIT_MS);
   }
 
-  // 退出登录就离开房间
+  // 登录好了：问要不要回到上次的房间；退出登录就离开房间
   watch(
     () => auth.allowed,
-    allowed => !allowed && leave()
+    (allowed, before) => {
+      if (allowed) offerLastRoom().catch(() => {});
+      else if (before) leave();
+    },
+    { immediate: true }
   );
 
   return {
@@ -674,6 +792,8 @@ export const useRoomStore = defineStore('room', () => {
     knocking,
     knock,
     stopKnocking,
+    lastRoom,
+    rejoinLast,
     transferHost,
     host,
     inRoom,

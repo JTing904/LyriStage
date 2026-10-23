@@ -311,6 +311,15 @@ export default {
   '{name} 没有回应，晚点再试试': "{name} didn't answer. Try again later",
   '找不到这个房间，可能已经关了': "Couldn't find that room. It may have closed",
 
+  // ---- 一起听：断线连回来、回到房间 ----
+  '网络断了，重新连线中…': 'Connection lost. Reconnecting…',
+  '连不回房间 {code}，网络好了再按「回到房间」': "Couldn't get back into room {code}. Tap Back to room when you're online",
+  '你刚才在房间 {code}': 'You were in room {code}',
+  回到房间: 'Back to room',
+  '连线中…': 'Connecting…',
+  '你是房主，回去后大家可以继续跟着你听。': "You're the host. Go back and everyone can keep listening with you.",
+  '房间还开着，按一下就回去。': 'The room is still open. Tap to go back.',
+
   // ---- 好友页：便签、表情回应 ----
   有新的好友动态: 'New friend activity',
   你的便签: 'Your note',

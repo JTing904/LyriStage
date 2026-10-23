@@ -106,6 +106,15 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
 
     <!-- 还没在房间里 -->
     <div v-if="!room.inRoom" class="start">
+      <!-- 刚才在房间里（App 被关掉、断线连不回来）：一键回去 -->
+      <section v-if="room.lastRoom" class="card back">
+        <h2>{{ $t('你刚才在房间 {code}', { code: room.lastRoom.code }) }}</h2>
+        <p>{{ room.lastRoom.role === 'host' ? $t('你是房主，回去后大家可以继续跟着你听。') : $t('房间还开着，按一下就回去。') }}</p>
+        <button class="primary" :disabled="room.status === 'connecting'" @click="room.rejoinLast()">
+          {{ room.status === 'connecting' ? $t('连线中…') : $t('回到房间') }}
+        </button>
+      </section>
+
       <section class="card">
         <h2>{{ $t('开一个房间') }}</h2>
         <p>{{ $t('你当房主，大家跟着你的歌听。') }}</p>
@@ -387,6 +396,11 @@ header p {
 .card h2 {
   margin: 0;
   font-size: 18px;
+}
+.card.back {
+  grid-column: 1 / -1;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
 }
 .card p {
   margin: 0;
