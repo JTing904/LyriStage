@@ -214,7 +214,7 @@ onBeforeUnmount(() => clearInterval(resendTimer));
                 inputmode="numeric"
                 autocomplete="one-time-code"
                 maxlength="10"
-                placeholder="123456"
+                placeholder="12345678"
                 required
               />
             </label>
