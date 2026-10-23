@@ -45,6 +45,17 @@
                 android:resource="@xml/now_playing_widget_info" />
         </receiver>
 
+        <!-- App 关着也收得到的通知（Firebase）：小图示、颜色、频道 -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="social" />
+
         <!-- 一起听的语音：关掉屏幕、切到别的 App 时继续（VoiceCallService.java） -->
         <service
             android:name=".VoiceCallService"

@@ -29,6 +29,7 @@ import { netease, audioEffects } from '../services';
 import EqualizerPanel from '../components/EqualizerPanel.vue';
 import { pinWidget } from '../widget';
 import { isLockScreenLyricsOn, setLockScreenLyrics } from '../mediaSession';
+import { pushSupported, pushWanted, setPushWanted } from '../push';
 import { t, locale, LOCALES } from '../i18n';
 import { timeAgo } from '../utils/format';
 
@@ -67,6 +68,16 @@ const updateText = computed(() => {
 });
 
 const auth = useAuthStore();
+
+// ---- 通知（手机 App） ----
+const pushOn = ref(pushWanted());
+/** 开了但系统设置里不允许通知 */
+const pushBlocked = ref(false);
+async function togglePush(on) {
+  pushOn.value = on;
+  const granted = await setPushWanted(on).catch(() => false);
+  pushBlocked.value = on && !granted;
+}
 const library = useLibraryStore();
 const theme = useThemeStore();
 const avatar = useAvatarStore();
@@ -561,6 +572,20 @@ function summary(id) {
               </div>
             </form>
           </div>
+
+          <!-- 手机 App：关着也收得到通知 -->
+          <template v-if="pushSupported">
+            <h3 class="section-label">{{ $t('通知') }}</h3>
+            <div class="card">
+              <div class="row">
+                <span class="label">
+                  {{ $t('App 关着也通知我') }}
+                  <small>{{ pushBlocked ? $t('系统设置里关掉了 LyriStage 的通知') : $t('好友回应、好友邀请、有人想加入你的房间') }}</small>
+                </span>
+                <input :checked="pushOn" type="checkbox" role="switch" class="switch" @change="togglePush($event.target.checked)" />
+              </div>
+            </div>
+          </template>
 
           <h3 class="section-label">{{ $t('我的资料') }}</h3>
           <div class="card">

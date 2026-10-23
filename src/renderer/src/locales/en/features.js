@@ -311,6 +311,13 @@ export default {
   '{name} 没有回应，晚点再试试': "{name} didn't answer. Try again later",
   '找不到这个房间，可能已经关了': "Couldn't find that room. It may have closed",
 
+  // ---- 通知（App 关着也收得到） ----
+  通知: 'Notifications',
+  'App 关着也通知我': 'Notify me when the app is closed',
+  '好友回应、好友邀请、有人想加入你的房间': 'Reactions, friend requests and people asking to join your room',
+  '系统设置里关掉了 LyriStage 的通知': 'Notifications for LyriStage are turned off in system settings',
+  好友和一起听: 'Friends and Listen Together',
+
   // ---- 一起听：断线连回来、回到房间 ----
   '网络断了，重新连线中…': 'Connection lost. Reconnecting…',
   '连不回房间 {code}，网络好了再按「回到房间」': "Couldn't get back into room {code}. Tap Back to room when you're online",

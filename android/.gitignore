@@ -62,7 +62,8 @@ captures/
 .cxx/
 
 # Google Services (e.g. APIs or Firebase)
-# google-services.json
+# 放在本机就好，不上传（npm run 打包时直接读 android/app/google-services.json）
+google-services.json
 
 # Freeline
 freeline.py

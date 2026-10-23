@@ -234,7 +234,12 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = await resetAvatar();
   }
 
+  /** 退出登录前要做的事（例如删掉这台手机的推送代号：要趁还登录着才删得掉） */
+  const logoutHooks = [];
+  const onLogout = fn => logoutHooks.push(fn);
+
   async function logout() {
+    await Promise.allSettled(logoutHooks.map(fn => fn()));
     await signOut();
     user.value = null;
   }
@@ -264,6 +269,7 @@ export const useAuthStore = defineStore('auth', () => {
     restoreProviderAvatar,
     redeem,
     logout,
+    onLogout,
   };
 });
 
