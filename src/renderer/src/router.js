@@ -9,6 +9,7 @@ export const router = createRouter({
     { path: '/search', name: 'search', component: () => import('./views/SearchView.vue') },
     { path: '/library', name: 'library', component: () => import('./views/LibraryView.vue'), meta: { member: true } },
     { path: '/liked', name: 'liked', component: () => import('./views/LikedView.vue'), meta: { member: true } },
+    { path: '/offline', name: 'offline', component: () => import('./views/OfflineView.vue') },
     { path: '/daily', name: 'daily', component: () => import('./views/DailyView.vue'), meta: { member: true } },
     { path: '/playlist/:id', name: 'playlist', component: () => import('./views/PlaylistView.vue') },
     { path: '/album/:id', name: 'album', component: () => import('./views/AlbumView.vue') },

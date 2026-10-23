@@ -115,7 +115,8 @@ export const useRoomStore = defineStore('room', () => {
     return {
       track: s.track ? toSnapshot(s.track) : null,
       // 房主找到的音频链接也分享出去（网页版的朋友自己找不到 VIP 歌）
-      source: s.source?.url ? { url: s.source.url, br: s.source.br, source: 'room' } : null,
+      // 从手机里播的（离线听歌）是这台手机才打得开的档案，不分享
+      source: s.source?.url && s.source.source !== 'offline' ? { url: s.source.url, br: s.source.br, source: 'room' } : null,
       playing: s.playing,
       position: player.currentTime(),
     };

@@ -30,6 +30,7 @@ import EqualizerPanel from '../components/EqualizerPanel.vue';
 import { pinWidget } from '../widget';
 import { isLockScreenLyricsOn, setLockScreenLyrics } from '../mediaSession';
 import { pushSupported, pushWanted, setPushWanted } from '../push';
+import { OFFLINE_LIMITS, offlineBytes, offlineSettings, offlineSupported, offlineTracks, saveOfflineSettings } from '../offline';
 import { t, locale, LOCALES } from '../i18n';
 import { timeAgo } from '../utils/format';
 
@@ -373,7 +374,7 @@ onBeforeUnmount(() => phoneQuery.removeEventListener('change', onPhoneChange));
 const CATEGORIES = computed(() =>
   [
     { id: 'account', group: 'mine', label: '账号', icon: 'users' },
-    { id: 'playback', group: 'mine', label: '播放与音效', icon: 'volume', show: audioEffects.supported },
+    { id: 'playback', group: 'mine', label: '播放与音效', icon: 'volume', show: audioEffects.supported || offlineSupported },
     { id: 'lyrics', group: 'mine', label: '歌词', icon: 'desktop-lyrics', show: isNativeApp || isElectron },
     { id: 'appearance', group: 'mine', label: '外观', icon: 'moon' },
     { id: 'shortcuts', group: 'mine', label: '快捷键', icon: 'grid', show: !isNativeApp },
@@ -645,6 +646,59 @@ function summary(id) {
               <input v-model="audioEffects.settings.leveler" type="checkbox" role="switch" class="switch" />
             </div>
           </div>
+
+          <!-- 离线听歌（手机 App）：听过的歌存在手机里 -->
+          <template v-if="offlineSupported">
+            <h3 class="section-label">{{ $t('离线听歌') }}</h3>
+            <div class="card">
+              <div class="row">
+                <span class="label">
+                  {{ $t('把听过的歌存在手机') }}
+                  <small>{{ $t('没网络也能听') }}</small>
+                </span>
+                <input
+                  :checked="offlineSettings.enabled"
+                  type="checkbox"
+                  role="switch"
+                  class="switch"
+                  @change="saveOfflineSettings({ enabled: $event.target.checked })"
+                />
+              </div>
+              <div class="row">
+                <span class="label">{{ $t('用行动数据时也存') }}</span>
+                <input
+                  :checked="offlineSettings.cellular"
+                  type="checkbox"
+                  role="switch"
+                  class="switch"
+                  :disabled="!offlineSettings.enabled"
+                  @change="saveOfflineSettings({ cellular: $event.target.checked })"
+                />
+              </div>
+              <div class="row">
+                <span class="label">{{ $t('最多用多少空间') }}</span>
+                <div class="segmented" role="radiogroup" :aria-label="$t('最多用多少空间')">
+                  <button
+                    v-for="mb in OFFLINE_LIMITS"
+                    :key="mb"
+                    role="radio"
+                    :aria-checked="offlineSettings.limitMb === mb"
+                    :class="{ on: offlineSettings.limitMb === mb }"
+                    @click="saveOfflineSettings({ limitMb: mb })"
+                  >
+                    {{ mb >= 1024 ? `${mb / 1024} GB` : `${mb} MB` }}
+                  </button>
+                </div>
+              </div>
+              <RouterLink to="/offline" class="row link-row">
+                <span class="label">
+                  {{ $t('存在手机里的歌') }}
+                  <small>{{ $t('{n} 首 · {mb} MB', { n: offlineTracks.length, mb: Math.round(offlineBytes / 1024 / 1024) }) }}</small>
+                </span>
+                <Icon name="chevron-right" :size="18" class="chev" />
+              </RouterLink>
+            </div>
+          </template>
         </template>
 
         <!-- ===== 歌词 ===== -->

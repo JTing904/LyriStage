@@ -19,6 +19,7 @@ import {
 import { PersonalFM, SongRadio } from '@core/recommend';
 import { apiBase, isElectron, localApiHeaders, translateApiBase } from './platform';
 import { connectMediaSession } from './mediaSession';
+import { offlineLyrics, offlineSource, saveOffline, shouldSave } from './offline';
 
 configureSupabase({
   url: import.meta.env.VITE_SUPABASE_URL,
@@ -123,7 +124,14 @@ async function loadLyrics(track) {
  */
 export async function getLyrics(track) {
   // v2：加了 LRCLIB 以后换 key，以前存的"没有歌词"不要再用 7 天
-  const raw = await lyricCache.getOrLoad(`lyric:v2:${track.id}`, () => loadLyrics(track));
+  let raw;
+  try {
+    raw = await lyricCache.getOrLoad(`lyric:v2:${track.id}`, () => loadLyrics(track));
+  } catch (err) {
+    // 没网络：用存在手机里的那份（离线听歌存歌时一起存的）
+    raw = await offlineLyrics(track.id);
+    if (!raw) throw err;
+  }
   return buildLyrics(raw, { durationMs: track.dt });
 }
 
@@ -154,7 +162,22 @@ export const sharedSources = new Map();
  * - 电脑版：本机的 API 解灰
  * - 手机 App、网页版：Vercel 上的 API 解灰
  */
+/** 最近播的歌用了哪个链接（离线听歌存歌时用，不用再问一次） */
+const recentSources = new Map();
+
 async function resolveSource(track) {
+  // 存在手机里的（离线听歌）：直接从手机播，不用网络
+  const local = await offlineSource(track);
+  if (local) return local;
+  const found = await resolveOnline(track);
+  if (found) {
+    recentSources.set(track.id, found);
+    if (recentSources.size > 30) recentSources.delete(recentSources.keys().next().value);
+  }
+  return found;
+}
+
+async function resolveOnline(track) {
   // 网易云的链接、以前在 B 站挑过的视频：两个一起问（一个一个问要多等一趟）
   const pickPromise = getBilibiliPick(track.id).catch(() => null);
   const official = await netease.songUrl(track.id);
@@ -199,6 +222,14 @@ if (import.meta.hot) {
 
 // 听完一首（或切歌）时写进听歌记录；没登录 LyriStage 账号就不记
 player.on('played', async ({ track, listenedSeconds, context }) => {
+  // 离线听歌：听够久了就在背景存进手机（连歌词一起）
+  const source = recentSources.get(track.id);
+  if (source && shouldSave(track, listenedSeconds)) {
+    lyricCache
+      .get(`lyric:v2:${track.id}`)
+      .catch(() => null)
+      .then(raw => saveOffline(track, source, raw ?? null));
+  }
   try {
     if (await getCurrentUser()) {
       await recordPlay(track, { listenedSeconds, context });

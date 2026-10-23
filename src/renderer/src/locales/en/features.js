@@ -311,6 +311,21 @@ export default {
   '{name} 没有回应，晚点再试试': "{name} didn't answer. Try again later",
   '找不到这个房间，可能已经关了': "Couldn't find that room. It may have closed",
 
+  // ---- 离线听歌 ----
+  离线听歌: 'Offline listening',
+  存在手机: 'On this phone',
+  存在手机里的歌: 'Songs on this phone',
+  把听过的歌存在手机: 'Keep songs you play on this phone',
+  没网络也能听: 'Play them without internet',
+  用行动数据时也存: 'Also save on mobile data',
+  最多用多少空间: 'Space to use',
+  '{n} 首 · {mb} MB': '{n} songs · {mb} MB',
+  '把存在手机里的歌全部删掉？之后听到的歌会再存进来。': 'Delete all songs saved on this phone? Songs you play later will be saved again.',
+  '只有手机 App 有离线听歌': 'Offline listening is only in the phone app',
+  '听超过 30 秒的歌会自动存进来。': 'Songs you play for over 30 seconds are saved here automatically.',
+  '连着 Wi-Fi 时，听超过 30 秒的歌会自动存进来。': 'On Wi-Fi, songs you play for over 30 seconds are saved here automatically.',
+  全部删掉: 'Delete all',
+
   // ---- 通知（App 关着也收得到） ----
   通知: 'Notifications',
   'App 关着也通知我': 'Notify me when the app is closed',

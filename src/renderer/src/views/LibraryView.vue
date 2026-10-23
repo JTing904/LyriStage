@@ -14,6 +14,7 @@ import { t } from '../i18n';
 import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
 import TileGrid from '../components/TileGrid.vue';
+import { offlineSupported, offlineTracks } from '../offline';
 
 const library = useLibraryStore();
 const friendsStore = useFriendsStore();
@@ -126,6 +127,10 @@ async function create() {
     <div class="title-row">
       <h1 class="display title">{{ $t('我的音乐库') }}</h1>
       <span class="title-links">
+        <!-- 离线听歌：存在手机里的歌 -->
+        <RouterLink v-if="offlineSupported" to="/offline" class="report-link">
+          <Icon name="offline" :size="18" />{{ $t('存在手机') }}<span v-if="offlineTracks.length" class="count">{{ offlineTracks.length }}</span>
+        </RouterLink>
         <RouterLink to="/report" class="report-link">
           <Icon name="chart" :size="18" />{{ $t('听歌报告') }}
         </RouterLink>
@@ -244,6 +249,13 @@ async function create() {
   border-radius: 999px;
   font-size: 14px;
   font-weight: 700;
+}
+/* 存在手机里几首 */
+.count {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-hover);
+  font-size: 12px;
 }
 .title-links {
   display: flex;
