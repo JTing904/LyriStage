@@ -172,3 +172,23 @@ it('originalArtistIn：从翻唱歌名认出原唱（各种括号、冒号写法
   ).toBe('周杰伦');
   expect(originalArtistIn([{ name: '告白气球' }, {}])).toBeNull();
 });
+
+describe('hiddenSongs（网易云下架、搜不到的原唱）', () => {
+  const qingtian = { id: 186016, name: '晴天', ar: [{ id: 6452, name: '周杰伦' }], privilege: { st: -200 } };
+
+  it('先问服务器的 /search/originals（Apple 的目录 + 网易云的专辑）', async () => {
+    const http = fakeHttp({ '/search/originals': { songs: [qingtian] } });
+    const netease = createNetease(http);
+    expect((await netease.hiddenSongs('晴天')).map(s => s.id)).toEqual([186016]);
+    expect(http.get).toHaveBeenCalledWith('/search/originals', { keywords: '晴天' });
+  });
+
+  it('服务器是旧版（没有这个路径）就用老方法：关键词里的歌手 → 他的歌', async () => {
+    const http = fakeHttp({
+      '/cloudsearch': { result: { artists: [{ id: 6452, name: '周杰伦' }] } },
+      '/artist/songs': { songs: [qingtian, { id: 1, name: '晴天', privilege: { st: 0 } }] },
+    });
+    const songs = await createNetease(http).hiddenSongs('晴天 周杰伦');
+    expect(songs.map(s => s.id)).toEqual([186016]);
+  });
+});

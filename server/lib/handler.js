@@ -4,11 +4,13 @@
 // - /song/url/match（解灰）自己实现，见下面 unblock()
 // - /lyric/translate（歌词英文翻译）见 translate.js
 // - /voice/ice（一起听语音的连线资料）见 voice.js
+// - /search/originals（搜索补原唱：网易云下架、搜不到的歌，例如周杰伦）见 originals.js
 const crypto = require('crypto');
 const { findOnBilibili, checkBilibili, BilibiliRateLimited } = require('./bilibili');
 const { findOnPublicSources, checkPublicSources } = require('./publicSources');
 const { handleTranslate } = require('./translate');
 const { handleIce } = require('./voice');
+const { handleOriginals, itunesSearch } = require('./originals');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -348,6 +350,23 @@ function createHandler(options = {}) {
     return result?.body?.lrc?.lyric ?? '';
   }
 
+  /** 直接叫网易云 API 的某个模块（不经过 HTTP），回传 body */
+  async function callModule(name, query) {
+    await getApp();
+    const run = require(`@neteasecloudmusicapienhanced/api/module/${name}`);
+    const request = require('@neteasecloudmusicapienhanced/api/util/request');
+    const result = await run({ ...query, realIP, cookie: {} }, request);
+    return result?.body ?? {};
+  }
+  const originalsDeps = {
+    itunes: itunesSearch,
+    netease: {
+      searchArtists: async name => (await callModule('cloudsearch', { keywords: name, type: 100, limit: 5 })).result?.artists ?? [],
+      artistAlbums: async id => (await callModule('artist_album', { id, limit: 300 })).hotAlbums ?? [],
+      albumSongs: async id => (await callModule('album', { id })).songs ?? [],
+    },
+  };
+
   const { localToken } = options;
   // 只有 Vercel（要检查成员的那个）需要限流；电脑版本机 API 只有自己在用
   const rateLimit = options.requireMember ? createRateLimiter() : null;
@@ -389,6 +408,10 @@ function createHandler(options = {}) {
     }
     if (url.pathname === '/lyric/translate') {
       const { status, body } = await handleTranslate(req, url, { ...options.translate, fetchLyric });
+      return sendJson(res, status, body);
+    }
+    if (url.pathname === '/search/originals') {
+      const { status, body } = await handleOriginals(url, originalsDeps);
       return sendJson(res, status, body);
     }
     if (url.pathname === '/voice/ice') {

@@ -245,6 +245,14 @@ export function createNetease(http) {
       const norm = text => String(text).toLowerCase().replace(/[\s\p{P}]/gu, '');
       const k = norm(keyword);
       if (!k) return [];
+      // 先问 LyriStage 服务器：用 Apple 的目录找出原唱，再去网易云「歌手 → 专辑」找回那首歌
+      // （网易云连歌手的歌曲清单都会藏起下架的歌，专辑里还在）。服务器没有这个功能（旧版）或找不到，才用下面的老方法
+      try {
+        const songs = (await http.get('/search/originals', { keywords: keyword })).songs ?? [];
+        if (songs.length) return songs.slice(0, limit);
+      } catch {
+        // 用老方法
+      }
       const lookup = async name =>
         (await http.get('/cloudsearch', { keywords: name, type: 100, limit: 3 })).result?.artists ?? [];
       // 要试的歌手：关键词里的歌手（「晴天 周杰伦」），再来是翻唱写的原唱（「稻香」→ 周杰伦）。
