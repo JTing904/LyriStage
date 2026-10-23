@@ -1,24 +1,35 @@
 // 好友：好友名单、收到 / 送出的邀请、好友在听什么，还有把自己在听什么告诉好友。
+// 便签（像 IG：一句话、可以附歌、24 小时后消失）和表情回应（收到时跳出提示，好友分页有红点）
 // 数据库还没执行 2026-10-25 那份 SQL 时（表不存在），整个功能安静地藏起来
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import {
   PRIVATE_MODE_MS,
   answerFriendRequest,
+  clearMyNote,
   clearNowPlaying,
   getMyProfile,
   getSupabase,
+  isMissingTable,
+  listFriendNotes,
   listFriends,
   listFriendsNowPlaying,
+  listReactionsToMe,
+  markReactionsSeen,
+  reactToFriend,
   removeFriend,
   sendFriendRequest,
+  setMyNote,
   setNowPlaying,
   syncMyProfile,
+  toReaction,
   updateSharing,
   watchFriends,
 } from '@core/data';
 import { usePlayer } from '../composables/usePlayer';
 import { useAuthStore } from './auth';
+import { useNoticeStore } from './notice';
+import { t } from '../i18n';
 
 /** 播放中每隔这么久告诉好友"我还在听"（App 被关掉时数据库不会知道，靠这个判断） */
 const HEARTBEAT_MS = 2 * 60 * 1000;
@@ -54,6 +65,25 @@ export const useFriendsStore = defineStore('friends', () => {
       .filter(Boolean);
   }
 
+  // ---- 便签、表情回应 ----
+  /** 数据库有便签功能（执行过 2026-11-03 的 SQL） */
+  const notesAvailable = ref(false);
+  /** userId → { body, track, createdAt, expiresAt }（自己的也在里面） */
+  const notes = ref(new Map());
+  /** 别人送给我的表情（新的在前） */
+  const reactions = ref([]);
+
+  async function loadNotes() {
+    try {
+      const [list, received] = await Promise.all([listFriendNotes(), listReactionsToMe()]);
+      notes.value = new Map(list.map(n => [n.userId, n]));
+      reactions.value = received;
+      notesAvailable.value = true;
+    } catch (err) {
+      if (isMissingTable(err)) notesAvailable.value = false;
+    }
+  }
+
   async function refresh() {
     try {
       const [list, now] = await Promise.all([listFriends(), listFriendsNowPlaying()]);
@@ -62,7 +92,7 @@ export const useFriendsStore = defineStore('friends', () => {
       outgoing.value = list.outgoing;
       listening.value = new Map(now.map(n => [n.userId, n]));
       available.value = true;
-      await loadRooms();
+      await Promise.all([loadRooms(), loadNotes()]);
     } catch (err) {
       // 42P01：表不存在（还没执行 SQL）
       if (err?.code === '42P01' || /does not exist|schema cache/.test(err?.message ?? '')) available.value = false;
@@ -87,11 +117,24 @@ export const useFriendsStore = defineStore('friends', () => {
         // 表不存在：refresh 会把功能藏起来
       }
       await refresh();
-      // 自己的「正在听」变了（我刚换歌）不用重新读好友资料
+      // 打开 App 时：有还没看的回应就说一声
+      const unseen = reactions.value.filter(r => !r.seen).length;
+      if (unseen) {
+        useNoticeStore().show(t('你收到 {n} 个好友的回应', { n: unseen }), {
+          action: { label: t('查看'), run: () => (location.hash = '#/friends') },
+        });
+      }
       const me = auth.user?.id;
       if (available.value) {
         stopWatching = watchFriends(change => {
-          if (change?.table === 'now_playing' && (change.new?.user_id ?? change.old?.user_id) === me) return;
+          const row = change?.new ?? {};
+          // 自己的「正在听」变了（我刚换歌）不用重新读好友资料
+          if (change?.table === 'now_playing' && (row.user_id ?? change.old?.user_id) === me) return;
+          if (change?.table === 'friend_notes') return void loadNotes();
+          if (change?.table === 'friend_reactions') {
+            if (change.eventType === 'INSERT' && row.to_user === me) onReaction(toReaction(row));
+            return;
+          }
           refresh();
         });
       }
@@ -150,6 +193,50 @@ export const useFriendsStore = defineStore('friends', () => {
     if (on) await clearNowPlaying().catch(() => {});
   }
 
+  /** 朋友的名字（不在名单里就叫「朋友」） */
+  const nameOf = id => friends.value.find(f => f.id === id)?.name || t('朋友');
+
+  /** 有人送表情给我：马上跳出来（在好友页的话就直接看得到，不用跳） */
+  function onReaction(reaction) {
+    if (reactions.value.some(r => r.id === reaction.id)) return;
+    reactions.value = [reaction, ...reactions.value].slice(0, 50);
+    if (location.hash.startsWith('#/friends')) return;
+    const message =
+      reaction.target === 'note'
+        ? t('{name} 回应了你的便签 {emoji}', { name: nameOf(reaction.from), emoji: reaction.emoji })
+        : t('{name} 回应了你在听的《{song}》 {emoji}', {
+            name: nameOf(reaction.from),
+            song: reaction.context,
+            emoji: reaction.emoji,
+          });
+    useNoticeStore().show(message, { action: { label: t('查看'), run: () => (location.hash = '#/friends') } });
+  }
+
+  /** 还没看的回应 */
+  const unseenReactions = computed(() => reactions.value.filter(r => !r.seen));
+  /** 好友分页上的红点：新的好友邀请 + 还没看的回应 */
+  const badge = computed(() => incoming.value.length + unseenReactions.value.length);
+
+  async function markSeen() {
+    if (!unseenReactions.value.length) return;
+    reactions.value = reactions.value.map(r => ({ ...r, seen: true }));
+    await markReactionsSeen().catch(() => {});
+  }
+
+  /** 写便签；attachSong 就附上正在听的歌 */
+  async function saveNote(body, attachSong) {
+    await setMyNote(body, attachSong ? state.track : null);
+    await loadNotes();
+  }
+  async function deleteNote() {
+    await clearMyNote();
+    await loadNotes();
+  }
+  /** 送表情给好友：回应他的便签，或他正在听的歌 */
+  async function react(friendId, emoji, target, context) {
+    await reactToFriend({ friendId, emoji, target, context });
+  }
+
   async function send(code) {
     const result = await sendFriendRequest(code);
     await refresh();
@@ -189,7 +276,18 @@ export const useFriendsStore = defineStore('friends', () => {
     incoming,
     outgoing,
     activity,
+    listening,
     rooms,
+    notesAvailable,
+    notes,
+    reactions,
+    unseenReactions,
+    badge,
+    nameOf,
+    markSeen,
+    saveNote,
+    deleteNote,
+    react,
     sharing,
     inPrivateMode,
     privateUntil,

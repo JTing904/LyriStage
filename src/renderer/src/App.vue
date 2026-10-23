@@ -260,7 +260,7 @@ watch(
 
 // 手机：底部 Tab 的四个主页面以外（歌手、歌单、设置…）顶部要有返回列；
 // 往下滑过页头后，返回列变实心并显示名字
-const TAB_PAGES = ['home', 'search', 'library', 'room'];
+const TAB_PAGES = ['home', 'search', 'friends', 'library', 'room'];
 const showBackBar = computed(() => !TAB_PAGES.includes(String(route.name)));
 const {
   distance: pullDistance,

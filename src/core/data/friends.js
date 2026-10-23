@@ -158,18 +158,113 @@ export async function listFriendsNowPlaying() {
 }
 
 /**
- * 好友换歌、收到好友邀请时通知（Realtime；数据库照样按规则过滤）
- * @param {() => void} onChange
+ * 好友换歌、收到好友邀请、便签和表情回应有变化时通知（Realtime；数据库照样按规则过滤）
+ * @param {(change: { table: string, eventType: string, new: any, old: any }) => void} onChange
  * @returns {() => void} 取消订阅
  */
 export function watchFriends(onChange) {
   const db = requireSupabase();
-  const channel = db
-    .channel(`friends:${Math.random().toString(36).slice(2)}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'now_playing' }, onChange)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships' }, onChange)
-    .subscribe();
+  const channel = db.channel(`friends:${Math.random().toString(36).slice(2)}`);
+  for (const table of ['now_playing', 'friendships', 'friend_notes', 'friend_reactions']) {
+    channel.on('postgres_changes', { event: '*', schema: 'public', table }, onChange);
+  }
+  channel.subscribe();
   return () => db.removeChannel(channel);
+}
+
+// ---- 便签、表情回应（supabase/migrations/20261103000000_friend_notes.sql）----------------
+
+/** 便签最多几个字（数据库也只接受这么多） */
+export const NOTE_MAX = 60;
+/** 回应可以用的表情（数据库也只接受这几个） */
+export const NOTE_REACTIONS = ['❤️', '🔥', '😭', '😂', '👏', '🎶'];
+
+/** 数据库还没执行那份 SQL（表或函数不存在） */
+export const isMissingTable = error =>
+  ['42P01', 'PGRST202', 'PGRST205', '42883'].includes(error?.code) || /does not exist|schema cache/.test(error?.message ?? '');
+
+/**
+ * 自己和好友的便签（过期的、私人模式的数据库不会给）
+ * @returns {Promise<Array<{ userId: string, body: string, track: object | null, createdAt: string, expiresAt: string }>>}
+ */
+export async function listFriendNotes() {
+  const rows = unwrap(
+    await requireSupabase().from('friend_notes').select('user_id, body, track, created_at, expires_at')
+  );
+  const now = Date.now();
+  return rows
+    .filter(r => new Date(r.expires_at).getTime() > now)
+    .map(r => ({ userId: r.user_id, body: r.body, track: r.track, createdAt: r.created_at, expiresAt: r.expires_at }));
+}
+
+/** 写便签（再写一次就换掉，重新算 24 小时）；track 可以不附 */
+export async function setMyNote(body, track = null) {
+  unwrap(
+    await requireSupabase().rpc('set_friend_note', {
+      body: String(body ?? '').trim().slice(0, NOTE_MAX),
+      track: track ? toSnapshot(track) : null,
+    })
+  );
+}
+
+/** 删掉自己的便签 */
+export async function clearMyNote() {
+  const user = await getCurrentUser();
+  if (!user) return;
+  unwrap(await requireSupabase().from('friend_notes').delete().eq('user_id', user.id));
+}
+
+/**
+ * 送表情给好友（回应他的便签 'note'，或他正在听的歌 'listening'）
+ * @param {{ friendId: string, emoji: string, target: 'note' | 'listening', context: string }} reaction
+ */
+export async function reactToFriend({ friendId, emoji, target, context }) {
+  return unwrap(
+    await requireSupabase().rpc('react_to_friend', {
+      friend: friendId,
+      emoji,
+      target,
+      context: String(context ?? '').slice(0, 120),
+    })
+  );
+}
+
+/**
+ * 别人送给我的表情（最近 30 天，新的在前）
+ * @returns {Promise<Array<{ id: number, from: string, emoji: string, target: string, context: string, seen: boolean, at: string }>>}
+ */
+export async function listReactionsToMe() {
+  const user = await getCurrentUser();
+  if (!user) return [];
+  const rows = unwrap(
+    await requireSupabase()
+      .from('friend_reactions')
+      .select('id, from_user, emoji, target, context, seen, created_at')
+      .eq('to_user', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50)
+  );
+  return rows.map(toReaction);
+}
+
+/** 数据库的一行回应 → 画面用的 */
+export const toReaction = r => ({
+  id: r.id,
+  from: r.from_user,
+  emoji: r.emoji,
+  target: r.target,
+  context: r.context,
+  seen: r.seen,
+  at: r.created_at,
+});
+
+/** 收到的回应都标成看过了 */
+export async function markReactionsSeen() {
+  const user = await getCurrentUser();
+  if (!user) return;
+  unwrap(
+    await requireSupabase().from('friend_reactions').update({ seen: true }).eq('to_user', user.id).eq('seen', false)
+  );
 }
 
 // ---- 好友周榜（supabase/migrations/20261027000000_friends_weekly_board.sql） ----------

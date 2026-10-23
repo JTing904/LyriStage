@@ -1,10 +1,14 @@
 <script setup>
 // 手机版底部的 Tab
 import Icon from './Icon.vue';
+import { useFriendsStore } from '../stores/friends';
+
+const friendsStore = useFriendsStore();
 
 const TABS = [
   { to: '/', icon: 'home', label: '首页' },
   { to: '/search', icon: 'search', label: '搜索' },
+  { to: '/friends', icon: 'friends', label: '好友' },
   { to: '/library', icon: 'library', label: '音乐库' },
   { to: '/room', icon: 'users', label: '一起听' },
 ];
@@ -20,7 +24,11 @@ const TABS = [
       active-class=""
       exact-active-class="active"
     >
-      <Icon :name="tab.icon" />
+      <span class="icon">
+        <Icon :name="tab.icon" />
+        <!-- 好友：新的邀请、还没看的回应 -->
+        <span v-if="tab.to === '/friends' && friendsStore.badge" class="dot" :aria-label="$t('有新的好友动态')" />
+      </span>
       <span>{{ $t(tab.label) }}</span>
     </RouterLink>
   </nav>
@@ -29,7 +37,7 @@ const TABS = [
 <style scoped>
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   height: calc(60px + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--sidebar);
@@ -46,6 +54,20 @@ const TABS = [
   font-size: 11px;
   white-space: nowrap;
   color: var(--text-dim);
+}
+.icon {
+  position: relative;
+  display: grid;
+}
+.dot {
+  position: absolute;
+  top: -2px;
+  right: -5px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--sidebar);
+  border-radius: 50%;
+  background: var(--accent);
 }
 .tab.active {
   color: var(--text);

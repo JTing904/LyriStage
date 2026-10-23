@@ -6,14 +6,17 @@ import PlaylistCover from './PlaylistCover.vue';
 import { useAuthStore } from '../stores/auth';
 import { useLibraryStore } from '../stores/library';
 import { useRoomStore } from '../stores/room';
+import { useFriendsStore } from '../stores/friends';
 
 const auth = useAuthStore();
 const library = useLibraryStore();
 const room = useRoomStore();
+const friendsStore = useFriendsStore();
 
 const NAV = [
   { to: '/', icon: 'home', label: '首页' },
   { to: '/search', icon: 'search', label: '搜索' },
+  { to: '/friends', icon: 'friends', label: '好友' },
   { to: '/library', icon: 'library', label: '我的音乐库' },
   { to: '/room', icon: 'users', label: '一起听' },
 ];
@@ -35,6 +38,8 @@ const NAV = [
         <Icon :name="item.icon" />{{ $t(item.label) }}
         <!-- 在房间里：显示几个人在一起听 -->
         <span v-if="item.to === '/room' && room.inRoom" class="live">{{ $t('{n} 人', { n: room.members.length }) }}</span>
+        <!-- 新的好友邀请、还没看的回应 -->
+        <span v-if="item.to === '/friends' && friendsStore.badge" class="live">{{ friendsStore.badge }}</span>
       </RouterLink>
     </div>
 

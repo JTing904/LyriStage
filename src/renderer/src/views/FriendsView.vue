@@ -1,7 +1,7 @@
 <script setup>
-// 好友：好友码、加好友、收到的邀请、好友在听什么、隐私设置。
-// 参考 Apple Music（要对方同意才能看到）和 Spotify（好友动态、私人模式）
-import { computed, onMounted, ref, watch } from 'vue';
+// 好友（底部第 3 个分页）：便签那一排（像 IG）、在一起听、好友名单、周榜、加好友、隐私设置。
+// 参考 IG 私讯页的便签、Apple Music（要对方同意才能看到）和 Spotify（好友动态、私人模式）
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { onPullRefresh } from '../composables/usePullRefresh';
 import { useRoute } from 'vue-router';
 import { useFriendsStore } from '../stores/friends';
@@ -11,6 +11,9 @@ import { timeAgo } from '../utils/format';
 import { t } from '../i18n';
 import Cover from '../components/Cover.vue';
 import WeeklyBoard from '../components/WeeklyBoard.vue';
+import FriendNotes from '../components/FriendNotes.vue';
+import FriendRooms from '../components/FriendRooms.vue';
+import NoteSheet from '../components/NoteSheet.vue';
 import Icon from '../components/Icon.vue';
 
 const friendsStore = useFriendsStore();
@@ -74,10 +77,40 @@ async function add() {
   }
 }
 
+/** 「加好友」那张卡：还没有好友、或从邀请链接打开时直接打开，其他时候按右上角的按钮才出来 */
+const showAdd = ref(false);
+watch(
+  () => friendsStore.friends.length,
+  n => n === 0 && (showAdd.value = true),
+  { immediate: true }
+);
 // 从邀请链接打开（#/friends?add=好友码）：先填好，用户按一下就送出
 onMounted(() => {
-  if (typeof route.query.add === 'string') code.value = route.query.add;
+  if (typeof route.query.add === 'string') {
+    code.value = route.query.add;
+    showAdd.value = true;
+  }
 });
+
+// ---- 便签、回应 ----
+const sheet = ref(null);
+/** 名单里点头像：有便签或正在听就打开他的便签 */
+function openFriend(p) {
+  const note = friendsStore.notes.get(p.id) ?? null;
+  if (!note && !p.live) return;
+  sheet.value.open({ ...p, isMe: false, note, song: p.live ? p.track : note?.track ?? null, live: Boolean(p.live) });
+}
+/** 进来时还没看的回应：这次显示出来，离开页面就算看过了 */
+const fresh = ref([]);
+watch(
+  () => friendsStore.unseenReactions,
+  list => {
+    const known = new Set(fresh.value.map(r => r.id));
+    fresh.value = [...list.filter(r => !known.has(r.id)), ...fresh.value].slice(0, 10);
+  },
+  { immediate: true }
+);
+onBeforeUnmount(() => friendsStore.markSeen());
 
 async function answer(person, accept) {
   try {
@@ -138,15 +171,27 @@ async function togglePrivate() {
 
 <template>
   <div class="page friends-page">
-    <h1 class="display title">{{ $t('好友') }}</h1>
+    <div class="head">
+      <h1 class="display title">{{ $t('好友') }}</h1>
+      <button
+        v-if="friendsStore.available"
+        class="icon-btn add-btn"
+        :class="{ on: showAdd }"
+        :aria-label="$t('加好友')"
+        :aria-expanded="showAdd"
+        @click="showAdd = !showAdd"
+      >
+        <Icon name="friends" :size="20" />
+      </button>
+    </div>
 
     <p v-if="!friendsStore.available" class="page-state">
       {{ $t('好友功能还没开通（管理员要先更新数据库）') }}
     </p>
 
     <template v-else>
-      <!-- 我的好友码 + 加好友 -->
-      <section class="card">
+      <!-- 我的好友码 + 加好友（右上角的按钮打开） -->
+      <section v-if="showAdd" class="card">
         <div class="my-code">
           <span class="label">{{ $t('你的好友码') }}</span>
           <code>{{ friendsStore.profile?.friendCode ?? '…' }}</code>
@@ -189,81 +234,118 @@ async function togglePrivate() {
         </ul>
       </section>
 
-      <!-- 好友在听什么 -->
-      <WeeklyBoard v-if="friendsStore.friends.length" />
-
-      <section>
-        <h2 class="section-title">{{ $t('好友') }}</h2>
-        <p v-if="!rows.length" class="empty">{{ $t('还没有好友。把你的好友码传给朋友吧。') }}</p>
-        <ul v-else class="people card">
-          <li v-for="p in rows" :key="p.id">
-            <Cover :url="p.avatar" :size="44" round class="avatar" />
+      <!-- 新的回应（这次进来才显示，离开就算看过了） -->
+      <section v-if="fresh.length" class="card fresh">
+        <h2 class="section-title">{{ $t('新的回应') }}</h2>
+        <ul>
+          <li v-for="r in fresh" :key="r.id">
+            <span class="emoji">{{ r.emoji }}</span>
             <span class="who">
-              <span class="name">{{ p.name }}</span>
-              <span v-if="p.track" class="listening">
-                <span v-if="p.live" class="live-dot" :aria-label="$t('正在听')" />
-                {{ p.track.name }} · {{ artists(p.track) }}
-                <span v-if="!p.live" class="ago">{{ timeAgo(p.updatedAt, t) }}</span>
+              <span class="name">{{ friendsStore.nameOf(r.from) }}</span>
+              <span class="listening">
+                {{ r.target === 'note' ? $t('你的便签「{text}」', { text: r.context }) : $t('你在听的《{song}》', { song: r.context }) }}
               </span>
-              <span v-else class="listening quiet">{{ $t('最近没在听') }}</span>
             </span>
-            <button
-              v-if="p.track"
-              class="icon-btn"
-              :aria-label="$t('播放 {name}', { name: p.track.name })"
-              @click="player.playList([p.track], 0, `friend:${p.id}`)"
-            >
-              <Icon name="play" :size="20" />
-            </button>
-            <button class="icon-btn" :aria-label="$t('解除好友')" @click="askRemove(p)">
-              <Icon name="x" :size="18" />
-            </button>
+            <span class="ago">{{ timeAgo(r.at, t) }}</span>
           </li>
         </ul>
       </section>
 
-      <!-- 送出去还没回应的 -->
-      <section v-if="friendsStore.outgoing.length">
-        <h2 class="section-title">{{ $t('已送出的邀请') }}</h2>
-        <ul class="people card">
-          <li v-for="p in friendsStore.outgoing" :key="p.id">
-            <Cover :url="p.avatar" :size="44" round class="avatar" />
-            <span class="name">{{ p.name }}</span>
-            <span class="pending">{{ $t('等对方同意') }}</span>
-            <button class="ghost small" @click="friendsStore.remove(p.id)">{{ $t('取消') }}</button>
-          </li>
-        </ul>
-      </section>
+      <!-- 便签（像 IG） -->
+      <FriendNotes v-if="friendsStore.notesAvailable" class="notes-row" @open="item => sheet.open(item)" />
 
-      <!-- 隐私 -->
-      <section>
-        <h2 class="section-title">{{ $t('隐私') }}</h2>
-        <div class="card privacy">
-          <label class="switch-row">
-            <span>
-              {{ $t('让好友看到我在听什么') }}
-              <small>{{ $t('关掉后，好友就看不到你在听的歌') }}</small>
-            </span>
-            <input
-              type="checkbox"
-              role="switch"
-              class="switch"
-              :checked="friendsStore.profile?.shareListening"
-              @change="toggleShare($event.target.checked)"
-            />
-          </label>
-          <div class="switch-row">
-            <span>
-              {{ $t('私人模式') }}
-              <small>{{ friendsStore.inPrivateMode ? privateLeft : $t('暂时不让好友看到，6 小时后自动结束') }}</small>
-            </span>
-            <button class="ghost small" :disabled="!friendsStore.profile?.shareListening" @click="togglePrivate">
-              {{ friendsStore.inPrivateMode ? $t('结束私人模式') : $t('开始') }}
-            </button>
-          </div>
+      <div class="cols">
+        <div class="col">
+          <section v-if="friendsStore.rooms.length">
+            <h2 class="section-title">{{ $t('在一起听') }}</h2>
+            <FriendRooms />
+          </section>
+
+          <section>
+            <h2 class="section-title">{{ $t('好友') }}</h2>
+            <p v-if="!rows.length" class="empty">{{ $t('还没有好友。把你的好友码传给朋友吧。') }}</p>
+            <ul v-else class="people card">
+              <li v-for="p in rows" :key="p.id">
+                <button class="avatar-btn" :aria-label="$t('看 {name} 的便签', { name: p.name })" @click="openFriend(p)">
+                  <Cover :url="p.avatar" :size="44" round class="avatar" :class="{ live: p.live }">
+                    <span class="initial">{{ (p.name || '?').slice(0, 1).toUpperCase() }}</span>
+                  </Cover>
+                </button>
+                <span class="who">
+                  <span class="name">{{ p.name }}</span>
+                  <span v-if="p.track" class="listening" :class="{ now: p.live }">
+                    <span v-if="p.live" class="eq" :aria-label="$t('正在听')"><i /><i /><i /></span>
+                    <span v-else class="ago-inline">{{ timeAgo(p.updatedAt, t) }} ·</span>
+                    {{ p.track.name }} · {{ artists(p.track) }}
+                  </span>
+                  <span v-else class="listening quiet">{{ $t('最近没在听') }}</span>
+                </span>
+                <button
+                  v-if="p.track"
+                  class="cover-btn"
+                  :aria-label="$t('播放 {name}', { name: p.track.name })"
+                  @click="player.playList([p.track], 0, `friend:${p.id}`)"
+                >
+                  <Cover :url="p.track.al?.picUrl" :size="40" radius="8px" />
+                  <Icon name="play" :size="16" class="cover-play" />
+                </button>
+                <button class="icon-btn" :aria-label="$t('解除好友')" @click="askRemove(p)">
+                  <Icon name="x" :size="18" />
+                </button>
+              </li>
+            </ul>
+          </section>
+
+          <!-- 送出去还没回应的 -->
+          <section v-if="friendsStore.outgoing.length">
+            <h2 class="section-title">{{ $t('已送出的邀请') }}</h2>
+            <ul class="people card">
+              <li v-for="p in friendsStore.outgoing" :key="p.id">
+                <Cover :url="p.avatar" :size="44" round class="avatar" />
+                <span class="name">{{ p.name }}</span>
+                <span class="pending">{{ $t('等对方同意') }}</span>
+                <button class="ghost small" @click="friendsStore.remove(p.id)">{{ $t('取消') }}</button>
+              </li>
+            </ul>
+          </section>
         </div>
-      </section>
+
+        <div class="col">
+          <WeeklyBoard v-if="friendsStore.friends.length" />
+
+          <!-- 隐私 -->
+          <section>
+            <h2 class="section-title">{{ $t('隐私') }}</h2>
+            <div class="card privacy">
+              <label class="switch-row">
+                <span>
+                  {{ $t('让好友看到我在听什么') }}
+                  <small>{{ $t('关掉后，好友就看不到你在听的歌') }}</small>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  class="switch"
+                  :checked="friendsStore.profile?.shareListening"
+                  @change="toggleShare($event.target.checked)"
+                />
+              </label>
+              <div class="switch-row">
+                <span>
+                  {{ $t('私人模式') }}
+                  <small>{{ friendsStore.inPrivateMode ? privateLeft : $t('暂时不让好友看到，6 小时后自动结束') }}</small>
+                </span>
+                <button class="ghost small" :disabled="!friendsStore.profile?.shareListening" @click="togglePrivate">
+                  {{ friendsStore.inPrivateMode ? $t('结束私人模式') : $t('开始') }}
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
     </template>
+
+    <NoteSheet ref="sheet" />
 
     <dialog ref="confirmBox" class="confirm" @click.self="confirmBox.close()">
       <div class="confirm-box">
@@ -279,9 +361,51 @@ async function togglePrivate() {
 </template>
 
 <style scoped>
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 .title {
   margin: 0;
   font-size: clamp(28px, 4vw, 44px);
+}
+.add-btn {
+  border: 1px solid var(--line-strong);
+}
+.add-btn.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* 电脑：左边名单、右边周榜和隐私；窄的叠成一栏 */
+.cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
+  gap: 28px;
+  align-items: start;
+}
+.col {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+.notes-row {
+  --page-x: 4px;
+}
+.fresh ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fresh li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+.emoji {
+  font-size: 24px;
 }
 .card {
   padding: 18px;
@@ -430,20 +554,82 @@ button:disabled {
 .listening.quiet {
   color: var(--text-faint);
 }
-.live-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 4px;
-  border-radius: 50%;
-  background: #2fa463;
-  vertical-align: 1px;
-  animation: pulse 1.6s ease-in-out infinite;
+.listening.now {
+  color: #2fa463;
+  font-weight: 700;
 }
-@keyframes pulse {
-  50% {
-    opacity: 0.35;
+.ago-inline {
+  color: var(--text-faint);
+}
+/* 正在听：三根会跳的音柱 */
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 10px;
+  margin-right: 4px;
+}
+.eq i {
+  width: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  animation: eq 0.9s ease-in-out infinite alternate;
+}
+.eq i:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.eq i:nth-child(3) {
+  animation-delay: -0.6s;
+}
+@keyframes eq {
+  from {
+    height: 30%;
   }
+  to {
+    height: 100%;
+  }
+}
+.initial {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 800;
+}
+.avatar-btn {
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+.avatar.live {
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px #2fa463;
+}
+/* 右边的封面：按了播放那首 */
+.cover-btn {
+  position: relative;
+  flex: none;
+  width: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.cover-play {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  color: #fff;
+  opacity: 0;
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.6));
+  transition: opacity 0.15s;
+}
+.cover-btn:hover .cover-play,
+.cover-btn:focus-visible .cover-play {
+  opacity: 1;
 }
 .ago {
   margin-left: 6px;
@@ -484,15 +670,23 @@ button:disabled {
   color: var(--text-dim);
 }
 @media (prefers-reduced-motion: reduce) {
-  .live-dot {
+  .eq i {
+    height: 70%;
     animation: none;
   }
 }
-/* 手机：顶部让出返回列 */
+@media (max-width: 1099px) {
+  .cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* 手机：便签那排贴齐画面左右两边，滑得到最边上 */
 @media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
   .title {
-    margin-top: 44px;
-    font-size: 28px;
+    font-size: 30px;
+  }
+  .notes-row {
+    --page-x: 16px;
   }
 }
 

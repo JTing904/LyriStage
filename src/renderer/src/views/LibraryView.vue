@@ -126,10 +126,6 @@ async function create() {
     <div class="title-row">
       <h1 class="display title">{{ $t('我的音乐库') }}</h1>
       <span class="title-links">
-        <RouterLink v-if="friendsStore.available" to="/friends" class="report-link">
-          <Icon name="friends" :size="18" />{{ $t('好友') }}
-          <span v-if="friendsStore.incoming.length" class="badge">{{ friendsStore.incoming.length }}</span>
-        </RouterLink>
         <RouterLink to="/report" class="report-link">
           <Icon name="chart" :size="18" />{{ $t('听歌报告') }}
         </RouterLink>
@@ -253,18 +249,6 @@ async function create() {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-/* 收到几个好友邀请 */
-.badge {
-  display: grid;
-  place-items: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-size: 12px;
 }
 .report-link:hover {
   border-color: var(--accent);

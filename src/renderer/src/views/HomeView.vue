@@ -9,10 +9,8 @@ import { useAuthStore } from '../stores/auth';
 import { useRecentStore } from '../stores/recent';
 import { useAvatarStore } from '../stores/avatar';
 import { useFriendsStore } from '../stores/friends';
-import { useRoomStore } from '../stores/room';
-import WeeklyBoard from '../components/WeeklyBoard.vue';
+import FriendRooms from '../components/FriendRooms.vue';
 import { t, locale } from '../i18n';
-import { timeAgo } from '../utils/format';
 import AvatarFigure from '../components/AvatarFigure.vue';
 import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
@@ -23,14 +21,6 @@ const auth = useAuthStore();
 const avatar = useAvatarStore();
 const recent = useRecentStore();
 const friendsStore = useFriendsStore();
-const room = useRoomStore();
-
-/** 好友开着的房间（我已经在里面的那间不用再显示）；顺便带上他正在放的歌 */
-const friendRooms = computed(() =>
-  friendsStore.rooms
-    .filter(f => !(room.inRoom && room.hostId === f.id))
-    .map(f => ({ ...f, song: friendsStore.activity.find(a => a.id === f.id && a.live)?.track.name ?? '' }))
-);
 
 const now = new Date();
 const greeting = computed(() => {
@@ -189,61 +179,8 @@ const clock = ms => {
       </div>
     </section>
 
-    <!-- 好友开着「一起听」：按「请求加入」，房主同意才进得去 -->
-    <section v-if="friendRooms.length" class="friend-rooms" :aria-label="$t('朋友在一起听')">
-      <div v-for="f in friendRooms" :key="f.id" class="friend-room">
-        <span class="room-avatar">
-          <Cover :url="f.avatar" :size="44" round>
-            <span class="room-initial">{{ (f.name || '?').slice(0, 1).toUpperCase() }}</span>
-          </Cover>
-          <span class="room-dot" aria-hidden="true" />
-        </span>
-        <span class="room-meta">
-          <strong>{{ $t('{name} 在一起听', { name: f.name }) }}</strong>
-          <span>{{ f.song ? $t('正在放《{song}》', { song: f.song }) : $t('{time}开的房间', { time: timeAgo(f.startedAt, t) }) }}</span>
-        </span>
-        <button
-          class="knock"
-          :class="{ waiting: room.knocking === f.id }"
-          :disabled="Boolean(room.knocking) && room.knocking !== f.id"
-          @click="room.knocking === f.id ? room.stopKnocking() : room.knock(f.id, f.name)"
-        >
-          {{ room.knocking === f.id ? $t('等对方同意…') : $t('请求加入') }}
-        </button>
-      </div>
-    </section>
-
-    <!-- 朋友正在听（参考 Spotify 的好友动态）：好友同意、而且对方开着分享才看得到 -->
-    <section v-if="friendsStore.available && (friendsStore.activity.length || friendsStore.incoming.length)" class="friends">
-      <div class="section-head">
-        <h2 class="display">{{ friendsStore.anyLive ? $t('朋友正在听') : $t('朋友最近在听') }}</h2>
-        <RouterLink to="/friends" class="see-all">
-          <template v-if="friendsStore.incoming.length">{{ $t('{n} 个好友邀请', { n: friendsStore.incoming.length }) }}</template>
-          <template v-else>{{ $t('全部') }}</template>
-        </RouterLink>
-      </div>
-      <div class="friend-row">
-        <button
-          v-for="f in friendsStore.activity"
-          :key="f.id"
-          class="friend"
-          :aria-label="$t('播放 {name}', { name: f.track.name })"
-          @click="player.playList([f.track], 0, `friend:${f.id}`)"
-        >
-          <span class="friend-cover">
-            <Cover :url="f.track.al?.picUrl" :size="120" radius="14px" />
-            <Cover :url="f.avatar" :size="36" round class="friend-avatar" />
-            <span v-if="f.live" class="live" :aria-label="$t('正在听')" />
-          </span>
-          <strong>{{ f.name }}</strong>
-          <span>{{ f.track.name }}</span>
-          <span class="when" :class="{ now: f.live }">{{ f.live ? $t('正在听') : timeAgo(f.updatedAt, t) }}</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- 好友周榜：这周前三名（有好友、这周有人听过才显示） -->
-    <WeeklyBoard v-if="friendsStore.available && friendsStore.friends.length" compact />
+    <!-- 好友开着「一起听」：按「请求加入」，房主同意才进得去（朋友正在听、周榜在好友页） -->
+    <FriendRooms />
 
     <p v-if="failed" class="retry">
       {{ $t('有些内容没有载入成功。') }}
@@ -732,163 +669,4 @@ h2 {
   }
 }
 
-/* 朋友在一起听：一行一个房间 */
-.friend-rooms {
-  display: grid;
-  gap: 10px;
-}
-.friend-room {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: var(--surface);
-}
-.room-avatar {
-  position: relative;
-  flex: none;
-  width: 44px;
-}
-.room-initial {
-  display: grid;
-  place-items: center;
-  height: 100%;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 800;
-}
-.room-dot {
-  position: absolute;
-  right: -2px;
-  bottom: -2px;
-  width: 13px;
-  height: 13px;
-  border: 2.5px solid var(--surface);
-  border-radius: 50%;
-  background: #2fa463;
-}
-.room-meta {
-  display: grid;
-  flex: 1;
-  min-width: 0;
-  gap: 2px;
-}
-.room-meta strong,
-.room-meta span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.room-meta strong {
-  font-size: 15px;
-}
-.room-meta span {
-  font-size: 13px;
-  color: var(--text-dim);
-}
-.knock {
-  flex: none;
-  min-height: 38px;
-  padding: 0 18px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.knock.waiting {
-  border: 1px solid var(--line-strong);
-  background: none;
-  color: var(--text-dim);
-}
-.knock:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-/* 朋友正在听：一排可以左右滑的小卡片 */
-.section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-.see-all {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--accent);
-}
-.friend-row {
-  display: flex;
-  gap: 14px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  scrollbar-width: none;
-}
-.friend-row::-webkit-scrollbar {
-  display: none;
-}
-.friend {
-  display: grid;
-  flex: none;
-  gap: 4px;
-  width: 120px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.friend-cover {
-  position: relative;
-  width: 120px;
-}
-.friend-avatar {
-  position: absolute;
-  right: -6px;
-  bottom: -6px;
-  width: 36px;
-  border: 3px solid var(--bg);
-  border-radius: 50%;
-}
-.live {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  width: 10px;
-  height: 10px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  background: #2fa463;
-}
-.friend strong,
-.friend span:not(.friend-cover, .live) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.friend strong {
-  margin-top: 6px;
-  font-size: 14px;
-}
-.friend > span:not(.friend-cover) {
-  font-size: 12px;
-  color: var(--text-dim);
-}
-/* 正在听 / x 分钟前 */
-.friend > .when {
-  color: var(--text-faint);
-}
-.friend > .when.now {
-  color: var(--accent);
-  font-weight: 700;
-}
 </style>
