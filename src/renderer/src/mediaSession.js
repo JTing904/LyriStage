@@ -43,8 +43,9 @@ export function connectMediaSession(player, { getLyrics } = {}) {
     previoustrack: () => player.prev(),
     nexttrack: () => player.next(),
     seekto: ({ seekTime }) => typeof seekTime === 'number' && player.seek(seekTime),
-    seekbackward: () => player.seek(Math.max(0, player.currentTime() - 10)),
-    seekforward: () => player.seek(player.currentTime() + 10),
+    // 手机通知栏的按钮图示写着 30（插件内建的图示），跳的秒数要跟它一样
+    seekbackward: () => player.seek(Math.max(0, player.currentTime() - 30)),
+    seekforward: () => player.seek(player.currentTime() + 30),
   };
   for (const [action, handler] of Object.entries(handlers)) {
     MediaSession.setActionHandler({ action }, handler).catch(ignore);

@@ -7,7 +7,7 @@
   "license": "MIT",
   "main": "./out/main/index.js",
   "scripts": {
-    "postinstall": "node node_modules/electron/install.js",
+    "postinstall": "node node_modules/electron/install.js && patch-package",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
@@ -45,6 +45,7 @@
     "electron": "43.7.7",
     "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",
+    "patch-package": "8.0.1",
     "pinia": "4.0.3",
     "playwright-core": "1.59.1",
     "three": "0.170.0",
