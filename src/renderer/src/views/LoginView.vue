@@ -39,6 +39,13 @@ const email = ref('');
 const password = ref('');
 const showPassword = ref(false);
 const invite = ref('');
+/** 名字：注册时填；GitHub / Google 登录的人在输入邀请码那一步填（先帮他填好那边的名字） */
+const name = ref('');
+watch(
+  () => auth.loggedIn && auth.member === false,
+  needs => needs && !name.value && (name.value = auth.displayName),
+  { immediate: true }
+);
 const busy = ref(false);
 const error = ref('');
 
@@ -91,12 +98,12 @@ function submit() {
   run(() =>
     mode.value === 'login'
       ? auth.loginWithEmail(email.value.trim(), password.value)
-      : auth.registerWithEmail(email.value.trim(), password.value, invite.value)
+      : auth.registerWithEmail(email.value.trim(), password.value, invite.value, name.value)
   );
 }
 
 function submitInvite() {
-  run(() => auth.redeem(invite.value));
+  run(() => auth.redeem(invite.value, name.value));
 }
 
 // ---- 忘记密码：寄验证码 → 输入验证码和新密码（改好就登录） ----
@@ -184,6 +191,10 @@ onBeforeUnmount(() => clearInterval(resendTimer));
               {{ $t('登录，输入邀请码就能开始使用。') }}
             </p>
           </div>
+          <label>
+            <span class="label-row">{{ $t('名字') }}<small class="field-hint">{{ $t('朋友会看到、可以用来搜你') }}</small></span>
+            <input v-model="name" autocomplete="nickname" maxlength="30" required />
+          </label>
           <label>
             {{ $t('邀请码') }}
             <input
@@ -303,6 +314,10 @@ onBeforeUnmount(() => clearInterval(resendTimer));
             <div class="divider"><span />{{ $t('或用邮箱') }}<span /></div>
           </template>
 
+          <label v-if="mode === 'register'">
+            <span class="label-row">{{ $t('名字') }}<small class="field-hint">{{ $t('朋友会看到、可以用来搜你') }}</small></span>
+            <input v-model="name" autocomplete="nickname" maxlength="30" required />
+          </label>
           <label>
             {{ $t('邮箱') }}
             <input
@@ -587,6 +602,11 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+.field-hint {
+  color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 400;
 }
 .label-row .link {
   font-size: 13px;

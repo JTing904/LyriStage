@@ -1,5 +1,6 @@
 // 好友和「朋友正在听」（supabase/migrations/20261025000000_friends_and_shared_playlists.sql）
-// - 加好友：把自己的好友码传给朋友，朋友输入后送出邀请，你同意了才是好友
+// - 加好友：搜名字（对方开着搜索）或输入好友码送出邀请，你同意了才是好友
+//   （搜名字：supabase/migrations/20261105000000_friend_search.sql）
 // - 只有互相是好友、而且对方开着分享（不在私人模式）才看得到对方在听什么
 import { getCurrentUser } from './auth';
 import { requireSupabase, unwrap } from './supabase';
@@ -31,31 +32,40 @@ export async function syncMyProfile({ displayName, avatarUrl }) {
   }
 }
 
-/** @returns {Promise<{ friendCode: string, shareListening: boolean, privateUntil: string | null } | null>} */
+/**
+ * searchable：别人能不能用名字搜到我（null = 数据库还没加这个功能）
+ * @returns {Promise<{ friendCode: string, shareListening: boolean, privateUntil: string | null, searchable: boolean | null } | null>}
+ */
 export async function getMyProfile() {
   const user = await getCurrentUser();
   if (!user) return null;
-  const row = unwrap(
-    await requireSupabase()
-      .from('member_profiles')
-      .select('friend_code, share_listening, private_until')
-      .eq('user_id', user.id)
-      .maybeSingle()
-  );
+  const read = columns =>
+    requireSupabase().from('member_profiles').select(columns).eq('user_id', user.id).maybeSingle();
+  let result = await read('friend_code, share_listening, private_until, searchable');
+  // 还没执行搜名字那份 SQL：读不到 searchable，退回旧的读法
+  if (result.error && /searchable/.test(result.error.message ?? '')) {
+    result = await read('friend_code, share_listening, private_until');
+  }
+  const row = unwrap(result);
   return row && {
     friendCode: row.friend_code,
     shareListening: row.share_listening,
     privateUntil: row.private_until,
+    searchable: row.searchable ?? null,
   };
 }
 
-/** 让好友看到我在听什么 / 私人模式（privateUntil：这个时间以前都隐藏，null = 不隐藏） */
-export async function updateSharing({ shareListening, privateUntil }) {
+/**
+ * 让好友看到我在听什么 / 私人模式（privateUntil：这个时间以前都隐藏，null = 不隐藏）/
+ * 让别人用名字搜到我（searchable）
+ */
+export async function updateSharing({ shareListening, privateUntil, searchable }) {
   const user = await getCurrentUser();
   if (!user) return;
   const patch = { updated_at: new Date().toISOString() };
   if (shareListening !== undefined) patch.share_listening = shareListening;
   if (privateUntil !== undefined) patch.private_until = privateUntil;
+  if (searchable !== undefined) patch.searchable = searchable;
   unwrap(await requireSupabase().from('member_profiles').update(patch).eq('user_id', user.id));
 }
 
@@ -67,6 +77,20 @@ export async function updateSharing({ shareListening, privateUntil }) {
  */
 export async function sendFriendRequest(code) {
   return unwrap(await requireSupabase().rpc('send_friend_request', { code }));
+}
+
+/**
+ * 搜名字或好友码（2 个字以上），最多 10 个
+ * @returns {Promise<Array<{ id: string, name: string, avatar: string | null, relation: 'friends' | 'sent' | 'incoming' | null, mutual: number, byCode: boolean }>>}
+ */
+export async function searchMembers(text) {
+  const rows = unwrap(await requireSupabase().rpc('search_members', { q: text }));
+  return rows.map(r => ({ id: r.id, name: r.name, avatar: r.avatar, relation: r.relation, mutual: r.mutual, byCode: r.by_code }));
+}
+
+/** 对搜到的人送邀请（对方要开着搜索）；回传跟 sendFriendRequest 一样 */
+export async function sendFriendRequestTo(id) {
+  return unwrap(await requireSupabase().rpc('send_friend_request_to', { target: id }));
 }
 
 /**

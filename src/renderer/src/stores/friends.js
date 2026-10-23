@@ -19,6 +19,8 @@ import {
   reactToFriend,
   removeFriend,
   sendFriendRequest,
+  sendFriendRequestTo,
+  searchMembers,
   setMyNote,
   setNowPlaying,
   syncMyProfile,
@@ -99,6 +101,8 @@ export const useFriendsStore = defineStore('friends', () => {
     }
   }
 
+  /** 数据库有没有「搜名字」（没有就只能用好友码） */
+  const searchAvailable = ref(true);
   // 登录成为成员：同步自己的名字头像（好友看到的那份）、读好友、开始即时更新
   let stopWatching = null;
   watch(
@@ -113,6 +117,8 @@ export const useFriendsStore = defineStore('friends', () => {
       try {
         await syncMyProfile({ displayName: auth.displayName, avatarUrl: auth.avatarUrl });
         profile.value = await getMyProfile();
+        // 数据库还没加「搜名字」：好友页照旧只能用好友码
+        searchAvailable.value = profile.value?.searchable !== null;
       } catch {
         // 表不存在：refresh 会把功能藏起来
       }
@@ -242,6 +248,29 @@ export const useFriendsStore = defineStore('friends', () => {
     await refresh();
     return result;
   }
+  /** 对搜到的人送邀请 */
+  async function sendTo(id) {
+    const result = await sendFriendRequestTo(id);
+    await refresh();
+    return result;
+  }
+  /** 搜名字或好友码；数据库还没加这个功能就回传 null（画面改用只有好友码的旧样子） */
+  async function search(text) {
+    try {
+      return await searchMembers(text);
+    } catch (err) {
+      if (err?.code === 'PGRST202' || /search_members/.test(err?.message ?? '')) {
+        searchAvailable.value = false;
+        return null;
+      }
+      throw err;
+    }
+  }
+  /** 让别人用名字搜到我 */
+  async function setSearchable(on) {
+    await updateSharing({ searchable: on });
+    profile.value = { ...profile.value, searchable: on };
+  }
   async function answer(id, accept) {
     await answerFriendRequest(id, accept);
     await refresh();
@@ -270,6 +299,10 @@ export const useFriendsStore = defineStore('friends', () => {
 
   return {
     available,
+    searchAvailable,
+    search,
+    sendTo,
+    setSearchable,
     anyLive,
     profile,
     friends,

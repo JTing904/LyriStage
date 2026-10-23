@@ -210,12 +210,14 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /** 注册并马上兑换邀请码；邀请码不对时账号已经建好，会停在"输入邀请码"那一步 */
-  async function registerWithEmail(email, password, invite) {
+  async function registerWithEmail(email, password, invite, name) {
     const { session } = await signUp(email, password);
     if (!session) {
       throw new Error(t('注册成功，但需要先去邮箱点确认链接再登录'));
     }
     user.value = session.user;
+    // 名字先存：邀请码不对的话，下次输入邀请码时名字已经有了
+    if (name?.trim()) await saveName(name);
     await redeem(invite);
   }
 
@@ -224,10 +226,14 @@ export const useAuthStore = defineStore('auth', () => {
     await openAuthPage(await getOAuthUrl(provider, oauthRedirect()));
   }
 
-  async function redeem(invite) {
+  /** 兑换邀请码（GitHub / Google 登录的人这一步一起填名字） */
+  async function redeem(invite, name) {
     await redeemInvite(invite);
+    if (name?.trim()) await saveName(name);
     await checkMember();
   }
+  /** 自己确认过名字没有（还没的话打开 App 会问一次） */
+  const nameConfirmed = computed(() => Boolean(user.value?.user_metadata?.name_confirmed));
 
   // ---- 编辑资料（设置页）----
 
@@ -266,6 +272,7 @@ export const useAuthStore = defineStore('auth', () => {
     loggedIn,
     allowed,
     displayName,
+    nameConfirmed,
     avatarUrl,
     customAvatar,
     providerAvatar,

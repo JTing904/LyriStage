@@ -190,6 +190,24 @@ const PAGES = [
     fits: [['dialog.add-dialog[open]', 'viewport']],
   },
   { id: 'artist', hash: '#/artist/6452', wait: 4000 },
+  // 已经有账号的人第一次打开：确认名字（名字像邮箱前缀时有提醒）
+  {
+    id: 'name-sheet',
+    hash: '#/',
+    open: () => {
+      const d = document.querySelector('dialog.name-sheet');
+      d?.showModal();
+      const input = d?.querySelector('input');
+      if (input) {
+        input.value = 'kengtingtan';
+        input.dispatchEvent(new Event('input'));
+      }
+    },
+    close: () => document.querySelector('dialog.name-sheet')?.close(),
+    fits: [['dialog.name-sheet[open]', 'viewport']],
+  },
+  // 好友页：加好友的搜索框（打开「加好友」卡片）
+  { id: 'friends-add', hash: '#/friends', mock: MOCK_FRIENDS, open: () => click('.add-btn') },
   // 断网胶囊 + 同时有提示：两个不能叠在一起，也不能盖住迷你播放条
   {
     id: 'offline-pill',
@@ -739,6 +757,8 @@ async function main() {
           await page.evaluate(h => (location.hash = h), p.hash);
         }
         await sleep(p.wait ?? 2500);
+        // 「确认你的名字」只跳一次、而且要用户自己确认：检查时先关掉（不帮用户确认）；name-sheet 那一页再打开来检查
+        await page.evaluate(() => document.querySelector('dialog.name-sheet[open]')?.close()).catch(() => {});
         if (p.mock) await page.evaluate(p.mock);
         if (p.open) {
           await page.evaluate(`${HELPERS}; (${p.open.toString()})()`);

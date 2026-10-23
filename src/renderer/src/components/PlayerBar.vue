@@ -610,9 +610,19 @@ button.icon.sleep-btn {
     padding: 4px 8px;
     font-size: 14px;
   }
-  /* 完整播放条（平板）：进度条贴着上缘，感应范围变高后往上移，线还是在上缘 */
+  /* 完整播放条（平板）：线贴着上缘，感应范围只往播放条里面长（不要伸进上面的页面，
+     按列表最下面那一行时会不小心拖到进度） */
   .player-bar:not(.compact) .progress {
-    top: -15px;
+    top: -2px;
+  }
+  .player-bar:not(.compact) .scrubber {
+    height: 22px;
+  }
+  .player-bar:not(.compact) .track-line {
+    top: 1px;
+  }
+  .player-bar:not(.compact) .scrubber.active .track-line {
+    top: 0;
   }
 }
 

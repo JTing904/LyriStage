@@ -14,8 +14,9 @@ export const NAME_MAX = 30;
  */
 export async function updateDisplayName(name) {
   const value = name.trim().slice(0, NAME_MAX) || null;
+  // name_confirmed：自己确认过名字（注册时填的、或改过的），就不会再跳出「确认你的名字」
   const { user } = unwrap(
-    await requireSupabase().auth.updateUser({ data: { custom_name: value } })
+    await requireSupabase().auth.updateUser({ data: { custom_name: value, name_confirmed: true } })
   );
   return user;
 }

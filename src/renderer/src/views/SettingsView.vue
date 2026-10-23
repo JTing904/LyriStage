@@ -34,6 +34,7 @@ import { OFFLINE_LIMITS, offlineBytes, offlineSettings, offlineSupported, offlin
 import { t, locale, LOCALES } from '../i18n';
 import { timeAgo } from '../utils/format';
 import { showError, humanMessage } from '../friendlyError';
+import { useFriendsStore } from '../stores/friends';
 
 // ---- 锁屏歌词（Android App）----
 const lockLyrics = ref(isLockScreenLyricsOn());
@@ -75,6 +76,17 @@ const auth = useAuthStore();
 const pushOn = ref(pushWanted());
 /** 开了但系统设置里不允许通知 */
 const pushBlocked = ref(false);
+// 让别人用名字搜到我
+const friendsStore = useFriendsStore();
+async function toggleSearchable(on, input) {
+  try {
+    await friendsStore.setSearchable(on);
+  } catch (err) {
+    input.checked = !on;
+    showError(err, t('没改成功'));
+  }
+}
+
 async function togglePush(on) {
   pushOn.value = on;
   const granted = await setPushWanted(on).catch(() => false);
@@ -584,6 +596,26 @@ function summary(id) {
               </div>
             </form>
           </div>
+
+          <!-- 好友：能不能用名字搜到我（数据库还没加这个功能时不显示） -->
+          <template v-if="friendsStore.profile && friendsStore.profile.searchable !== null">
+            <h3 class="section-label">{{ $t('好友') }}</h3>
+            <div class="card">
+              <div class="row">
+                <span class="label">
+                  {{ $t('让别人用名字搜到我') }}
+                  <small>{{ $t('关掉的话，只有拿到你好友码的人才能加你') }}</small>
+                </span>
+                <input
+                  :checked="friendsStore.profile.searchable"
+                  type="checkbox"
+                  role="switch"
+                  class="switch"
+                  @change="toggleSearchable($event.target.checked, $event.target)"
+                />
+              </div>
+            </div>
+          </template>
 
           <!-- 手机 App：关着也收得到通知 -->
           <template v-if="pushSupported">

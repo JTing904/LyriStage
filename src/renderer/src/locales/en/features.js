@@ -503,4 +503,21 @@ export default {
   关掉睡眠定时: 'Turn off sleep timer',
   // 其他音源标签
   '网易云没有这首的版权，会改用 B 站等其他来源播放，音质可能不一样': 'NetEase doesn’t have the rights to this song, so it plays from another source such as Bilibili. Quality may differ.',
+  // 名字、搜名字加好友
+  '朋友会看到、可以用来搜你': 'Friends see it and can search for it',
+  确认你的名字: 'Confirm your name',
+  '朋友加你好友时会用名字搜你，也会在好友列表看到它。': 'Friends find you by this name and see it in their friends list.',
+  '这看起来像邮箱的前缀，朋友可能认不出是你，要不要换成平常的称呼？': 'This looks like the start of your email. Friends may not recognise it — use the name they know you by?',
+  确定: 'OK',
+  搜名字或输入好友码: 'Search a name or enter a friend code',
+  搜不到: 'Search didn’t work',
+  已经是好友: 'Already friends',
+  邀请了你: 'Invited you',
+  '{n} 个共同好友': '{n} mutual friend | {n} mutual friends',
+  已送出: 'Sent',
+  '找不到「{q}」，可能对方关掉了搜索，请他给你好友码': 'No one found for "{q}". They may have turned off search — ask for their friend code.',
+  '或用好友码：你的好友码': 'Or use friend codes. Yours:',
+  让别人用名字搜到我: 'Let others find me by name',
+  '关掉的话，只有拿到你好友码的人才能加你': 'When off, only people with your friend code can add you',
+  '一小时内送太多邀请了，等一下再送': 'Too many requests in the last hour. Try again later',
 };

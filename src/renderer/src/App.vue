@@ -35,6 +35,7 @@ import LoginPrompt from './components/LoginPrompt.vue';
 import AppSidebar from './components/AppSidebar.vue';
 import BottomTabs from './components/BottomTabs.vue';
 import GuestPlaySheet from './components/GuestPlaySheet.vue';
+import NameConfirmSheet from './components/NameConfirmSheet.vue';
 import MiniPlayer from './components/MiniPlayer.vue';
 import MobileBackBar from './components/MobileBackBar.vue';
 import PlayerBar from './components/PlayerBar.vue';
@@ -351,6 +352,7 @@ function onContentScroll() {
 
     <AddToPlaylistDialog />
     <GuestPlaySheet />
+    <NameConfirmSheet />
     <QueuePanel />
     <RoomReactions />
     <LoginPrompt />

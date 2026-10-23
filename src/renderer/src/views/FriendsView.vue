@@ -59,6 +59,62 @@ const addResult = ref(null);
 watch(code, value => {
   if (value) addResult.value = null;
 });
+
+// ---- 搜名字或好友码（打 2 个字以上，停 0.3 秒才搜）----
+/** @type {import('vue').Ref<Array<any> | null>} null = 还没搜 */
+const results = ref(null);
+const searching = ref(false);
+let searchTimer = 0;
+let searchSeq = 0;
+watch(code, value => {
+  clearTimeout(searchTimer);
+  const text = value.trim();
+  if (!friendsStore.searchAvailable || [...text].length < 2) {
+    results.value = null;
+    searching.value = false;
+    return;
+  }
+  searching.value = true;
+  searchTimer = setTimeout(async () => {
+    const seq = ++searchSeq;
+    try {
+      const list = await friendsStore.search(text);
+      if (seq === searchSeq) results.value = list;
+    } catch (err) {
+      if (seq === searchSeq) {
+        results.value = null;
+        addResult.value = { ok: false, text: humanMessage(err, t('搜不到')) };
+      }
+    } finally {
+      if (seq === searchSeq) searching.value = false;
+    }
+  }, 300);
+});
+onBeforeUnmount(() => clearTimeout(searchTimer));
+/** 搜到的人：送邀请（用好友码找到的就用好友码送，对方关掉搜索也可以） */
+async function addPerson(person) {
+  if (busy.value) return;
+  busy.value = true;
+  try {
+    const result = person.byCode ? await friendsStore.send(code.value.trim()) : await friendsStore.sendTo(person.id);
+    person.relation = result === 'accepted' || result === 'friends' ? 'friends' : result === 'sent' ? 'sent' : person.relation;
+    if (result === 'accepted') notice.show(t(RESULT.accepted));
+  } catch (err) {
+    showError(err, t('好友邀请没送出去'));
+  } finally {
+    busy.value = false;
+  }
+}
+async function acceptPerson(person) {
+  await answer({ id: person.id, name: person.name }, true);
+  person.relation = 'friends';
+}
+/** 按 Enter：只搜到一个就直接送；还没有搜索功能就照旧用好友码 */
+function submitAdd() {
+  if (!friendsStore.searchAvailable) return add();
+  const only = results.value?.length === 1 ? results.value[0] : null;
+  if (only && !only.relation) addPerson(only);
+}
 async function add() {
   const value = code.value.trim();
   if (!value || busy.value) return;
@@ -193,8 +249,52 @@ async function togglePrivate() {
     <template v-else>
       <!-- 我的好友码 + 加好友（右上角的按钮打开） -->
       <section v-if="showAdd" class="card">
-        <div class="my-code">
-          <span class="label">{{ $t('你的好友码') }}</span>
+        <!-- 搜名字或好友码（数据库还没加搜索功能时：只能输入好友码） -->
+        <form v-if="friendsStore.searchAvailable" class="add search-add" role="search" @submit.prevent="submitAdd">
+          <Icon name="search" :size="18" class="search-icon" />
+          <input
+            v-model="code"
+            class="search-input"
+            maxlength="60"
+            autocomplete="off"
+            enterkeyhint="search"
+            :placeholder="$t('搜名字或输入好友码')"
+            :aria-label="$t('搜名字或输入好友码')"
+          />
+        </form>
+        <form v-else class="add" @submit.prevent="add">
+          <input
+            v-model="code"
+            class="code-input"
+            maxlength="12"
+            autocomplete="off"
+            :placeholder="$t('输入朋友的好友码')"
+            :aria-label="$t('朋友的好友码')"
+          />
+          <button class="primary" :disabled="busy || !code.trim()">{{ busy ? $t('送出中…') : $t('加好友') }}</button>
+        </form>
+        <ul v-if="results?.length" class="people results">
+          <li v-for="p in results" :key="p.id">
+            <Cover :url="p.avatar" :size="44" round class="avatar">
+              <span class="initial">{{ (p.name || '?').slice(0, 1).toUpperCase() }}</span>
+            </Cover>
+            <span class="name">
+              {{ p.name }}
+              <small v-if="p.relation === 'friends'">{{ $t('已经是好友') }}</small>
+              <small v-else-if="p.relation === 'incoming'">{{ $t('邀请了你') }}</small>
+              <small v-else-if="p.mutual">{{ $t('{n} 个共同好友', { n: p.mutual }) }}</small>
+            </span>
+            <button v-if="p.relation === 'sent'" class="ghost small" disabled>{{ $t('已送出') }}</button>
+            <button v-else-if="p.relation === 'incoming'" class="primary small" :disabled="busy" @click="acceptPerson(p)">{{ $t('同意') }}</button>
+            <button v-else-if="!p.relation" class="primary small" :disabled="busy" @click="addPerson(p)">{{ $t('加好友') }}</button>
+          </li>
+        </ul>
+        <p v-else-if="results && !searching" class="hint none">{{ $t('找不到「{q}」，可能对方关掉了搜索，请他给你好友码', { q: code.trim() }) }}</p>
+        <p v-if="addResult" class="add-result" :class="{ ok: addResult.ok }" role="status">
+          <Icon :name="addResult.ok ? 'check' : 'x'" :size="16" />{{ addResult.text }}
+        </p>
+        <div class="my-code" :class="{ below: friendsStore.searchAvailable }">
+          <span class="label">{{ friendsStore.searchAvailable ? $t('或用好友码：你的好友码') : $t('你的好友码') }}</span>
           <code>{{ friendsStore.profile?.friendCode ?? '…' }}</code>
           <div class="buttons">
             <button class="ghost" :disabled="!friendsStore.profile" @click="copy(friendsStore.profile.friendCode, $t('好友码已复制'))">
@@ -206,20 +306,6 @@ async function togglePrivate() {
           </div>
           <p class="hint">{{ $t('朋友输入你的好友码、你同意后才是好友。只有好友看得到你在听什么。') }}</p>
         </div>
-        <form class="add" @submit.prevent="add">
-          <input
-            v-model="code"
-            class="code-input"
-            maxlength="12"
-            autocomplete="off"
-            :placeholder="$t('输入朋友的好友码')"
-            :aria-label="$t('朋友的好友码')"
-          />
-          <button class="primary" :disabled="busy || !code.trim()">{{ busy ? $t('送出中…') : $t('加好友') }}</button>
-        </form>
-        <p v-if="addResult" class="add-result" :class="{ ok: addResult.ok }" role="status">
-          <Icon :name="addResult.ok ? 'check' : 'x'" :size="16" />{{ addResult.text }}
-        </p>
       </section>
 
       <!-- 收到的邀请 -->
@@ -442,6 +528,65 @@ async function togglePrivate() {
 .add {
   display: flex;
   gap: 8px;
+}
+.search-add {
+  position: relative;
+  align-items: center;
+}
+.search-icon {
+  position: absolute;
+  left: 16px;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  padding: 0 16px 0 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+.search-input:focus {
+  border-color: var(--accent);
+  outline: 0;
+}
+.results {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.results .name {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.results .name small {
+  color: var(--text-dim);
+  font-size: 12.5px;
+  font-weight: 400;
+}
+.results .initial {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  color: #fff;
+  font-weight: 800;
+}
+.hint.none {
+  margin: 12px 4px 0;
+}
+.my-code:not(.below) {
+  margin-top: 16px;
+}
+.my-code.below {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
