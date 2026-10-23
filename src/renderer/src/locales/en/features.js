@@ -531,4 +531,8 @@ export default {
   '来 LyriStage 一起编辑歌单「{name}」，共享歌单码 {code}': 'Edit the playlist "{name}" with me on LyriStage. Playlist code {code}',
   '分享不了，把上面的共享歌单码传给朋友吧': 'Couldn’t share. Send the playlist code above instead',
   共享歌单码: 'Playlist code',
+  // 小项目：滑动提示、离线全部删掉
+  往下滑可以关掉: 'Swipe down to close',
+  '把存在手机里的歌全部删掉？': 'Delete all songs saved on this phone?',
+  '之后听到的歌会再存进来。': 'Songs you play later will be saved again.',
 };

@@ -57,6 +57,21 @@ const controlsVisible = ref(true);
 const pickerOpen = ref(false);
 const shareOpen = ref(false);
 let hideTimer = 0;
+
+// 往下滑关掉的提示：手机第一次打开歌词时说一次（之后记住，不再出现）
+const HINT_KEY = 'lyristage:stage-swipe-hint';
+const swipeHint = ref(false);
+if (!props.embedded && window.matchMedia?.('(pointer: coarse)').matches) {
+  try {
+    if (!localStorage.getItem(HINT_KEY)) {
+      localStorage.setItem(HINT_KEY, '1');
+      swipeHint.value = true;
+      setTimeout(() => (swipeHint.value = false), 4000);
+    }
+  } catch {
+    // 存不了就不提示（不然每次都跳出来）
+  }
+}
 function wake() {
   controlsVisible.value = true;
   clearTimeout(hideTimer);
@@ -148,6 +163,10 @@ onBeforeUnmount(() => {
   >
     <!-- 手机：提示可以往下拉关闭 -->
     <span v-if="!embedded" class="grabber" aria-hidden="true" />
+    <!-- 第一次打开（手机）：告诉用户可以往下滑关掉，只出现一次 -->
+    <Transition name="hint">
+      <span v-if="swipeHint" class="swipe-hint" role="status">{{ $t('往下滑可以关掉') }}</span>
+    </Transition>
     <component
       :is="style.component"
       v-if="status === 'ready'"
@@ -249,6 +268,29 @@ onBeforeUnmount(() => {
 }
 .grabber {
   display: none;
+}
+.swipe-hint {
+  position: absolute;
+  z-index: 12;
+  top: calc(env(safe-area-inset-top) + 16px);
+  left: 50%;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.hint-enter-active,
+.hint-leave-active {
+  transition: opacity 0.4s;
+}
+.hint-enter-from,
+.hint-leave-to {
+  opacity: 0;
 }
 @media (pointer: coarse) {
   /* 提示线在最上面，按钮列往下让一点，窄屏时才不会和右边的按钮叠在一起 */

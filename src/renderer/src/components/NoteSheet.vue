@@ -148,7 +148,7 @@ async function remove() {
         </div>
         <div v-if="item.song" class="actions">
           <button class="btn primary" @click="play"><Icon name="play" :size="16" />{{ $t('播放') }}</button>
-          <button class="btn" @click="queue"><Icon name="queue" :size="18" />{{ $t('加入队列') }}</button>
+          <button class="btn" @click="queue"><Icon name="queue" :size="18" />{{ $t('加入播放队列') }}</button>
         </div>
 
         <div class="react">

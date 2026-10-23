@@ -1,10 +1,13 @@
 <script setup>
 // 手机版底部的 Tab
+import { ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import Icon from './Icon.vue';
 import { useFriendsStore } from '../stores/friends';
 import { locale } from '../i18n';
 
 const friendsStore = useFriendsStore();
+const route = useRoute();
 
 const TABS = [
   { to: '/', icon: 'home', label: '首页' },
@@ -14,6 +17,23 @@ const TABS = [
   // 英文的 Listen Together 在五个分页里放不下，底部这里用短的
   { to: '/room', icon: 'users', label: '一起听', en: 'Together' },
 ];
+
+// 子页面（歌单、专辑、设置…）不是任何一个分页：继续亮着刚才那个分页，才知道自己在哪一区
+// 我的歌单、我喜欢的、离线、听歌报告属于音乐库；每日推荐属于首页
+const OWNER = [
+  [/^\/(my|liked|offline|report)(\/|$)/, '/library'],
+  [/^\/daily(\/|$)/, '/'],
+  [/^\/join\//, '/library'],
+];
+const current = ref('/');
+watch(
+  () => route.path,
+  path => {
+    const tab = TABS.find(t => t.to === path)?.to ?? OWNER.find(([re]) => re.test(path))?.[1];
+    if (tab) current.value = tab;
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
@@ -23,8 +43,10 @@ const TABS = [
       :key="tab.to"
       :to="tab.to"
       class="tab"
+      :class="{ active: current === tab.to }"
       active-class=""
-      exact-active-class="active"
+      exact-active-class=""
+      :aria-current="current === tab.to ? 'page' : undefined"
     >
       <span class="icon">
         <Icon :name="tab.icon" />
@@ -53,7 +75,7 @@ const TABS = [
   gap: 3px;
   min-width: 0;
   padding: 0 2px;
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
   color: var(--text-dim);
 }

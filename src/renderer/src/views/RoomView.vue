@@ -1238,6 +1238,22 @@ header p {
     min-height: 180px;
   }
 }
+/* 手指：顶部的圆按钮加大到 40px（34px 太小，容易按错） */
+@media (pointer: coarse) {
+  .round-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .voice-btn {
+    height: 40px;
+  }
+  .room-top .voice-btn {
+    min-width: 40px;
+  }
+  .chip {
+    min-height: 40px;
+  }
+}
 /* 很窄的手机：头像放不下就收起来（成员分页看得到） */
 @media (max-width: 379px) {
   .avatars {

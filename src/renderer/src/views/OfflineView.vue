@@ -1,12 +1,13 @@
 <script setup>
 // 存在手机里的歌（离线听歌）：没网络也能播；可以全部清掉
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { usePlayCollection } from '../composables/usePlayCollection';
 import { offlineBytes, offlineSettings, offlineSupported, offlineTracks, clearOffline } from '../offline';
 import { totalLength } from '../utils/format';
 import { t } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
 import TrackList from '../components/TrackList.vue';
+import ConfirmSheet from '../components/ConfirmSheet.vue';
 
 const { playAll, shuffleAll } = usePlayCollection();
 
@@ -20,8 +21,9 @@ const meta = computed(() =>
     : ''
 );
 
+const confirmClear = ref(null);
 async function clearAll() {
-  if (window.confirm(t('把存在手机里的歌全部删掉？之后听到的歌会再存进来。'))) await clearOffline();
+  if (await confirmClear.value.ask()) await clearOffline();
 }
 </script>
 
@@ -46,6 +48,12 @@ async function clearAll() {
         <button class="ghost" @click="clearAll">{{ $t('全部删掉') }}</button>
       </p>
     </template>
+    <ConfirmSheet
+      ref="confirmClear"
+      :title="$t('把存在手机里的歌全部删掉？')"
+      :text="$t('之后听到的歌会再存进来。')"
+      :confirm-label="$t('全部删掉')"
+    />
   </div>
 </template>
 

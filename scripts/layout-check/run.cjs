@@ -171,6 +171,14 @@ const PAGES = [
   },
   { id: 'library', hash: '#/library' },
   { id: 'offline', hash: '#/offline' },
+  // 「全部删掉」的确认面板：只打开来看，关掉时等于按取消（不会真的删）
+  {
+    id: 'offline-confirm',
+    hash: '#/offline',
+    open: () => [...document.querySelectorAll('button')].find(b => /全部删掉|Delete all/.test(b.textContent))?.click(),
+    close: () => document.querySelector('dialog.confirm-sheet')?.close(),
+    fits: [['dialog.confirm-sheet[open]', 'viewport']],
+  },
   { id: 'liked', hash: '#/liked' },
   { id: 'playlist', hash: '#/playlist/3778678', wait: 4000 },
   {

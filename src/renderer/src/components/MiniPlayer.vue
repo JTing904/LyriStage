@@ -1,6 +1,6 @@
 <script setup>
 // 手机版的迷你播放条：点一下打开歌词舞台
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import Icon from './Icon.vue';
 import Cover from './Cover.vue';
 import { useUiStore } from '../stores/ui';
@@ -20,6 +20,48 @@ const emit = defineEmits(['open-stage']);
 const progress = computed(() =>
   props.state.duration ? Math.min(1, props.state.time / props.state.duration) : 0
 );
+// 左右滑歌名：左滑下一首、右滑上一首（像 Spotify）；滑的时候歌名跟着手指动一点
+const SWIPE_PX = 60;
+const dx = ref(0);
+let start = null;
+let swiped = false;
+function onDown(event) {
+  if (event.pointerType === 'mouse') return;
+  start = { x: event.clientX, y: event.clientY };
+  swiped = false;
+}
+function onMove(event) {
+  if (!start) return;
+  const x = event.clientX - start.x;
+  const y = event.clientY - start.y;
+  // 往上下滑是在卷页面，不算
+  if (Math.abs(y) > Math.abs(x)) return (dx.value = 0);
+  dx.value = Math.max(-80, Math.min(80, x * 0.5));
+}
+function onUp(event) {
+  if (!start) return;
+  const x = event.clientX - start.x;
+  const y = event.clientY - start.y;
+  start = null;
+  dx.value = 0;
+  if (Math.abs(x) < SWIPE_PX || Math.abs(x) < Math.abs(y) * 2) return;
+  swiped = true;
+  if (x < 0) props.player.next();
+  else props.player.prev();
+}
+function onCancel() {
+  start = null;
+  dx.value = 0;
+}
+/** 刚滑完放开会接着来一个 click：不要因此打开歌词 */
+function onOpen() {
+  if (swiped) {
+    swiped = false;
+    return;
+  }
+  emit('open-stage');
+}
+
 const artists = computed(() =>
   (props.state.track?.ar ?? []).map(a => a.name).join(' / ')
 );
@@ -27,7 +69,16 @@ const artists = computed(() =>
 
 <template>
   <div v-if="state.track" class="mini">
-    <button class="open" :aria-label="$t('打开歌词')" @click="emit('open-stage')">
+    <button
+      class="open"
+      :aria-label="$t('打开歌词')"
+      :style="dx ? { transform: `translateX(${dx}px)` } : undefined"
+      @pointerdown="onDown"
+      @pointermove="onMove"
+      @pointerup="onUp"
+      @pointercancel="onCancel"
+      @click="onOpen"
+    >
       <Cover :url="state.track.al?.picUrl" :size="42" radius="8px" class="cover" />
       <span class="meta">
         <strong>{{ state.track.name }}</strong>
@@ -68,6 +119,8 @@ const artists = computed(() =>
   border: 1px solid var(--line);
 }
 .open {
+  touch-action: pan-y;
+  transition: transform 0.15s ease-out;
   flex: 1;
   min-width: 0;
   display: flex;
