@@ -13,6 +13,23 @@ export async function signIn(email, password) {
 }
 
 /**
+ * 忘记密码第一步：寄一组验证码到邮箱。
+ * 邮件里放的是验证码（Supabase 后台的 Reset Password 模板用 {{ .Token }}），不是链接：
+ * 登录用 PKCE，链接只能在申请的那台设备打开；验证码在哪台设备输入都可以。
+ * 邮箱没注册过也一样「成功」（不让别人用这个查谁有账号）
+ */
+export async function sendPasswordResetCode(email) {
+  unwrap(await requireSupabase().auth.resetPasswordForEmail(email));
+}
+
+/** 忘记密码第二步：用验证码登录，再改成新密码 */
+export async function resetPasswordWithCode(email, code, password) {
+  const supabase = requireSupabase();
+  unwrap(await supabase.auth.verifyOtp({ email, token: code, type: 'recovery' }));
+  unwrap(await supabase.auth.updateUser({ password }));
+}
+
+/**
  * 第三方登录（GitHub / Google）第一步：拿到授权页网址，由调用方决定怎么打开
  * （网页版直接跳转；电脑版用系统浏览器打开）。
  * 授权完成后浏览器会回到 redirectTo，网址里带 ?code=…，再交给 exchangeAuthCode()。

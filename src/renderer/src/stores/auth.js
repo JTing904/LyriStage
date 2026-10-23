@@ -14,6 +14,8 @@ import {
   signIn,
   signOut,
   signUp,
+  sendPasswordResetCode,
+  resetPasswordWithCode,
   updateDisplayName,
   uploadAvatar,
 } from '@core/data';
@@ -200,6 +202,13 @@ export const useAuthStore = defineStore('auth', () => {
     await checkMember();
   }
 
+  /** 忘记密码：验证码对了就登录并换成新密码 */
+  async function resetPassword(email, code, password) {
+    await resetPasswordWithCode(email, code, password);
+    user.value = await getCurrentUser();
+    await checkMember();
+  }
+
   /** 注册并马上兑换邀请码；邀请码不对时账号已经建好，会停在"输入邀请码"那一步 */
   async function registerWithEmail(email, password, invite) {
     const { session } = await signUp(email, password);
@@ -263,6 +272,8 @@ export const useAuthStore = defineStore('auth', () => {
     providerLabel,
     whenReady,
     loginWithEmail,
+    resetPassword,
+    sendPasswordResetCode,
     registerWithEmail,
     loginWithProvider,
     saveName,

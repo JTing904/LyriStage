@@ -3,11 +3,13 @@
 // - 登录：GitHub 或邮箱 + 密码
 // - 注册：邮箱 + 密码 + 邀请码
 // - 登录了但还不是成员（例如第一次用 GitHub 登录）：输入邀请码
-import { computed, onMounted, ref, watch } from 'vue';
+// - 忘记密码：邮箱收一组验证码，输入验证码和新密码就登录
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { listOAuthProviders } from '@core/data';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useAvatarStore } from '../stores/avatar';
+import { useNoticeStore } from '../stores/notice';
 import { redirectTarget } from '../router';
 import AvatarFigure from '../components/AvatarFigure.vue';
 import Icon from '../components/Icon.vue';
@@ -32,7 +34,7 @@ onMounted(() => {
 });
 const providers = computed(() => PROVIDERS.filter(p => enabledProviders.value.includes(p.id)));
 
-const mode = ref('login'); // 'login' | 'register'
+const mode = ref('login'); // 'login' | 'register' | 'reset'
 const email = ref('');
 const password = ref('');
 const showPassword = ref(false);
@@ -64,7 +66,9 @@ function describe(err) {
   if (/password should be at least/i.test(message)) return t('密码太短了');
   if (/unable to validate email|invalid.*email/i.test(message))
     return t('邮箱格式不对');
-  if (/rate limit|too many/i.test(message)) return t('尝试太多次了，请稍后再试');
+  if (/rate limit|too many|only request this after/i.test(message)) return t('尝试太多次了，请稍后再试');
+  if (/token has expired|otp.*(expired|invalid)|invalid.*(token|otp)/i.test(message)) return t('验证码不对或过期了');
+  if (/should be different/i.test(message)) return t('新密码不能跟旧密码一样');
   if (/failed to fetch|network/i.test(message)) return t('连不上服务器，请检查网络');
   // 自己丢出的中文错误（例如邀请码不对）有对照就换成目前的语言；其他的说人话
   return humanMessage(err, t('没登录成功'));
@@ -94,6 +98,42 @@ function submit() {
 function submitInvite() {
   run(() => auth.redeem(invite.value));
 }
+
+// ---- 忘记密码：寄验证码 → 输入验证码和新密码（改好就登录） ----
+const code = ref('');
+/** 验证码寄到哪个邮箱（空的 = 还没寄） */
+const codeSentTo = ref('');
+/** 几秒后可以重新寄（Supabase 同一个人 60 秒只能寄一次） */
+const resendIn = ref(0);
+let resendTimer = 0;
+function startReset() {
+  mode.value = 'reset';
+  code.value = '';
+  codeSentTo.value = '';
+  password.value = '';
+}
+function sendCode() {
+  run(async () => {
+    const to = email.value.trim();
+    await auth.sendPasswordResetCode(to);
+    codeSentTo.value = to;
+    resendIn.value = 60;
+    clearInterval(resendTimer);
+    resendTimer = setInterval(() => {
+      if (--resendIn.value <= 0) clearInterval(resendTimer);
+    }, 1000);
+  });
+}
+function submitReset() {
+  if (!codeSentTo.value) return sendCode();
+  run(async () => {
+    await auth.resetPassword(codeSentTo.value, code.value.replace(/\s/g, ''), password.value);
+    useNoticeStore().show(t('密码改好了'));
+  });
+}
+// 改了邮箱：要重新寄
+watch(email, value => codeSentTo.value && value.trim() !== codeSentTo.value && (codeSentTo.value = ''));
+onBeforeUnmount(() => clearInterval(resendTimer));
 </script>
 
 <template>
@@ -152,6 +192,70 @@ function submitInvite() {
           </p>
         </form>
 
+        <!-- 忘记密码 -->
+        <form v-else-if="mode === 'reset'" class="form" @submit.prevent="submitReset">
+          <div class="head">
+            <h1 class="display">{{ $t('重设密码') }}</h1>
+            <p v-if="!codeSentTo">{{ $t('输入注册时用的邮箱，我们会寄一组验证码给你。') }}</p>
+          </div>
+          <label>
+            {{ $t('邮箱') }}
+            <input v-model="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+          </label>
+          <template v-if="codeSentTo">
+            <p class="sent" role="status">
+              {{ $t('验证码寄到 {email} 了。没收到的话看看垃圾邮件。', { email: codeSentTo }) }}
+            </p>
+            <label>
+              {{ $t('验证码') }}
+              <input
+                v-model="code"
+                class="otp"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                maxlength="10"
+                placeholder="123456"
+                required
+              />
+            </label>
+            <label>
+              {{ $t('新密码') }}
+              <span class="password-field">
+                <input
+                  v-model="password"
+                  :type="showPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  :placeholder="$t('至少 8 位')"
+                  minlength="8"
+                  required
+                />
+                <button
+                  type="button"
+                  class="eye"
+                  :aria-label="showPassword ? $t('隐藏密码') : $t('显示密码')"
+                  :aria-pressed="showPassword"
+                  @click="showPassword = !showPassword"
+                >
+                  <Icon :name="showPassword ? 'eye-off' : 'eye'" :size="20" />
+                </button>
+              </span>
+            </label>
+          </template>
+          <p v-if="error" class="error" role="alert">{{ error }}</p>
+          <button type="submit" class="primary" :disabled="busy">
+            <template v-if="busy">{{ $t('请稍候…') }}</template>
+            <template v-else>{{ codeSentTo ? $t('改好并登录') : $t('寄验证码') }}</template>
+          </button>
+          <p class="switch">
+            <template v-if="codeSentTo">
+              <button v-if="resendIn <= 0" type="button" class="link" :disabled="busy" @click="sendCode">{{ $t('重新寄') }}</button>
+              <span v-else>{{ $t('重新寄（{n} 秒）', { n: resendIn }) }}</span>
+              ·
+            </template>
+            <button type="button" class="link" @click="mode = 'login'">{{ $t('回到登录') }}</button>
+          </p>
+        </form>
+
         <!-- 登录 / 注册 -->
         <form v-else class="form" @submit.prevent="submit">
           <div class="head">
@@ -197,7 +301,10 @@ function submitInvite() {
             />
           </label>
           <label>
-            {{ $t('密码') }}
+            <span class="label-row">
+              {{ $t('密码') }}
+              <button v-if="mode === 'login'" type="button" class="link" @click="startReset">{{ $t('忘记密码？') }}</button>
+            </span>
             <span class="password-field">
               <input
                 v-model="password"
@@ -460,6 +567,29 @@ button:disabled {
   font-size: 14px;
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.label-row .link {
+  font-size: 13px;
+}
+.sent {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: color-mix(in srgb, #16a34a 80%, var(--text));
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+}
+.otp {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 22px;
+  letter-spacing: 0.3em;
 }
 .switch {
   margin: 0;
