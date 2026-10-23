@@ -484,4 +484,6 @@ export default {
   密码改好了: 'Password changed',
   验证码不对或过期了: 'That code is wrong or has expired',
   新密码不能跟旧密码一样: 'Use a password you haven’t used before',
+  // 设置入口（没登录也能进）
+  还没输入邀请码: 'Invite code not entered yet',
 };

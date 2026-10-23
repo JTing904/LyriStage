@@ -372,11 +372,12 @@ const onPhoneChange = e => (isPhone.value = e.matches);
 phoneQuery.addEventListener('change', onPhoneChange);
 onBeforeUnmount(() => phoneQuery.removeEventListener('change', onPhoneChange));
 
+// 没登录（或还不是成员）只看得到外观、快捷键、关于：账号、播放、歌词都要能听歌才有用
 const CATEGORIES = computed(() =>
   [
-    { id: 'account', group: 'mine', label: '账号', icon: 'users' },
-    { id: 'playback', group: 'mine', label: '播放与音效', icon: 'volume', show: audioEffects.supported || offlineSupported },
-    { id: 'lyrics', group: 'mine', label: '歌词', icon: 'desktop-lyrics', show: isNativeApp || isElectron },
+    { id: 'account', group: 'mine', label: '账号', icon: 'users', show: auth.allowed },
+    { id: 'playback', group: 'mine', label: '播放与音效', icon: 'volume', show: auth.allowed && (audioEffects.supported || offlineSupported) },
+    { id: 'lyrics', group: 'mine', label: '歌词', icon: 'desktop-lyrics', show: auth.allowed && (isNativeApp || isElectron) },
     { id: 'appearance', group: 'mine', label: '外观', icon: 'moon' },
     { id: 'shortcuts', group: 'mine', label: '快捷键', icon: 'grid', show: !isNativeApp },
     { id: 'about', group: 'mine', label: '关于', icon: 'settings' },
@@ -394,7 +395,7 @@ const adminCategories = computed(() => CATEGORIES.value.filter(c => c.group === 
 const cat = computed(() => {
   const c = String(route.query.c ?? '');
   if (CATEGORIES.value.some(x => x.id === c)) return c;
-  return isPhone.value ? null : 'account';
+  return isPhone.value ? null : CATEGORIES.value[0].id;
 });
 const current = computed(() => CATEGORIES.value.find(c => c.id === cat.value) ?? null);
 /** 手机：进下一层（按返回回到列表）；电脑：直接换 */
@@ -474,7 +475,7 @@ function summary(id) {
       </nav>
 
       <div v-if="isPhone && !cat" class="phone-cats">
-        <button class="card profile-card" @click="openCat('account')">
+        <button v-if="auth.allowed" class="card profile-card" @click="openCat('account')">
           <Cover v-if="auth.avatarUrl" :url="auth.avatarUrl" :size="48" round class="avatar" />
           <span v-else class="avatar initial">{{ auth.displayName.slice(0, 1).toUpperCase() }}</span>
           <span class="who">
@@ -483,6 +484,15 @@ function summary(id) {
           </span>
           <Icon name="chevron-right" :size="18" class="chev" />
         </button>
+        <!-- 没登录 / 还没兑换邀请码 -->
+        <div v-else class="card profile-card guest-card">
+          <span class="avatar initial guest-avatar"><Icon name="users" :size="22" /></span>
+          <span class="who">
+            <strong>{{ auth.loggedIn ? $t('还没输入邀请码') : $t('还没登录') }}</strong>
+            <span>{{ $t('登录后才能听歌、收藏') }}</span>
+          </span>
+          <RouterLink to="/login" class="login-btn">{{ auth.loggedIn ? $t('输入邀请码') : $t('登录') }}</RouterLink>
+        </div>
         <h3 class="section-label">{{ $t('我的') }}</h3>
         <div class="card">
           <button
@@ -1323,6 +1333,24 @@ h1 {
 /* 手机：分类列表 */
 .phone-cats .card + .section-label {
   margin-top: 22px;
+}
+.guest-card .who span {
+  /* 说明比较长（英文），换行比截掉好 */
+  white-space: normal;
+}
+.initial.guest-avatar {
+  background: var(--surface-hover);
+  color: var(--text-faint);
+}
+.login-btn {
+  flex: none;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 .profile-card {
   display: flex;

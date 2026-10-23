@@ -126,7 +126,14 @@ async function create() {
 <template>
   <div class="page">
     <div class="title-row">
-      <h1 class="display title">{{ $t('我的音乐库') }}</h1>
+      <span class="title-main">
+        <!-- 手机：按自己的头像进设置（电脑、平板横放有侧边栏的账号卡片） -->
+        <RouterLink to="/settings" class="me" :aria-label="$t('设置')" :title="$t('设置')">
+          <Cover v-if="auth.avatarUrl" :url="auth.avatarUrl" :size="40" round />
+          <span v-else class="me-initial">{{ auth.displayName.slice(0, 1).toUpperCase() }}</span>
+        </RouterLink>
+        <h1 class="display title">{{ $t('我的音乐库') }}</h1>
+      </span>
       <span class="title-links">
         <!-- 离线听歌：存在手机里的歌 -->
         <RouterLink v-if="offlineSupported" to="/offline" class="report-link">
@@ -239,6 +246,35 @@ async function create() {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+.title-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.me {
+  display: none;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.me-initial {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  color: #fff;
+  font-weight: 800;
+  font-size: 17px;
+}
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
+  .me {
+    display: block;
+  }
 }
 .report-link {
   display: inline-flex;

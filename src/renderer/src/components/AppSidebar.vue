@@ -91,6 +91,10 @@ const NAV = [
       <Icon name="settings" :size="18" class="gear" />
     </RouterLink>
     <div v-else-if="auth.ready" class="account guest">
+      <!-- 没登录也能进设置（换主题、语言） -->
+      <RouterLink to="/settings" class="guest-gear" :aria-label="$t('设置')" :title="$t('设置')">
+        <Icon name="settings" :size="18" />
+      </RouterLink>
       <span class="who">
         <strong>{{ $t('还没登录') }}</strong>
         <span>{{ $t('登录后才能听歌、收藏') }}</span>
@@ -268,7 +272,23 @@ const NAV = [
   color: var(--text-dim);
 }
 .guest {
+  position: relative;
   flex-wrap: wrap;
+}
+.guest-gear {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--text-dim);
+}
+.guest-gear:hover {
+  background: var(--surface);
+  color: var(--text);
 }
 .login {
   margin-left: auto;

@@ -26,12 +26,8 @@ export const router = createRouter({
     { path: '/join/:code', name: 'join-playlist', component: () => import('./views/JoinPlaylistView.vue'), meta: { member: true } },
     { path: '/friends', name: 'friends', component: () => import('./views/FriendsView.vue'), meta: { member: true } },
     { path: '/room', name: 'room', component: () => import('./views/RoomView.vue'), meta: { member: true } },
-    {
-      path: '/settings',
-      name: 'settings',
-      component: () => import('./views/SettingsView.vue'),
-      meta: { member: true },
-    },
+    // 没登录也能进（换主题、换语言、看版本）；要登录的类别在页面里藏起来
+    { path: '/settings', name: 'settings', component: () => import('./views/SettingsView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 });
