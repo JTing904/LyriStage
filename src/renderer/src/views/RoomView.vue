@@ -526,6 +526,7 @@ header p {
   color: var(--text);
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 .chip-btn:hover {
   background: var(--line-strong);
@@ -1085,8 +1086,16 @@ header p {
   .knock {
     margin: 0 12px 10px;
   }
+  .chip {
+    flex: none;
+    gap: 6px;
+  }
   .chip code {
     font-size: 15px;
+    letter-spacing: 0.08em;
+  }
+  .chip-btn {
+    padding: 4px 9px;
   }
   .side-panel {
     border: 0;
@@ -1096,6 +1105,65 @@ header p {
   .messages {
     max-height: 46dvh;
     min-height: 180px;
+  }
+}
+/* 很窄的手机：头像放不下就收起来（成员分页看得到） */
+@media (max-width: 379px) {
+  .avatars {
+    display: none;
+  }
+}
+/* 手机横屏：画面矮，歌词在左、聊天在右，跟电脑版一样排，不用往下卷才看到聊天 */
+@media (pointer: coarse) and (max-height: 600px) and (orientation: landscape) {
+  .room-page.inside {
+    padding: 8px 12px 8px 0;
+  }
+  .room {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 36%);
+    gap: 12px;
+    height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 80px);
+    min-height: 0;
+  }
+  .left {
+    gap: 8px;
+  }
+  .room-top {
+    padding: 0;
+  }
+  .stage-panel {
+    height: auto;
+    min-height: 0;
+    border-radius: 18px;
+  }
+  .side-panel {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--surface);
+  }
+  .messages {
+    max-height: none;
+    min-height: 0;
+    padding: 12px;
+  }
+  .reaction-bar {
+    padding: 8px 10px;
+  }
+  .reaction {
+    width: 34px;
+    height: 34px;
+    font-size: 17px;
+  }
+  .composer {
+    padding: 0 10px 10px;
+  }
+  .composer input,
+  .composer button,
+  .composer .pick-btn {
+    min-height: 38px;
+    height: 38px;
+  }
+  .composer .pick-btn {
+    width: 38px;
   }
 }
 </style>

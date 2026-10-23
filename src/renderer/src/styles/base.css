@@ -167,6 +167,19 @@ img {
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
     env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
+/* 手机直屏：底部 Tab 自己会垫高到导航条底下（BottomTabs.vue），这里再垫一次就会多一截空白
+   （三个按钮的导航条特别高，很明显）；登录页那些没有 Tab 的照旧 */
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
+  #app:has(> .shell) {
+    padding-bottom: 0;
+  }
+}
+/* 手机横屏：Tab 在左边、不垫底部，就还是由这里垫 */
+@media (pointer: coarse) and (max-height: 600px) and (orientation: landscape) {
+  #app:has(> .shell) {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
 
 /* 滚动条：细、圆角、半透明，跟着深浅主题；不要上下的小箭头 */
 ::-webkit-scrollbar {
