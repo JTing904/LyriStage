@@ -1,5 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { buildMessage, isDeadToken } from './index.ts';
+import { buildMessage, fcmMessage, isDeadToken, safeAvatar } from './index.ts';
+
+const SUPABASE = 'https://abc.supabase.co';
+
+describe('safeAvatar（通知右边的头像）', () => {
+  it('只放 Supabase 上传的、GitHub、Google 的头像', () => {
+    expect(safeAvatar(`${SUPABASE}/storage/v1/object/public/avatars/u1.jpg`, SUPABASE)).not.toBe('');
+    expect(safeAvatar('https://avatars.githubusercontent.com/u/1', SUPABASE)).not.toBe('');
+    expect(safeAvatar('https://lh3.googleusercontent.com/a/x', SUPABASE)).not.toBe('');
+  });
+  it('其他网站、http、乱写的都不放', () => {
+    expect(safeAvatar('https://evil.example/track.png', SUPABASE)).toBe('');
+    expect(safeAvatar(`${SUPABASE}/storage/v1/object/public/other/x.jpg`, SUPABASE)).toBe('');
+    expect(safeAvatar('http://avatars.githubusercontent.com/u/1', SUPABASE)).toBe('');
+    expect(safeAvatar(null, SUPABASE)).toBe('');
+  });
+});
+
+describe('fcmMessage', () => {
+  it('只送资料（App 自己显示通知），高优先；不安全的头像拿掉', () => {
+    const m = fcmMessage('tok', 'reaction', { from: 'u2', avatar: 'https://evil.example/a.png' }, { title: 'T', body: 'B', url: '#/friends' }, SUPABASE);
+    expect(m.notification).toBeUndefined();
+    expect(m.android.priority).toBe('high');
+    expect(m.data).toEqual({ title: 'T', body: 'B', url: '#/friends', kind: 'reaction', from: 'u2', avatar: '' });
+  });
+});
 
 describe('buildMessage', () => {
   it('表情回应：便签和正在听的歌写法不一样', () => {

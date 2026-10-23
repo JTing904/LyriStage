@@ -2,6 +2,7 @@
 // 数据库有新的表情回应、好友邀请、敲门时叫这里（见 supabase/migrations/20261104000000_push_notifications.sql）：
 //   POST { user_id, kind, params }，header x-push-secret 是数据库自动产生的密码
 // 这里查出那个人登记过的手机，用他的语言写好通知，一台一台送；手机已经不收了（App 删掉）的代号顺便删掉。
+// 送的是资料（标题、内容、要打开哪一页、谁送的、他的头像），通知由 App 自己显示，右边才放得了头像。
 //
 // 部署：Supabase → Edge Functions → 新增 send-push，贴上这整个文件；「Verify JWT」要关掉（靠 x-push-secret 确认）。
 // Secrets 加一个 FCM_SERVICE_ACCOUNT：Firebase → 项目设置 → 服务账号 → 生成新的私钥，
@@ -64,6 +65,43 @@ export function buildMessage(kind, params, locale) {
     default:
       return null;
   }
+}
+
+/**
+ * 通知右边放的头像：只放 Supabase 上传的、GitHub、Google 的头像
+ * （头像网址是用户自己填的资料，随便一个网址会让收通知的手机去连那个网站，对方就知道你的 IP）
+ */
+export function safeAvatar(url, supabaseUrl) {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'https:') return '';
+    if (u.host === new URL(supabaseUrl).host && u.pathname.startsWith('/storage/v1/object/public/avatars/')) return url;
+    if (u.host === 'avatars.githubusercontent.com') return url;
+    if (/^lh\d\.googleusercontent\.com$/.test(u.host)) return url;
+  } catch {
+    // 不是网址
+  }
+  return '';
+}
+
+/**
+ * 送给 FCM 的一则：只放资料，由 App 自己显示通知（PushMessagingService.java），右边才放得了头像
+ * @returns {object} FCM HTTP v1 的 message
+ */
+export function fcmMessage(token, kind, params, message, supabaseUrl) {
+  return {
+    token,
+    data: {
+      title: message.title,
+      body: message.body,
+      url: message.url,
+      kind,
+      from: String(params?.from ?? ''),
+      avatar: safeAvatar(params?.avatar, supabaseUrl),
+    },
+    // 高优先：App 整个关掉、手机待机也会马上收到
+    android: { priority: 'high' },
+  };
 }
 
 /** FCM 说这个代号已经没用了（App 删掉、换手机）：从数据库删掉 */
@@ -147,19 +185,7 @@ async function handle(req) {
     const res = await fetch(`https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${auth}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: {
-          token,
-          notification: { title: message.title, body: message.body },
-          // 点通知打开哪一页（App 里 push.js 读这个）
-          data: { url: message.url, kind },
-          android: {
-            priority: 'high',
-            // 好友和一起听的通知频道（App 第一次打开时建立）；同一种的新通知盖掉旧的
-            notification: { channel_id: 'social', tag: kind },
-          },
-        },
-      }),
+      body: JSON.stringify({ message: fcmMessage(token, kind, params, message, env('SUPABASE_URL')) }),
     });
     if (res.ok) sent++;
     else if (isDeadToken(res.status, await res.json().catch(() => null))) dead.push(token);

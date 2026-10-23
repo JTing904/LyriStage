@@ -55,6 +55,8 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    // 自己显示推送通知（PushMessagingService.java）：跟推送插件用同一版
+    implementation "com.google.firebase:firebase-messaging:25.0.1"
 }
 
 apply from: 'capacitor.build.gradle'

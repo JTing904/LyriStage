@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="false"
@@ -55,6 +56,18 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="social" />
+
+        <!-- 推送通知自己显示（右边放朋友头像，PushMessagingService.java）：取代推送插件原本的 -->
+        <service
+            android:name="com.capacitorjs.plugins.pushnotifications.MessagingService"
+            tools:node="remove" />
+        <service
+            android:name=".PushMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
 
         <!-- 一起听的语音：关掉屏幕、切到别的 App 时继续（VoiceCallService.java） -->
         <service

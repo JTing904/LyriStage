@@ -130,6 +130,22 @@ as $$
 $$;
 revoke execute on function private.display_name(uuid) from public, anon, authenticated;
 
+/** 通知里的人：名字、头像（通知右边显示，像 WhatsApp）、账号 id（同一个人的新通知盖掉旧的） */
+create or replace function private.sender(uid uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'name', private.display_name(uid),
+    'avatar', (select p.avatar_url from public.member_profiles p where p.user_id = uid),
+    'from', uid
+  );
+$$;
+revoke execute on function private.sender(uuid) from public, anon, authenticated;
+
 -- ---- 3. 什么时候送 ----
 
 -- 好友送表情回应
@@ -140,8 +156,8 @@ security definer
 set search_path = ''
 as $$
 begin
-  perform private.send_push(new.to_user, 'reaction', jsonb_build_object(
-    'name', private.display_name(new.from_user), 'emoji', new.emoji, 'target', new.target, 'context', new.context
+  perform private.send_push(new.to_user, 'reaction', private.sender(new.from_user) || jsonb_build_object(
+    'emoji', new.emoji, 'target', new.target, 'context', new.context
   ));
   return null;
 end;
@@ -159,9 +175,9 @@ set search_path = ''
 as $$
 begin
   if tg_op = 'INSERT' and new.status = 'pending' then
-    perform private.send_push(new.addressee, 'friend_request', jsonb_build_object('name', private.display_name(new.requester)));
+    perform private.send_push(new.addressee, 'friend_request', private.sender(new.requester));
   elsif tg_op = 'UPDATE' and new.status = 'accepted' and old.status is distinct from 'accepted' then
-    perform private.send_push(new.requester, 'friend_accepted', jsonb_build_object('name', private.display_name(new.addressee)));
+    perform private.send_push(new.requester, 'friend_accepted', private.sender(new.addressee));
   end if;
   return null;
 end;
@@ -185,7 +201,7 @@ begin
   end if;
   select r.host_id into host from public.rooms r where r.code = new.room_code;
   if host is not null then
-    perform private.send_push(host, 'knock', jsonb_build_object('name', private.display_name(new.user_id)));
+    perform private.send_push(host, 'knock', private.sender(new.user_id));
   end if;
   return null;
 end;
