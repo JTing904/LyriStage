@@ -2,8 +2,8 @@
 // 点便签后弹出来的面板（手机从下面滑上来，电脑在中间）
 // - 好友的：完整的便签、他附的 / 正在听的歌（播放、加入队列）、送一个表情回应他
 // - 自己的：写便签（最多 60 字，可以附上正在听的歌）、删除，下面是收到的回应
-import { computed, ref } from 'vue';
-import { NOTE_MAX, NOTE_REACTIONS } from '@core/data';
+import { computed, nextTick, ref } from 'vue';
+import { NOTE_MAX, NOTE_REACTIONS, firstEmoji } from '@core/data';
 import { useAuthStore } from '../stores/auth';
 import { useFriendsStore } from '../stores/friends';
 import { useNoticeStore } from '../stores/notice';
@@ -30,6 +30,8 @@ const sent = ref(new Set());
 function open(target) {
   item.value = target;
   sent.value = new Set();
+  picking.value = false;
+  typedBad.value = false;
   if (target.isMe) {
     draft.value = target.note?.body ?? '';
     attach.value = target.note ? Boolean(target.note.track) : true;
@@ -67,6 +69,26 @@ async function react(emoji) {
       err?.code === '54000' ? t('送太多了，等一下再送') : t('送不出去：{error}', { error: err.message || err })
     );
   }
+}
+
+// 「＋」：用键盘选任何表情，打进去就送出（打的是字就提醒只能送表情）
+const picking = ref(false);
+const typed = ref('');
+const typedBad = ref(false);
+const emojiInput = ref(null);
+async function startPicking() {
+  picking.value = !picking.value;
+  typed.value = '';
+  typedBad.value = false;
+  await nextTick();
+  emojiInput.value?.focus();
+}
+function onTyped() {
+  const emoji = firstEmoji(typed.value);
+  typedBad.value = Boolean(typed.value.trim()) && !emoji;
+  if (!emoji) return;
+  typed.value = '';
+  react(emoji);
 }
 
 // ---- 自己的 ----
@@ -140,9 +162,26 @@ async function remove() {
           >
             {{ e }}
           </button>
+          <!-- 其他表情：用键盘选（什么表情都可以） -->
+          <button class="more" :class="{ on: picking }" :aria-label="$t('其他表情')" :aria-expanded="picking" @click="startPicking">
+            <Icon name="plus" :size="20" />
+          </button>
         </div>
-        <p class="hint">
-          {{ sent.size ? $t('送出了，{name} 会收到通知', { name: item.name }) : $t('按表情回应，{name} 会收到通知', { name: item.name }) }}
+        <label v-if="picking" class="emoji-field">
+          <input
+            ref="emojiInput"
+            v-model="typed"
+            enterkeyhint="send"
+            autocomplete="off"
+            :placeholder="$t('用键盘选一个表情')"
+            :aria-label="$t('用键盘选一个表情')"
+            @input="onTyped"
+          />
+        </label>
+        <p class="hint" :class="{ bad: typedBad }">
+          <template v-if="typedBad">{{ $t('只能送表情') }}</template>
+          <template v-else-if="sent.size">{{ $t('送出了 {emoji}，{name} 会收到通知', { emoji: [...sent].join(' '), name: item.name }) }}</template>
+          <template v-else>{{ $t('按表情回应，{name} 会收到通知', { name: item.name }) }}</template>
         </p>
       </template>
 
@@ -378,11 +417,46 @@ button {
   border-color: var(--accent);
   transform: scale(1.08);
 }
+.react .more {
+  display: grid;
+  place-items: center;
+  color: var(--text-dim);
+}
+.react .more.on {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+.emoji-field input {
+  display: block;
+  width: 100%;
+  height: 46px;
+  margin-top: 12px;
+  padding: 0 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 20px;
+  text-align: center;
+  box-sizing: border-box;
+}
+.emoji-field input::placeholder {
+  font-size: 14px;
+}
+.emoji-field input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
 .hint {
   margin: 12px 0 0;
   text-align: center;
   font-size: 12px;
   color: var(--text-faint);
+}
+.hint.bad {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 h3 {

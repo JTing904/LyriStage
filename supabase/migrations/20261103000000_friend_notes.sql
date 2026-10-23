@@ -4,7 +4,7 @@
 -- 1. 便签（像 IG）：一句话（最多 60 字），可以附上正在听的歌；只有好友看得到，24 小时后消失。
 --    每个人同时只有一则，再写一次就换掉。开着私人模式时好友看不到。
 -- 2. 表情回应：对好友的便签、或他正在听的歌送一个表情，对方会收到通知（App 开着时马上跳出来）。
---    只能送给好友；十分钟最多 30 个（避免洗版）。
+--    什么表情都可以（像 IG），但只能是表情：文字、网址都不收。只能送给好友；十分钟最多 30 个（避免洗版）。
 -- 3. 每天清一次：过期的便签、30 天以前的回应
 
 -- ---- 共用：在不在私人模式 ----
@@ -83,7 +83,10 @@ create table if not exists public.friend_reactions (
   id         bigint      generated always as identity primary key,
   from_user  uuid        not null default auth.uid() references auth.users (id) on delete cascade,
   to_user    uuid        not null references auth.users (id) on delete cascade,
-  emoji      text        not null check (emoji in ('❤️', '🔥', '😭', '😂', '👏', '🎶')),
+  -- 一个表情（含肤色、组合表情、国旗）：只收表情用到的那几段 Unicode，文字、网址都进不来
+  emoji      text        not null check (
+    emoji ~ '^[\u2190-\u2BFF\u3030\u303D\u3297\u3299\U0001F000-\U0001FAFF\uFE0F\u200D\u20E3\U000E0020-\U000E007F]{1,16}$'
+  ),
   -- 'note'：回应便签；'listening'：回应他正在听的歌
   target     text        not null check (target in ('note', 'listening')),
   -- 回应的是什么（便签那句话、或歌名），通知里显示

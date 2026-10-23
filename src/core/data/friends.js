@@ -176,8 +176,19 @@ export function watchFriends(onChange) {
 
 /** 便签最多几个字（数据库也只接受这么多） */
 export const NOTE_MAX = 60;
-/** 回应可以用的表情（数据库也只接受这几个） */
+/** 回应时直接按的几个常用表情（其他的按「＋」用键盘选，什么表情都可以） */
 export const NOTE_REACTIONS = ['❤️', '🔥', '😭', '😂', '👏', '🎶'];
+
+/** 是不是一个表情（跟数据库的检查一样：只收表情用到的那几段 Unicode，含肤色、组合表情、国旗） */
+const EMOJI = /^[←-⯿〰〽㊗㊙\u{1F000}-\u{1FAFF}️‍⃣\u{E0020}-\u{E007F}]{1,16}$/u;
+export const isEmoji = text => EMOJI.test(String(text ?? ''));
+
+/** 从键盘打的字里拿出第一个表情（一个表情可能由好几个字元组成，例如 ❤️‍🔥、👍🏽）；没有就是 '' */
+export function firstEmoji(text) {
+  const segments = new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(String(text ?? ''));
+  for (const { segment } of segments) if (isEmoji(segment)) return segment;
+  return '';
+}
 
 /** 数据库还没执行那份 SQL（表或函数不存在） */
 export const isMissingTable = error =>
