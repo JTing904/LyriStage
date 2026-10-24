@@ -139,7 +139,8 @@ const colors = computed(() => ({
   align-content: center;
   justify-content: center;
   align-items: center;
-  gap: 0.15em 0.35em;
+  /* 上下两行要留够空：每块会随机上下偏移、转一点角度（英文歌一个词一块，折成好几行时会叠在一起） */
+  gap: 0.45em 0.35em;
   font-size: clamp(26px, 4.2cqw, 64px);
 }
 .piece {

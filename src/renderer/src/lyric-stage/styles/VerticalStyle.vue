@@ -87,7 +87,8 @@ const seal = computed(() =>
   position: absolute;
   top: 10cqh;
   bottom: max(22cqh, calc(var(--controls-space, 170px) + 8px));
-  left: 12cqw;
+  /* 左边留给印章和歌手名（窄的框 12cqw 不够，字多时会盖上去） */
+  left: max(12cqw, calc(7cqw + 100px));
   right: 12cqw;
   display: flex;
   flex-direction: row-reverse;
@@ -100,7 +101,8 @@ const seal = computed(() =>
 .column {
   margin: 0;
   writing-mode: vertical-rl;
-  text-orientation: upright;
+  /* 中文直立，英文整段横躺（正统中文竖排的排法）；upright 会把英文排成一个字母一行，读不了 */
+  text-orientation: mixed;
   font-family: 'Ma Shan Zheng', 'KaiTi', 'STKaiti', serif;
   /* 一句尽量只占一列：每个字连间距约 1.12 个字高，字多就缩小（按可用高度 100cqh 算） */
   font-size: clamp(16px, min(7cqh, 6cqw, 88cqh / var(--chars)), 72px);
