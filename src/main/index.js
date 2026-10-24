@@ -6,6 +6,7 @@ import { startApiServer, API_PORT } from './apiServer';
 import { loadWindowState, trackWindowState } from './windowState';
 import { createTray } from './tray';
 import { createThumbar } from './thumbar';
+import { findAction, setJumpList } from './jumplist';
 import { createDesktopLyricsController } from './desktopLyrics';
 import { getSettings, updateSettings } from './settings';
 import { setupUpdater } from './updater';
@@ -55,6 +56,9 @@ if (process.defaultApp && process.argv.length >= 2) {
 /** Windows / Linux 把网址放在启动参数里 */
 const findAuthUrl = argv => argv.find(arg => arg.startsWith(AUTH_CALLBACK));
 
+/** 开机自动启动时带的参数：不打开窗口 */
+const START_HIDDEN = '--hidden';
+
 // 只允许开一个 LyriStage；第二次打开时把已有窗口叫到前面
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -101,6 +105,16 @@ if (!app.requestSingleInstanceLock()) {
   ipcMain.on('lyristage:desktop-lyrics', (event, enabled) => {
     if (fromMain(event)) desktopLyrics.setEnabled(Boolean(enabled));
   });
+  // 开机自动启动（设置 → 关于）：开机时带 --hidden 启动，缩在托盘。开发版不登记（会登记到 electron.exe）
+  ipcMain.handle('lyristage:open-at-login', () => ({
+    supported: app.isPackaged && process.platform === 'win32',
+    on: app.getLoginItemSettings({ args: [START_HIDDEN] }).openAtLogin,
+  }));
+  ipcMain.on('lyristage:set-open-at-login', (event, on) => {
+    if (!fromMain(event) || !app.isPackaged) return;
+    app.setLoginItemSettings({ openAtLogin: Boolean(on), args: [START_HIDDEN] });
+  });
+
   // App 的语言（托盘菜单、桌面歌词窗口跟着换）
   let locale = 'zh-CN';
   ipcMain.on('lyristage:set-locale', (event, value) => {
@@ -108,6 +122,7 @@ if (!app.requestSingleInstanceLock()) {
     locale = value;
     tray?.setLocale(value);
     thumbar?.setLocale(value);
+    setJumpList(value);
     desktopLyrics.setLocale(value);
   });
   // 设置页的「锁定桌面歌词」
@@ -146,10 +161,27 @@ if (!app.requestSingleInstanceLock()) {
       event.sender.send('lyristage:auth-callback', pendingAuthUrl);
       pendingAuthUrl = null;
     }
+    // 是按任务栏右键选单开的：等上次的歌恢复好再做
+    if (pendingAction) {
+      const action = pendingAction;
+      pendingAction = null;
+      setTimeout(() => sendToMain('lyristage:command', action), 1500);
+    }
   });
+
+  // 任务栏右键选单（jumplist.js）：页面还没准备好就先存着
+  let pendingAction = findAction(process.argv);
+  function runAction(action) {
+    // 「继续播放」不用叫出窗口（缩在托盘也能播）
+    if (action !== 'resume') focusWindow();
+    if (pageReady) sendToMain('lyristage:command', action);
+    else pendingAction = action;
+  }
 
   // App 已经开着时，点登录回调网址会再开一个 LyriStage，被单实例锁挡下，网址转到这里
   app.on('second-instance', (_event, argv) => {
+    const action = findAction(argv);
+    if (action) return runAction(action);
     deliverAuthUrl(findAuthUrl(argv));
     focusWindow();
   });
@@ -203,7 +235,11 @@ if (!app.requestSingleInstanceLock()) {
         additionalArguments: [`--lyristage-api-token=${apiToken}`],
       },
     });
-    if (state.maximized) mainWindow.maximize();
+    // maximize() 会顺便把窗口显示出来：开机自动启动（缩在托盘）时等第一次打开再放大
+    if (state.maximized) {
+      if (process.argv.includes(START_HIDDEN)) mainWindow.once('show', () => mainWindow.maximize());
+      else mainWindow.maximize();
+    }
     trackWindowState(mainWindow);
     thumbar = createThumbar(mainWindow, command => sendToMain('lyristage:command', command));
     thumbar.setLocale(locale);
@@ -223,7 +259,10 @@ if (!app.requestSingleInstanceLock()) {
     nativeTheme.on('updated', onThemeChange);
     mainWindow.on('closed', () => nativeTheme.off('updated', onThemeChange));
 
-    mainWindow.once('ready-to-show', () => mainWindow.show());
+    // 开机自动启动的（--hidden）：缩在托盘，不打开窗口
+    mainWindow.once('ready-to-show', () => {
+      if (!process.argv.includes(START_HIDDEN)) mainWindow.show();
+    });
     // 页面载入好：告诉它桌面歌词现在开着没有
     mainWindow.webContents.on('did-finish-load', () =>
       sendToMain('lyristage:desktop-lyrics-state', desktopLyrics.state())
@@ -288,6 +327,7 @@ if (!app.requestSingleInstanceLock()) {
       console.error(`[LyriStage] 网易云 API 启动失败（端口 ${API_PORT}）`, err);
     });
     createWindow();
+    setJumpList(locale);
     setupUpdater({ send: sendToMain, isMain: fromMain });
 
     // 全局快捷键：App 在背景也能用（键盘上的播放 / 下一首键 Windows 会通过媒体控制交给 App，不用另外注册）

@@ -228,14 +228,12 @@ export const controls = new Proxy(player, {
 player.on('prefetch', track => getLyrics(track).catch(() => {}));
 connectMediaSession(controls, { getLyrics });
 connectHeadphones(player);
-connectWidget(controls, {
-  getLyrics,
-  // 长按桌面图标的「私人 FM」（跟首页的私人 FM 卡片一样；用到的时候 App 早就开好了）
-  playFm: async () => {
-    const { useAuthStore } = await import('./stores/auth');
-    await controls.playFm(createFmSource(useAuthStore().loggedIn));
-  },
-});
+/** 手机长按图标、电脑任务栏右键选单的「私人 FM」（跟首页的私人 FM 卡片一样；用到的时候 App 早就开好了） */
+export async function playPersonalFm() {
+  const { useAuthStore } = await import('./stores/auth');
+  await controls.playFm(createFmSource(useAuthStore().loggedIn));
+}
+connectWidget(controls, { getLyrics, playFm: playPersonalFm });
 
 // 开发时：这个文件或它用到的任何文件（core/ 里的播放器、歌词解析…）改了，
 // Vite 会重新执行这个文件、建一个新的播放器，旧的如果正在播放会继续响，变成两首歌一起播。

@@ -27,10 +27,10 @@ contextBridge.exposeInMainWorld('lyristage', {
   },
 
   // ---- 主窗口：托盘控制、桌面歌词 ----
-  /** 托盘按了播放 / 暂停、上一首、下一首 */
+  /** 托盘按了播放 / 暂停、上一首、下一首；任务栏右键选单的继续播放、每日推荐、私人 FM、一起听 */
   onCommand: callback => {
     ipcRenderer.on('lyristage:command', (_event, command) => {
-      if (['toggle', 'prev', 'next'].includes(command)) callback(command);
+      if (['toggle', 'prev', 'next', 'resume', 'daily', 'fm', 'room'].includes(command)) callback(command);
     });
   },
   /** 正在播什么（托盘显示） */
@@ -38,6 +38,9 @@ contextBridge.exposeInMainWorld('lyristage', {
   /** 现在唱到的这一句（传给桌面歌词窗口） */
   sendLyric: payload => ipcRenderer.send('lyristage:lyric', payload),
   setLocale: locale => ipcRenderer.send('lyristage:set-locale', locale),
+  /** 开机自动启动：{ supported, on } */
+  openAtLogin: () => ipcRenderer.invoke('lyristage:open-at-login'),
+  setOpenAtLogin: on => ipcRenderer.send('lyristage:set-open-at-login', Boolean(on)),
   setDesktopLyrics: enabled => ipcRenderer.send('lyristage:desktop-lyrics', Boolean(enabled)),
   setDesktopLyricsLocked: locked =>
     ipcRenderer.send('lyristage:desktop-lyrics-lock', Boolean(locked)),

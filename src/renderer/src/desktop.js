@@ -2,7 +2,7 @@
 // 只在 Electron 里载入（main.js）
 import { reactive } from 'vue';
 import { findLineIndex } from '@core/lyrics';
-import { controls, player, getLyrics } from './services';
+import { controls, player, getLyrics, playPersonalFm } from './services';
 import { displayText, LINE_LEAD_MS } from './lyric-stage/useStage';
 
 /** 桌面歌词开着没有、锁定没有（播放条上的按钮用） */
@@ -10,11 +10,15 @@ export const desktopLyrics = reactive({ enabled: false, locked: false });
 
 /** @param {any} bridge window.lyristage（preload 提供） */
 export function connectDesktop(bridge) {
-  // ---- 托盘按钮 ----
+  // ---- 托盘按钮、任务栏右键选单 ----
   bridge.onCommand(command => {
     if (command === 'toggle') controls.toggle();
     else if (command === 'next') controls.next();
     else if (command === 'prev') controls.prev();
+    else if (command === 'resume') !player.getState().playing && controls.toggle();
+    else if (command === 'daily') location.hash = '#/daily';
+    else if (command === 'fm') playPersonalFm();
+    else if (command === 'room') location.hash = '#/room';
   });
 
   // ---- 托盘显示正在播什么 ----

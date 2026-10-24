@@ -103,6 +103,8 @@ export default {
   'App 收起来时，在桌面上显示歌词': 'Show lyrics on the desktop when LyriStage is minimized',
   锁定位置: 'Lock position',
   '锁定后点得到歌词后面的东西': 'Click through the lyrics to what’s behind them',
+  开机自动启动: 'Start with Windows',
+  '在托盘待命，不打开窗口': 'Waits in the tray without opening a window',
   外观: 'Appearance',
   主题: 'Theme',
   语言: 'Language',

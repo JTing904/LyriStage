@@ -326,3 +326,9 @@ export function onUpdateReady(callback) {
 export const updateStatus = () => bridge?.updateStatus?.() ?? Promise.resolve(null);
 export const checkForUpdates = () => bridge?.checkForUpdates?.() ?? Promise.resolve(null);
 export const installUpdate = () => bridge?.installUpdate?.();
+
+// ---- 电脑版开机自动启动 ------------------------------------------------------------
+
+/** @returns {Promise<{ supported: boolean, on: boolean } | null>} 开发版 supported 是 false */
+export const openAtLogin = () => bridge?.openAtLogin?.() ?? Promise.resolve(null);
+export const setOpenAtLogin = on => bridge?.setOpenAtLogin?.(on);

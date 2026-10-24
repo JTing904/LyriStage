@@ -20,7 +20,9 @@ import {
   saveImage as saveFile,
   isElectron,
   isNativeApp,
+  openAtLogin,
   setDesktopLyrics,
+  setOpenAtLogin,
   setDesktopLyricsLocked,
   updateStatus,
 } from '../platform';
@@ -51,6 +53,14 @@ function toggleLockLyrics(on) {
 const update = ref(null);
 const checking = ref(false);
 if (isElectron) updateStatus().then(s => (update.value = s));
+
+// ---- 电脑版：开机自动启动 ----
+const loginItem = ref(null);
+if (isElectron) openAtLogin().then(v => (loginItem.value = v)).catch(() => {});
+function toggleOpenAtLogin(on) {
+  setOpenAtLogin(on);
+  loginItem.value = { ...loginItem.value, on };
+}
 async function checkUpdate() {
   checking.value = true;
   try {
@@ -892,6 +902,19 @@ function summary(id) {
                   {{ $t('检查更新') }}
                 </button>
               </template>
+            </div>
+            <div v-if="loginItem?.supported" class="row">
+              <span class="label">
+                {{ $t('开机自动启动') }}
+                <small>{{ $t('在托盘待命，不打开窗口') }}</small>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                class="switch"
+                :checked="loginItem.on"
+                @change="toggleOpenAtLogin($event.target.checked)"
+              />
             </div>
           </div>
         </template>
