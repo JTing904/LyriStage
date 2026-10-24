@@ -6,6 +6,7 @@ import { createPlayer } from '@core/player/player';
 import { createHtmlAudio } from '@core/player/audio';
 import { createAudioEffects } from './audioEffects';
 import { connectWidget } from './widget';
+import { connectHeadphones } from './headphones';
 import { createCache } from '@core/cache';
 import { createDexieStore } from '@core/cache/dexie';
 import {
@@ -226,6 +227,7 @@ export const controls = new Proxy(player, {
 // 预先载入下一首的歌词（存进歌词缓存，切过去时马上有）
 player.on('prefetch', track => getLyrics(track).catch(() => {}));
 connectMediaSession(controls, { getLyrics });
+connectHeadphones(player);
 connectWidget(controls, {
   getLyrics,
   // 长按桌面图标的「私人 FM」（跟首页的私人 FM 卡片一样；用到的时候 App 早就开好了）

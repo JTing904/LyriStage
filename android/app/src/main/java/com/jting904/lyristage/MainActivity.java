@@ -20,6 +20,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(KeepAwakePlugin.class);
         // 一起听的语音在背景继续
         registerPlugin(VoicePlugin.class);
+        // 拔掉耳机、蓝牙断开时暂停
+        registerPlugin(HeadphonesPlugin.class);
         super.onCreate(savedInstanceState);
         Window window = getWindow();
         // 画面铺到状态栏、导航列底下，两条都透明，透出页面自己的颜色
