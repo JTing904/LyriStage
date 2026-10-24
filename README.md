@@ -11,7 +11,7 @@ Nine full-screen lyric stages, a daily mix made from what you love, and rooms wh
 
 [Website](https://jting904.github.io/LyriStage/) · [Download](https://github.com/JTing904/LyriStage/releases/latest) · [Web app](https://lyristage.vercel.app) · [中文](README.zh-CN.md)
 
-![Version](https://img.shields.io/badge/version-2.1.8-ff3b5c) ![License](https://img.shields.io/badge/code-MIT-blue) ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
+![Version](https://img.shields.io/badge/version-2.1.9-ff3b5c) ![License](https://img.shields.io/badge/code-MIT-blue) ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
 <a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage trailer: watch it on the website"></a>
 
@@ -31,8 +31,8 @@ Nine full-screen lyric stages, a daily mix made from what you love, and rooms wh
 - **Queue and sleep timer.** Play next, add to queue, drag to reorder, or see the whole queue as a poster wall of covers and share it as an image; stop after 15/30/60 minutes or at the end of the song.
 - **Equalizer.** 10 bands with presets, plus volume leveling so every song plays at about the same loudness.
 - **Your own library.** Likes, playlists, listening history, profile name and photo, synced between PC and phone. Removing songs or unliking can be undone, a forgotten password is reset with a code sent by email, and you can export your data or delete your account from Settings.
-- **Windows.** Tray icon, desktop lyrics while the app is minimized, global shortcuts, automatic updates, a 3D figurine on the home page.
-- **Android.** Offline listening (songs you play are kept on the phone, so they start instantly and play without internet), notifications when the app is closed (reactions, friend requests, someone asking to join your room) with the friend's photo, background playback, lock-screen and notification controls, lyrics on the lock screen, a home screen widget with the line being sung, full-screen lyrics in landscape, updates inside the app.
+- **Windows.** Tray icon, desktop lyrics while the app is minimized, play buttons on the taskbar thumbnail and shortcuts when you right-click the taskbar icon, global shortcuts, an option to start with Windows, automatic updates, a 3D figurine on the home page.
+- **Android.** Offline listening (songs you play are kept on the phone, so they start instantly and play without internet), notifications when the app is closed (reactions, friend requests, someone asking to join your room) with the friend's photo, background playback, lock-screen and notification controls, lyrics on the lock screen, a home screen widget with the line being sung over the blurred cover, shortcuts when you long-press the icon, invite links that open straight in the app, pausing when headphones are unplugged, a themed icon, full-screen lyrics in landscape, updates inside the app.
 - **iPhone.** A web app you can add to the Home Screen.
 - **中文 / English**, light and dark themes.
 

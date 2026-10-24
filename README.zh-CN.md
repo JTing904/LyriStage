@@ -11,7 +11,7 @@
 
 [官网](https://jting904.github.io/LyriStage/) · [下载](https://github.com/JTing904/LyriStage/releases/latest) · [网页版](https://lyristage.vercel.app) · [English](README.md)
 
-![版本](https://img.shields.io/badge/version-2.1.8-ff3b5c) ![许可证](https://img.shields.io/badge/code-MIT-blue) ![平台](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
+![版本](https://img.shields.io/badge/version-2.1.9-ff3b5c) ![许可证](https://img.shields.io/badge/code-MIT-blue) ![平台](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
 <a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage 宣传片：到官网观看"></a>
 
@@ -31,8 +31,8 @@
 - **播放队列、睡眠定时**：下一首播放、加入队列、拖动排序，也能把整个队列看成一面封面海报墙，还能做成图片分享；15 / 30 / 60 分钟后或这首播完就停。
 - **均衡器**：10 段均衡器和预设，还有音量平衡，每首歌差不多一样大声。
 - **自己的音乐库**：我喜欢、歌单、听歌记录、个人名字和头像，电脑和手机同步。移除歌、取消喜欢都可以复原；忘记密码用邮件里的验证码重设；在设置页可以导出资料、删除账号。
-- **Windows**：托盘、最小化时的桌面歌词、全局快捷键、自动更新、首页的 3D 公仔。
-- **Android**：离线听歌（听过的歌存在手机里，秒开、没网络也能听）、App 关着也收得到通知（好友回应、好友邀请、有人想加入你的房间，附朋友头像）、后台播放、锁屏和通知栏控制、锁屏歌词、显示正在唱那句的桌面小组件、横屏全屏看歌词、在 App 里直接更新。
+- **Windows**：托盘、最小化时的桌面歌词、任务栏缩图上的播放按钮和右键快捷选单、全局快捷键、开机自动启动、自动更新、首页的 3D 公仔。
+- **Android**：离线听歌（听过的歌存在手机里，秒开、没网络也能听）、App 关着也收得到通知（好友回应、好友邀请、有人想加入你的房间，附朋友头像）、后台播放、锁屏和通知栏控制、锁屏歌词、模糊封面底加正在唱那句的桌面小组件、长按图标的快捷选单、邀请链接直接打开 App、拔耳机自动暂停、主题图标、横屏全屏看歌词、在 App 里直接更新。
 - **iPhone**：网页版，可以加到主屏幕。
 - **中文 / English**，深色、浅色主题。
 
