@@ -207,7 +207,7 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
     <div v-else class="room" :class="{ 'no-chat': !chatOpen }">
       <!-- 左边：房间资料一条 + 歌词（跟全屏歌词同一组风格和设置） -->
       <div class="left">
-        <div class="room-top">
+        <div class="room-top" :class="{ phone: isPhone }">
           <span class="chip">
             <span class="chip-label">{{ $t('房间') }}</span>
             <code>{{ room.code }}</code>
@@ -582,6 +582,42 @@ header p {
   display: flex;
   align-items: center;
   gap: 10px;
+  container: room-top / inline-size;
+}
+/* 人多时这条放不下：不要把「房间」「加入语音」挤扁，按这条的宽度一步步收起次要的 */
+.room-top .voice-btn,
+.room-top .voice-on,
+.room-top .avatars {
+  flex: none;
+}
+.chip-label {
+  white-space: nowrap;
+}
+/* 前面加 .room-top：容器查询不会提高优先级，不加会被后面 .listening 等原本的样式盖掉 */
+@container room-top (max-width: 700px) {
+  .room-top .listening {
+    display: none;
+  }
+}
+@container room-top (max-width: 580px) {
+  .room-top .chip-label,
+  .room-top .voice-btn .label {
+    display: none;
+  }
+  .room-top .voice-btn {
+    min-width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+/* 更窄（电脑窗口拉窄）：头像收起，改成「5 人在听」（手机本来就只显示房主头像和人数） */
+@container room-top (max-width: 460px) {
+  .room-top:not(.phone) .avatars {
+    display: none;
+  }
+  .room-top:not(.phone) .listening {
+    display: inline-flex;
+  }
 }
 .grow {
   flex: 1;

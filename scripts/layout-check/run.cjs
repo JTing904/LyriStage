@@ -254,6 +254,8 @@ const PAGES = [
     close: () => click('.stage .topbar .pill[aria-expanded="true"]'),
     fits: [['.stage-panel .picker', '.stage-panel']],
   },
+  // 房间里人多：上面那条（房间码、语音、头像）不能挤扁或叠在一起
+  { id: 'room-many', hash: '#/room', room: true, mock: MOCK_MEMBERS },
   // 房主按「关闭房间」：先确认；可以先交给别人当房主
   {
     id: 'room-close',
@@ -319,6 +321,14 @@ const PAGES = [
     styleIndex: i,
     textOverlap: true,
     wait: 1500,
+  })),
+  // 全屏歌词也一样：手机横屏的框也很矮（矮框的排版规则同样会生效）
+  ...['kinetic', 'perspective', 'scroll', 'block', 'karaoke', 'vertical', 'mv', 'typewriter', 'vinyl'].map((id, i) => ({
+    id: `lyrics-style-${id}`,
+    stage: true,
+    only: ['phone-land', 'phone-360'],
+    styleIndex: i,
+    textOverlap: true,
   })),
 ];
 
@@ -548,6 +558,8 @@ function CHECK({ reach, see, fits, textOverlap }) {
   const backgroundOf = el => {
     const layers = [];
     for (let p = el; p; p = p.parentElement) {
+      // 歌词画面的底是风格自己画的（在旁边那层 .style-layer，例如竖排诗词的米色纸），往上找会找到错的深色底
+      if (p.matches('.stage') && p.querySelector('.style-layer')) return null;
       const cs = getComputedStyle(p);
       if (cs.backgroundImage !== 'none' || cs.backdropFilter !== 'none' || /^(IMG|VIDEO|CANVAS)$/.test(p.tagName)) return null;
       if (p.querySelector(':scope > img, :scope > canvas, :scope > video')) return null;
@@ -833,10 +845,11 @@ async function main() {
         await page.evaluate(() => document.querySelector('dialog.name-sheet[open]')?.close()).catch(() => {});
         if (p.mock) await page.evaluate(p.mock);
         if (p.styleIndex !== undefined) {
-          // 换歌词风格：打开房间歌词框的风格面板，按第几个（按了面板会自己关）
-          await page.evaluate(`${HELPERS}; click('.stage-panel .stage .topbar .pill[aria-expanded]')`);
+          // 换歌词风格：打开歌词框（房间的或全屏的）的风格面板，按第几个（按了面板会自己关）
+          const stage = p.room ? '.stage-panel .stage' : '.stage';
+          await page.evaluate(`${HELPERS}; click('${stage} .topbar .pill[aria-expanded]')`);
           await sleep(500);
-          await page.evaluate(i => [...document.querySelectorAll('.stage-panel .stage .picker .option')][i]?.click(), p.styleIndex);
+          await page.evaluate(([sel, i]) => [...document.querySelectorAll(`${sel} .picker .option`)][i]?.click(), [stage, p.styleIndex]);
           await sleep(2000);
         }
         if (p.open) {

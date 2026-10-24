@@ -243,6 +243,10 @@ const particles = Array.from({ length: 18 }, (_, i) => ({
   /* 还没开始唱时的歌名：宽的矮框也不能太大（不然上下被切掉） */
   font-size: calc(clamp(28px, min(9cqw, 22cqh), 120px));
 }
+/* 歌名和下面的歌手名之间留一点空（不然手机横屏时贴在一起） */
+.lead.intro + .sub {
+  margin-top: 0.5em;
+}
 .ghost {
   position: absolute;
   inset: 0;
