@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.jting904.lyristage",
+      "sha256_cert_fingerprints": [
+        "A7:86:37:31:BD:0D:1D:3E:EF:29:4E:EC:5F:A5:6A:2F:A2:AB:56:BD:27:6B:19:93:F4:96:CA:7A:F5:15:69:A5"
+      ]
+    }
+  }
+]

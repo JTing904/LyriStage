@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- 手机：加到主屏幕后像 App 一样全屏打开（iPhone 用网页版） -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="./icon-192.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <meta name="theme-color" content="#0e0e10" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="LyriStage" />
+    <meta name="color-scheme" content="dark light" />
+    <!--
+      不送 Referer：B 站的音频（解灰）看到别的网站的 Referer 会回 403，不送就可以播。
+      顺便也不让其他网站知道请求是从 LyriStage 来的
+    -->
+    <meta name="referrer" content="no-referrer" />
+    <!--
+      内容安全策略：只允许连接自己的 API、本机 API（电脑版）和 Supabase；
+      ws://localhost:* 是开发时 Vite 热更新用的；字体来自 Google Fonts；
+      wasm-unsafe-eval 只允许 WebAssembly（3D 公仔的模型解压要用），不允许 JS 的 eval
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+        script-src 'self' 'wasm-unsafe-eval';
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data: blob: https: http:;
+        media-src 'self' blob: https:;
+        connect-src 'self' blob: http://127.0.0.1:10754 https://lyristage-api.vercel.app https://*.supabase.co wss://*.supabase.co https://api.github.com https://lrclib.net ws://localhost:*"
+    />
+    <!--
+      歌词风格用到的字体（都是 OFL 开源授权）。Google Fonts 会把中文字体切成很多小块，
+      只下载页面上实际出现的字。离线使用（打包进安装包）留到阶段 6。
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700;900&family=Noto+Sans+SC:wght@400;500;700;900&family=Ma+Shan+Zheng&family=JetBrains+Mono:wght@500&display=swap"
+    />
+    <title>LyriStage</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

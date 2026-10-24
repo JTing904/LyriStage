@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LyriStage</string>
+    <string name="title_activity_main">LyriStage</string>
+    <string name="package_name">com.jting904.lyristage</string>
+    <string name="custom_url_scheme">com.jting904.lyristage</string>
+
+    <!-- 桌面小组件 -->
+    <string name="widget_label">LyriStage 正在播放</string>
+    <string name="widget_description">歌名、播放控制，拉高显示歌词</string>
+    <string name="widget_nothing_playing">还没有在播放的歌</string>
+    <string name="widget_open">打开 LyriStage</string>
+    <string name="widget_play">播放</string>
+    <string name="widget_pause">暂停</string>
+    <string name="widget_prev">上一首</string>
+    <string name="widget_next">下一首</string>
+    <string name="widget_paused">已暂停</string>
+    <string name="widget_now_playing">正在播放</string>
+    <!-- 小组件右上角的字标（跟 App 一样，Stage 是红色） -->
+    <string name="widget_logo">Lyri<font fgcolor="#FFFF3B5C">Stage</font></string>
+
+    <!-- 长按桌面图标的快捷选单 -->
+    <string name="shortcut_resume">继续播放</string>
+    <string name="shortcut_daily">每日推荐</string>
+    <string name="shortcut_fm">私人 FM</string>
+    <string name="shortcut_room">一起听</string>
+
+    <!-- 一起听的语音（关屏幕时继续） -->
+    <string name="voice_channel_name">一起听的语音</string>
+    <string name="voice_notification_title">LyriStage 语音中</string>
+    <string name="voice_notification_text">点一下回到房间</string>
+</resources>

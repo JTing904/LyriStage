@@ -1,0 +1,29 @@
+diff --git a/node_modules/@capgo/capacitor-media-session/android/src/main/java/com/capgo/mediasession/MediaSessionService.java b/node_modules/@capgo/capacitor-media-session/android/src/main/java/com/capgo/mediasession/MediaSessionService.java
+index e2c1f05..ab657fe 100644
+--- a/node_modules/@capgo/capacitor-media-session/android/src/main/java/com/capgo/mediasession/MediaSessionService.java
++++ b/node_modules/@capgo/capacitor-media-session/android/src/main/java/com/capgo/mediasession/MediaSessionService.java
+@@ -140,10 +140,8 @@ public class MediaSessionService extends Service {
+             new NotificationCompat.Action(
+                 R.drawable.ic_baseline_play_arrow_24,
+                 "Play",
+-                MediaButtonReceiver.buildMediaButtonPendingIntent(
+-                    this,
+-                    PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_PLAY
+-                )
++                // LyriStage patch：buildMediaButtonPendingIntent 只认单一个 action，合在一起会回传 null（按钮按了没反应）
++                MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY)
+             )
+         );
+         notificationActions.put(
+@@ -151,10 +149,7 @@ public class MediaSessionService extends Service {
+             new NotificationCompat.Action(
+                 R.drawable.ic_baseline_pause_24,
+                 "Pause",
+-                MediaButtonReceiver.buildMediaButtonPendingIntent(
+-                    this,
+-                    PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_PAUSE
+-                )
++                MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PAUSE)
+             )
+         );
+         notificationActions.put(

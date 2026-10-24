@@ -1,0 +1,40 @@
+# Windows 安装包：npm run dist:win → release/LyriStage-Setup-版本.exe
+appId: com.jting904.lyristage
+productName: LyriStage
+copyright: LyriStage（基于 YesPlayMusic，MIT）
+directories:
+  buildResources: build
+  output: release
+files:
+  - out/**
+  - resources/**
+  - package.json
+asarUnpack:
+  # 托盘 / 窗口图标要是真的文件
+  - resources/**
+  # 网易云 API 运行时会扫描、读写自己的目录；解灰的音源也放在外面比较保险
+  - node_modules/@neteasecloudmusicapienhanced/api/**
+  - node_modules/@unblockneteasemusic/server/**
+protocols:
+  # GitHub 登录回调：lyristage://auth/callback
+  - name: LyriStage
+    schemes:
+      - lyristage
+win:
+  target: nsis
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: LyriStage
+  # 固定档名：网站的下载按钮（releases/latest/download/LyriStage-Setup.exe）和自动更新都靠它
+  artifactName: LyriStage-Setup.${ext}
+
+# 自动更新从这里找新版本：Release 要上传 LyriStage-Setup.exe 和 latest.yml
+publish:
+  provider: github
+  owner: JTing904
+  repo: LyriStage

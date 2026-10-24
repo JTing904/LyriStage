@@ -1,0 +1,235 @@
+/*
+  主题颜色（设计稿：https://claude.ai/artifact/NrGZWpMyAbvdGzsBf6rv4Q）
+  - 默认深色；系统是浅色时自动切浅色
+  - 用户在设置里选了"深色 / 浅色"时，<html data-theme="dark|light"> 强制指定
+*/
+/* 英文界面：Noto Sans SC 的弯引号是中文全角宽度，"you’re" 会变成 "you’ re"。
+   只有这几个引号改用系统自带的英文字体（其他字不变） */
+@font-face {
+  font-family: 'Latin Quotes';
+  src: local('Roboto'), local('Segoe UI'), local('Helvetica Neue'), local('Arial');
+  unicode-range: U+2018-201F;
+}
+
+:root {
+  --bg: #0e0e10;
+  --sidebar: #121214;
+  --surface: #17171a;
+  --surface-2: #1a1a1d;
+  --surface-hover: #202024;
+  --line: #222226;
+  --line-strong: #3a3a40;
+  --text: #f4f4f5;
+  --text-dim: #a1a1aa;
+  --text-faint: #71717a;
+  --accent: #ff3b5c;
+  --on-accent: #ffffff;
+  --bar: #18181b;
+  --danger: #ff6b6b;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --radius: 12px;
+  /* 电脑版顶部留给拖动窗口和系统按钮的高度 */
+  --titlebar-height: 40px;
+  --font-sans: 'Noto Sans SC', system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  --font-display: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+  color-scheme: dark;
+}
+:root:lang(en) {
+  --font-sans: 'Latin Quotes', 'Noto Sans SC', system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --bg: #f4f4f6;
+    --sidebar: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #ffffff;
+    --surface-hover: #f1f1f3;
+    --line: #e4e4e7;
+    --line-strong: #d4d4d8;
+    --text: #18181b;
+    --text-dim: #5f5f6b;
+    --text-faint: #8a8a94;
+    --accent: #e11d48;
+    --bar: #ffffff;
+    --danger: #dc2626;
+    --shadow: 0 8px 24px rgba(24, 24, 27, 0.12);
+    color-scheme: light;
+  }
+}
+:root[data-theme='light'] {
+  --bg: #f4f4f6;
+  --sidebar: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #ffffff;
+  --surface-hover: #f1f1f3;
+  --line: #e4e4e7;
+  --line-strong: #d4d4d8;
+  --text: #18181b;
+  --text-dim: #5f5f6b;
+  --text-faint: #8a8a94;
+  --accent: #e11d48;
+  --bar: #ffffff;
+  --danger: #dc2626;
+  --shadow: 0 8px 24px rgba(24, 24, 27, 0.12);
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* 整个 App 固定在窗口大小，页面本身不滚动；需要滚动的区域（内容区、歌词）自己滚 */
+html,
+body,
+#app {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* 手指点的：对话框打开时会自动把焦点放在第一个按钮，那圈框是给键盘用的，用手指时不用显示 */
+@media (pointer: coarse) {
+  button:focus-visible {
+    outline: none;
+  }
+}
+img {
+  max-width: 100%;
+}
+
+/* 页面大标题、区块标题用宋体（和歌词舞台风格 A 一致） */
+.display {
+  font-family: var(--font-display);
+  font-weight: 900;
+}
+
+/* 内容页共用：歌单、专辑、歌手、搜索、每日推荐 */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px clamp(16px, 3vw, 40px) 48px;
+}
+/* 手机：区块之间不要空太多 */
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
+  .page {
+    gap: 20px;
+  }
+}
+.page-state {
+  margin: 0;
+  padding: 64px 0;
+  text-align: center;
+  color: var(--text-dim);
+}
+.section-title {
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+
+/*
+  手机版的排版条件（各组件的 @media 都用这一组，不能用变量所以照抄）：
+    @media (max-width: 899px), (pointer: coarse) and (max-height: 600px)
+  后半段是手机横屏：宽度会超过 900px，只看宽度会被当成电脑版
+*/
+
+/* 手机 App：内容避开顶部状态栏、底部导航条和横屏时的挖孔（电脑版和一般网页这些值是 0） */
+#app {
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+/* 手机直屏：底部 Tab 自己会垫高到导航条底下（BottomTabs.vue），这里再垫一次就会多一截空白
+   （三个按钮的导航条特别高，很明显）；登录页那些没有 Tab 的照旧 */
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
+  #app:has(> .shell) {
+    padding-bottom: 0;
+  }
+}
+/* 手机横屏：Tab 在左边、不垫底部，就还是由这里垫 */
+@media (pointer: coarse) and (max-height: 600px) and (orientation: landscape) {
+  #app:has(> .shell) {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* 滚动条：细、圆角、半透明，跟着深浅主题；不要上下的小箭头 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 22%, transparent) padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text) 40%, transparent) padding-box;
+}
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* 歌曲的「⋯」选单（歌曲列表、海报墙共用；Teleport 到 body，所以放在全局） */
+.track-menu {
+  position: fixed;
+  z-index: 300;
+  width: 200px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.3);
+}
+.track-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.track-menu button:hover,
+.track-menu button:focus-visible {
+  background: var(--surface-hover);
+}

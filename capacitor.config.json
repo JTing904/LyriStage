@@ -1,0 +1,8 @@
+{
+  "appId": "com.jting904.lyristage",
+  "appName": "LyriStage",
+  "webDir": "dist-web",
+  "android": {
+    "backgroundColor": "#0e0e10"
+  }
+}
