@@ -23,6 +23,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- 长按桌面图标的快捷选单：继续播放、每日推荐、私人 FM、一起听 -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+
             <!-- GitHub / Google 登录授权完回到 App：lyristage://auth/callback?code=… -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

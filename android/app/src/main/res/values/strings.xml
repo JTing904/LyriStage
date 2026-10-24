@@ -19,6 +19,12 @@
     <!-- 小组件右上角的字标（跟 App 一样，Stage 是红色） -->
     <string name="widget_logo">Lyri<font fgcolor="#FFFF3B5C">Stage</font></string>
 
+    <!-- 长按桌面图标的快捷选单 -->
+    <string name="shortcut_resume">继续播放</string>
+    <string name="shortcut_daily">每日推荐</string>
+    <string name="shortcut_fm">私人 FM</string>
+    <string name="shortcut_room">一起听</string>
+
     <!-- 一起听的语音（关屏幕时继续） -->
     <string name="voice_channel_name">一起听的语音</string>
     <string name="voice_notification_title">LyriStage 语音中</string>

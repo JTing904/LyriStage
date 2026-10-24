@@ -11,6 +11,10 @@
     <string name="widget_paused">Paused</string>
     <string name="widget_now_playing">Now playing</string>
     <string name="widget_logo">Lyri<font fgcolor="#FFFF3B5C">Stage</font></string>
+    <string name="shortcut_resume">Resume</string>
+    <string name="shortcut_daily">Daily Mix</string>
+    <string name="shortcut_fm">Personal FM</string>
+    <string name="shortcut_room">Listen Together</string>
     <string name="voice_channel_name">Listen Together voice</string>
     <string name="voice_notification_title">LyriStage voice is on</string>
     <string name="voice_notification_text">Tap to go back to the room</string>

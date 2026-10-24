@@ -1,5 +1,6 @@
 // Android 桌面小组件「正在播放」（原生部分在 android/.../NowPlayingWidget.java、WidgetPlugin.java）
-// 换歌、播放 / 暂停、唱到新的一句时把资料送过去（大的小组件显示这一句、进度条）；小组件的按钮回来叫播放器
+// 换歌、播放 / 暂停、唱到新的一句时把资料送过去（大的小组件显示这一句、进度条）；小组件的按钮回来叫播放器。
+// 长按桌面图标的快捷选单（android/.../res/xml/shortcuts.xml）也走同一条路：打开 App 后接着做那件事
 import { registerPlugin } from '@capacitor/core';
 import { findLineIndex } from '@core/lyrics';
 import { isNativeApp } from './platform';
@@ -20,9 +21,12 @@ export async function pinWidget() {
 
 /**
  * @param {ReturnType<typeof import('@core/player/player').createPlayer>} player
- * @param {{ getLyrics: (track: object) => Promise<{ lines: Array<{ start: number, text: string }> }> }} options
+ * @param {{
+ *   getLyrics: (track: object) => Promise<{ lines: Array<{ start: number, text: string }> }>,
+ *   playFm: () => Promise<void>,
+ * }} options
  */
-export function connectWidget(player, { getLyrics }) {
+export function connectWidget(player, { getLyrics, playFm }) {
   if (!Widget) return;
   const send = data => Widget.update(data).catch(ignore);
   /** 进度条用：跟着歌词、播放暂停一起送（小组件每次都整个重画，不能每秒送） */
@@ -35,9 +39,14 @@ export function connectWidget(player, { getLyrics }) {
     toggle: () => player.toggle(),
     prev: () => player.prev(),
     next: () => player.next(),
+    // 快捷选单
+    resume: () => !player.getState().playing && player.toggle(),
+    daily: () => (location.hash = '#/daily'),
+    fm: () => playFm(),
+    room: () => (location.hash = '#/room'),
   };
   Widget.addListener('action', ({ action }) => actions[action]?.());
-  // App 是按小组件的按钮打开的：等上次的歌恢复好再接着做
+  // App 是按小组件的按钮（或快捷选单）打开的：等上次的歌恢复好再接着做
   Widget.consumeLaunchAction()
     .then(({ action }) => action && setTimeout(() => actions[action]?.(), 1500))
     .catch(ignore);
