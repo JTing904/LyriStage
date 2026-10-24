@@ -309,11 +309,22 @@ const PAGES = [
     close: () => document.querySelector('dialog.share-dialog')?.close(),
     fits: [['dialog.share-dialog[open]', 'viewport']],
   },
+  // 每一种歌词风格放在一起听的房间里（矮的框）：字不能叠在一起（例如歌词和下面的「《歌名》歌手」）
+  // 只在框会很矮的尺寸检查；用的风格会改掉，检查完 KEYS 会把 lyristage:stage 改回来
+  ...['kinetic', 'perspective', 'scroll', 'block', 'karaoke', 'vertical', 'mv', 'typewriter', 'vinyl'].map((id, i) => ({
+    id: `room-style-${id}`,
+    hash: '#/room',
+    room: true,
+    only: ['phone-land', 'phone-360-big', 'tablet-land'],
+    styleIndex: i,
+    textOverlap: true,
+    wait: 1500,
+  })),
 ];
 
 // ---- 检查（在页面里跑，不能用外面的变数）-------------------------------------------------------
 
-function CHECK({ reach, see, fits }) {
+function CHECK({ reach, see, fits, textOverlap }) {
   const issues = [];
   const W = innerWidth;
   const H = innerHeight;
@@ -446,6 +457,49 @@ function CHECK({ reach, see, fits }) {
     }
   }
 
+  // 6. 歌词画面里的字不能叠在一起（只在歌词风格那几页检查：别的地方有故意叠着的装饰字）
+  if (textOverlap) {
+    const stage = document.querySelector('.stage-panel .stage') ?? document.querySelector('.stage');
+    const opacityOf = el => {
+      let o = 1;
+      for (let p = el; p && p !== stage.parentElement; p = p.parentElement) o *= Number(getComputedStyle(p).opacity);
+      return o;
+    };
+    const boxes = [];
+    const seen = new Set();
+    const walker = document.createTreeWalker(stage, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const el = node.parentElement;
+      if (!node.textContent.trim() || seen.has(el)) continue;
+      seen.add(el);
+      if (el.closest('[aria-hidden="true"], .ghost, .topbar, .controls, .picker, .defs, svg')) continue;
+      if (!visible(el) || opacityOf(el) < 0.3) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const r = range.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2) continue;
+      boxes.push({ el, r, text: node.textContent.trim().slice(0, 16) });
+    }
+    const hit = new Set();
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i];
+        const b = boxes[j];
+        if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+        const w = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left);
+        const h = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
+        if (w <= 0 || h <= 0) continue;
+        const smaller = Math.min(a.r.width * a.r.height, b.r.width * b.r.height);
+        if ((w * h) / smaller < 0.2 || hit.has(a.el) || hit.has(b.el)) continue;
+        hit.add(a.el);
+        hit.add(b.el);
+        mark(a.el);
+        mark(b.el);
+        issues.push({ kind: '字叠在一起', text: `「${a.text}」和「${b.text}」叠在一起` });
+      }
+    }
+  }
+
   // 5. 打开的面板不能左右滑（里面的东西被长名字撑宽，按钮被挤到面板外面）
   for (const d of document.querySelectorAll('dialog[open]')) {
     if (d.scrollWidth > d.clientWidth + 1) {
@@ -511,6 +565,8 @@ function CHECK({ reach, see, fits }) {
   for (const node of textNodes()) {
     const el = node.parentElement;
     if (faint.has(el) || !visible(el) || el.closest(':disabled, [disabled]')) continue;
+    // 歌词风格里没在唱的句子故意调淡（让正在唱的那句突出）：不算看不清
+    if (el.closest('.style-layer')) continue;
     // 正在淡入、淡出的（例如刚消失的提示）：半透明是动画的一半，不是真的看不清
     if (el.closest('[class*="-enter-active"], [class*="-leave-active"]')) continue;
     const r = el.getBoundingClientRect();
@@ -700,7 +756,7 @@ const MOCK_OFFLINE = JSON.stringify(
     ])
   )
 );
-const KEYS = ['lyristage:locale', 'lyristage:theme', 'lyristage:offline'];
+const KEYS = ['lyristage:locale', 'lyristage:theme', 'lyristage:offline', 'lyristage:stage'];
 
 async function main() {
   try {
@@ -709,8 +765,15 @@ async function main() {
     throw new Error('找不到 Android 设备：用 USB 接上并允许调试');
   }
   if (process.argv.includes('--install')) installDebuggable();
-  fs.rmSync(OUT, { recursive: true, force: true });
+  // 清掉上次的截图：只删里面的档案（资料夹被 VS Code 之类开着的话，整个删会失败）
   fs.mkdirSync(OUT, { recursive: true });
+  for (const file of fs.readdirSync(OUT)) {
+    try {
+      fs.rmSync(path.join(OUT, file), { recursive: true, force: true });
+    } catch {
+      // 开着的那个档案删不掉，等一下会被新的盖过去
+    }
+  }
 
   const runs = RUNS.filter(
     ([profile, locale, theme]) =>
@@ -747,6 +810,7 @@ async function main() {
       await sleep(5000);
       ({ browser, page } = await connect());
       for (const p of pages) {
+        if (p.only && !p.only.includes(profileId)) continue;
         const name = `${profileId}-${locale}-${theme}-${p.id}`;
         if (p.room && !(await page.evaluate(`${HELPERS}; STORE('room').inRoom`))) {
           await page.evaluate(`${HELPERS}; STORE('room').createRoom()`);
@@ -768,12 +832,19 @@ async function main() {
         // 「确认你的名字」只跳一次、而且要用户自己确认：检查时先关掉（不帮用户确认）；name-sheet 那一页再打开来检查
         await page.evaluate(() => document.querySelector('dialog.name-sheet[open]')?.close()).catch(() => {});
         if (p.mock) await page.evaluate(p.mock);
+        if (p.styleIndex !== undefined) {
+          // 换歌词风格：打开房间歌词框的风格面板，按第几个（按了面板会自己关）
+          await page.evaluate(`${HELPERS}; click('.stage-panel .stage .topbar .pill[aria-expanded]')`);
+          await sleep(500);
+          await page.evaluate(i => [...document.querySelectorAll('.stage-panel .stage .picker .option')][i]?.click(), p.styleIndex);
+          await sleep(2000);
+        }
         if (p.open) {
           await page.evaluate(`${HELPERS}; (${p.open.toString()})()`);
           await sleep(1000);
         }
         const see = profile.rotation === 1 ? p.seeLandscape ?? [] : [];
-        const { issues, width, height } = await page.evaluate(CHECK, { reach: p.reach ?? [], see, fits: p.fits ?? [] });
+        const { issues, width, height } = await page.evaluate(CHECK, { reach: p.reach ?? [], see, fits: p.fits ?? [], textOverlap: Boolean(p.textOverlap) });
         fs.writeFileSync(path.join(OUT, `${name}.png`), execFileSync(ADB, ['exec-out', 'screencap', '-p'], { maxBuffer: 64 << 20 }));
         await page.evaluate(() => document.querySelectorAll('[data-lc]').forEach(el => ((el.style.outline = ''), el.removeAttribute('data-lc'))));
         if (p.close) await page.evaluate(`${HELPERS}; (${p.close.toString()})()`).catch(() => {});

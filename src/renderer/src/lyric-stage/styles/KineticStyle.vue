@@ -201,6 +201,22 @@ const particles = Array.from({ length: 18 }, (_, i) => ({
   text-align: center;
   transition: opacity 0.8s;
 }
+/* 矮的画面（手机横屏、一起听的房间）：歌词只在下面那行「《歌名》歌手」以上的区域置中，
+   不然会叠在一起 */
+@container (max-height: 520px) {
+  .center {
+    bottom: calc(var(--controls-space, 170px) + 30px);
+  }
+}
+/* 非常矮（房间上面多了一条「有人想加入」）：下面那行跟歌名重复，不显示，让歌词用整个框 */
+@container (max-height: 320px) {
+  .credit {
+    display: none;
+  }
+  .center {
+    bottom: var(--controls-space, 170px);
+  }
+}
 .center.interlude {
   opacity: 0.35;
 }
@@ -224,7 +240,8 @@ const particles = Array.from({ length: 18 }, (_, i) => ({
   text-shadow: 0 0 24px rgba(0, 0, 0, 0.6);
 }
 .lead.intro {
-  font-size: calc(clamp(32px, 9cqw, 120px));
+  /* 还没开始唱时的歌名：宽的矮框也不能太大（不然上下被切掉） */
+  font-size: calc(clamp(28px, min(9cqw, 22cqh), 120px));
 }
 .ghost {
   position: absolute;

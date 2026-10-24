@@ -96,6 +96,13 @@ const progressOf = (line, word) =>
   color: rgba(255, 255, 255, 0.75);
 }
 
+/* 矮的画面（手机横屏、一起听的房间）：上面的歌名会撞到从下面排上来的歌词，
+   不显示（播放条上有歌名） */
+@container (max-height: 520px) {
+  .title {
+    display: none;
+  }
+}
 .slots {
   position: absolute;
   left: 6cqw;
@@ -114,7 +121,8 @@ const progressOf = (line, word) =>
 }
 .text {
   margin: 0;
-  font: 900 clamp(28px, 4.4cqw, 68px) / 1.2 'Noto Sans SC', system-ui, sans-serif;
+  /* 宽的矮框（手机横屏的房间）：也跟着高度缩小，两句才放得下、不会被切掉 */
+  font: 900 clamp(20px, min(4.4cqw, 11cqh), 68px) / 1.2 'Noto Sans SC', system-ui, sans-serif;
   letter-spacing: 0.02em;
 }
 /*
