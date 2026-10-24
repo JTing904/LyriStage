@@ -28,6 +28,16 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
 
+            <!-- LyriStage 的网址（一起听的邀请链接 https://lyristage.vercel.app/#/room?code=…）：装了 App 的直接在 App 打开。
+                 网站上要有 .well-known/assetlinks.json（src/renderer/public 里）系统才会验证通过。
+                 只接首页 /（网页版的每一页都在 # 后面），隐私政策之类的照样用浏览器 -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="lyristage.vercel.app" android:path="/" />
+            </intent-filter>
+
             <!-- GitHub / Google 登录授权完回到 App：lyristage://auth/callback?code=… -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

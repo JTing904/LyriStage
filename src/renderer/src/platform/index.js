@@ -98,6 +98,37 @@ export function onAuthCallback(callback) {
 }
 
 /**
+ * 手机 App：在 WhatsApp 等地方点了 https://lyristage.vercel.app/#/… 的链接（例如一起听的邀请），
+ * 装了 App 的会直接在 App 打开（AndroidManifest 的 App Links + 网站上的 .well-known/assetlinks.json）：
+ * 把链接里 # 后面那一页交给 callback。App 关着时是用这个链接打开的，也要接着去那一页
+ * @param {(path: string) => void} callback 例如 '/room?code=ABC123'
+ */
+export function onAppLink(callback) {
+  if (!isNativeApp) return;
+  const open = url => {
+    try {
+      const { host, hash } = new URL(url);
+      if (host === 'lyristage.vercel.app' && hash.startsWith('#/')) callback(hash.slice(1));
+    } catch {
+      // 不是网址
+    }
+  };
+  import('@capacitor/app').then(async ({ App }) => {
+    App.addListener('appUrlOpen', ({ url }) => open(url));
+    // 打开 App 的那条链接：页面重新载入后还会拿到同一条，只处理一次（不然又跳回邀请的房间）
+    const launch = (await App.getLaunchUrl())?.url ?? '';
+    const KEY = 'lyristage:launch-url';
+    try {
+      if (!launch || sessionStorage.getItem(KEY) === launch) return;
+      sessionStorage.setItem(KEY, launch);
+    } catch {
+      // 存不了就照样打开
+    }
+    open(launch);
+  });
+}
+
+/**
  * Android 返回键（其他平台没有这个键，不会触发）。
  * handler 回传 true = 已经处理了（例如关掉了歌词舞台）；
  * 回传 false 就照一般的返回：页面能后退就后退，不能就把 App 收到背景（音乐继续播）

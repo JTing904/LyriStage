@@ -5,6 +5,7 @@ import { randomBytes } from 'node:crypto';
 import { startApiServer, API_PORT } from './apiServer';
 import { loadWindowState, trackWindowState } from './windowState';
 import { createTray } from './tray';
+import { createThumbar } from './thumbar';
 import { createDesktopLyricsController } from './desktopLyrics';
 import { getSettings, updateSettings } from './settings';
 import { setupUpdater } from './updater';
@@ -60,6 +61,8 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   let mainWindow = null;
   let tray = null;
+  /** Windows 任务栏缩图下面的播放按钮 */
+  let thumbar = null;
   /** 真的要退出（托盘「退出」、系统关机）；不然关窗口只是缩到托盘 */
   let quitting = false;
   app.on('before-quit', () => {
@@ -82,11 +85,13 @@ if (!app.requestSingleInstanceLock()) {
   // 主窗口 → 托盘：正在播什么（托盘的提示文字和菜单）
   ipcMain.on('lyristage:now-playing', (event, info) => {
     if (!fromMain(event) || typeof info !== 'object' || !info) return;
-    tray?.setNowPlaying({
+    const nowPlaying = {
       title: String(info.title ?? ''),
       artist: String(info.artist ?? ''),
       playing: Boolean(info.playing),
-    });
+    };
+    tray?.setNowPlaying(nowPlaying);
+    thumbar?.setNowPlaying(nowPlaying);
   });
   // 主窗口 → 桌面歌词窗口：现在这一句
   ipcMain.on('lyristage:lyric', (event, payload) => {
@@ -102,6 +107,7 @@ if (!app.requestSingleInstanceLock()) {
     if (!fromMain(event) || !['zh-CN', 'en'].includes(value)) return;
     locale = value;
     tray?.setLocale(value);
+    thumbar?.setLocale(value);
     desktopLyrics.setLocale(value);
   });
   // 设置页的「锁定桌面歌词」
@@ -199,6 +205,8 @@ if (!app.requestSingleInstanceLock()) {
     });
     if (state.maximized) mainWindow.maximize();
     trackWindowState(mainWindow);
+    thumbar = createThumbar(mainWindow, command => sendToMain('lyristage:command', command));
+    thumbar.setLocale(locale);
 
     // 桌面歌词只在主窗口收起来（最小化、关到托盘）时出现
     const appVisible = () => mainWindow.isVisible() && !mainWindow.isMinimized();

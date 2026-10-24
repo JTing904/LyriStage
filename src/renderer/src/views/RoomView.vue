@@ -30,14 +30,19 @@ const { state, player } = usePlayer();
 const input = ref('');
 const copied = ref('');
 
-// 网址带了房间码（/room?code=ABC123）就直接加入
-onMounted(() => {
-  const code = normalizeCode(route.query.code);
-  if (code && !room.inRoom) {
-    input.value = code;
-    room.joinRoom(code);
-  }
-});
+// 网址带了房间码（/room?code=ABC123）就直接加入；
+// 已经停在这一页时点了邀请链接（App Links）页面不会重开，所以看着网址的房间码
+watch(
+  () => route.query.code,
+  value => {
+    const code = normalizeCode(value);
+    if (code && !room.inRoom) {
+      input.value = code;
+      room.joinRoom(code);
+    }
+  },
+  { immediate: true }
+);
 
 // ---- 聊天 ----
 const tab = ref('chat');
