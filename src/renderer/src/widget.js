@@ -1,5 +1,5 @@
 // Android 桌面小组件「正在播放」（原生部分在 android/.../NowPlayingWidget.java、WidgetPlugin.java）
-// 换歌、播放 / 暂停、唱到新的一句时把资料送过去（大的小组件显示这一句和下一句）；小组件的按钮回来叫播放器
+// 换歌、播放 / 暂停、唱到新的一句时把资料送过去（大的小组件显示这一句、进度条）；小组件的按钮回来叫播放器
 import { registerPlugin } from '@capacitor/core';
 import { findLineIndex } from '@core/lyrics';
 import { isNativeApp } from './platform';
@@ -25,6 +25,11 @@ export async function pinWidget() {
 export function connectWidget(player, { getLyrics }) {
   if (!Widget) return;
   const send = data => Widget.update(data).catch(ignore);
+  /** 进度条用：跟着歌词、播放暂停一起送（小组件每次都整个重画，不能每秒送） */
+  const progress = () => ({ position: player.currentTime() || 0, duration: player.getState().duration || 0 });
+  /** 没有歌词的歌：进度条至少每 15 秒动一下 */
+  const PROGRESS_EVERY_MS = 15000;
+  let progressSentAt = 0;
 
   const actions = {
     toggle: () => player.toggle(),
@@ -53,6 +58,8 @@ export function connectWidget(player, { getLyrics }) {
       lyric: '',
       lyricNext: '',
       cover: cover ? `${cover}?param=360y360` : '',
+      position: 0,
+      duration: track?.dt ? track.dt / 1000 : 0,
     });
     if (!track) return;
     try {
@@ -69,14 +76,22 @@ export function connectWidget(player, { getLyrics }) {
 
   // 唱到新的一句才送（一句几秒，不会太频繁）
   function showLine(time) {
-    if (!current || !lines.length) return;
+    if (!current) return;
+    if (!lines.length) {
+      if (Date.now() - progressSentAt < PROGRESS_EVERY_MS || !player.getState().playing) return;
+      progressSentAt = Date.now();
+      send(progress());
+      return;
+    }
     const index = findLineIndex(lines, time * 1000);
     if (index === shownLine) return;
     shownLine = index;
+    progressSentAt = Date.now();
     // 还没唱到第一句时，先把第一句当成"下一句"显示
     send({
       lyric: index >= 0 ? lines[index].text.trim() : '',
       lyricNext: lines[index + 1]?.text.trim() ?? '',
+      ...progress(),
     });
   }
   player.on('time', showLine);
@@ -87,7 +102,7 @@ export function connectWidget(player, { getLyrics }) {
     if ((state.track?.id ?? null) !== (current?.id ?? null)) onTrack(state.track);
     if (state.playing === lastPlaying) return;
     lastPlaying = state.playing;
-    send({ playing: state.playing });
+    send({ playing: state.playing, ...progress() });
   }
   player.on('change', onChange);
   onChange(player.getState());

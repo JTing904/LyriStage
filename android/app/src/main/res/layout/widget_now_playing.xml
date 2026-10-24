@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 小组件（一格高）：封面、歌名歌手、上一首 / 播放 / 下一首 -->
+<!-- 小组件（一格高）：封面、歌名、歌手（播放中换成正在唱的那句）、上一首 / 播放 / 下一首；底是模糊的封面 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg_shape"
+    android:clipToOutline="true">
 
     <ImageView
         android:id="@+id/widget_bg"
@@ -11,6 +13,13 @@
         android:layout_height="match_parent"
         android:scaleType="fitXY"
         android:src="@drawable/widget_bg_shape" />
+
+    <ImageView
+        android:id="@+id/widget_art"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -44,6 +53,9 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#FFFFFF"
+                android:shadowColor="#66000000"
+                android:shadowDy="1"
+                android:shadowRadius="6"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -54,6 +66,9 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#B3FFFFFF"
+                android:shadowColor="#66000000"
+                android:shadowDy="1"
+                android:shadowRadius="6"
                 android:textSize="13sp" />
         </LinearLayout>
 

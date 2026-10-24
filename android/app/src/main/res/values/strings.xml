@@ -14,6 +14,10 @@
     <string name="widget_pause">暂停</string>
     <string name="widget_prev">上一首</string>
     <string name="widget_next">下一首</string>
+    <string name="widget_paused">已暂停</string>
+    <string name="widget_now_playing">正在播放</string>
+    <!-- 小组件右上角的字标（跟 App 一样，Stage 是红色） -->
+    <string name="widget_logo">Lyri<font fgcolor="#FFFF3B5C">Stage</font></string>
 
     <!-- 一起听的语音（关屏幕时继续） -->
     <string name="voice_channel_name">一起听的语音</string>

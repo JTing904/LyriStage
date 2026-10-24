@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 小组件（两格以上）：上面大封面，旁边歌名、歌手、播放按钮；下面正在唱的那句和下一句 -->
+<!-- 小组件（两格以上）：歌词当主角。上面小封面、歌名和字标，中间大大的一句歌词，下面按钮和进度条 -->
+<!-- 圆角：Android 12 起靠 clipToOutline 把模糊的封面也裁成圆角；更早的系统不显示模糊封面，只用封面取的颜色 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg_shape"
+    android:clipToOutline="true">
 
     <ImageView
         android:id="@+id/widget_bg"
@@ -12,13 +15,23 @@
         android:scaleType="fitXY"
         android:src="@drawable/widget_bg_shape" />
 
+    <!-- 模糊、压暗的封面（WidgetPlugin 做好的） -->
+    <ImageView
+        android:id="@+id/widget_art"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:padding="14dp">
 
+        <!-- 上面一排：小封面、歌名 · 歌手（或「已暂停」），右边 LyriStage 字标 -->
         <LinearLayout
+            android:id="@+id/widget_info"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
@@ -26,109 +39,123 @@
 
             <ImageView
                 android:id="@+id/widget_cover"
-                android:layout_width="84dp"
-                android:layout_height="84dp"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
                 android:contentDescription="@string/widget_open"
                 android:scaleType="centerCrop" />
 
-            <LinearLayout
+            <TextView
+                android:id="@+id/widget_head"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:orientation="vertical"
-                android:paddingStart="14dp">
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:paddingStart="8dp"
+                android:paddingEnd="10dp"
+                android:shadowColor="#66000000"
+                android:shadowDy="1"
+                android:shadowRadius="6"
+                android:textColor="#FFFFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
-                <LinearLayout
-                    android:id="@+id/widget_info"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/widget_title"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:textColor="#FFFFFF"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/widget_artist"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:textColor="#B3FFFFFF"
-                        android:textSize="14sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageButton
-                        android:id="@+id/widget_prev"
-                        android:layout_width="38dp"
-                        android:layout_height="38dp"
-                        android:layout_marginStart="-8dp"
-                        android:background="?android:attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="@string/widget_prev"
-                        android:src="@drawable/widget_prev" />
-
-                    <ImageButton
-                        android:id="@+id/widget_toggle"
-                        android:layout_width="38dp"
-                        android:layout_height="38dp"
-                        android:layout_marginStart="10dp"
-                        android:layout_marginEnd="10dp"
-                        android:background="@drawable/widget_play_circle"
-                        android:src="@drawable/widget_play" />
-
-                    <ImageButton
-                        android:id="@+id/widget_next"
-                        android:layout_width="38dp"
-                        android:layout_height="38dp"
-                        android:background="?android:attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="@string/widget_next"
-                        android:src="@drawable/widget_next" />
-                </LinearLayout>
-            </LinearLayout>
+            <TextView
+                android:id="@+id/widget_logo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="serif"
+                android:shadowColor="#66000000"
+                android:shadowDy="1"
+                android:shadowRadius="6"
+                android:text="@string/widget_logo"
+                android:textColor="#FFFFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- 正在唱的那句和下一句（淡一点）：只占需要的高度 -->
+        <!-- 中间：大大的一句歌词（暂停、没有歌词时换成大大的歌名，下面一行歌手） -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:gravity="center_vertical"
-            android:orientation="vertical"
-            android:paddingTop="6dp">
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/widget_lyric"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
+                android:fontFamily="serif"
+                android:lineSpacingMultiplier="1.05"
                 android:maxLines="2"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
+                android:shadowColor="#66000000"
+                android:shadowDy="1"
+                android:shadowRadius="6"
+                android:text="@string/widget_nothing_playing"
+                android:textColor="#FFFFFFFF"
+                android:textSize="22sp"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/widget_lyric_next"
+                android:id="@+id/widget_sub"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#80FFFFFF"
+                android:shadowColor="#66000000"
+                android:shadowDy="1"
+                android:shadowRadius="6"
+                android:textColor="#B3FFFFFF"
                 android:textSize="13sp"
-                android:textStyle="bold" />
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- 下面一排：上一首、播放、下一首、进度条 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/widget_prev"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="-10dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/widget_prev"
+                android:src="@drawable/widget_prev" />
+
+            <ImageButton
+                android:id="@+id/widget_toggle"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/widget_play_circle"
+                android:src="@drawable/widget_play" />
+
+            <ImageButton
+                android:id="@+id/widget_next"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/widget_next"
+                android:src="@drawable/widget_next" />
+
+            <ProgressBar
+                android:id="@+id/widget_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="0dp"
+                android:layout_height="3dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:max="1000"
+                android:progressDrawable="@drawable/widget_progress" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>
