@@ -1,0 +1,60 @@
+.DS_Store
+node_modules
+/dist
+
+# local env files
+.env
+.env.local
+.env.*.local
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+.vercel
+
+#Electron-builder output
+/dist_electron
+NeteaseCloudMusicApi-master
+NeteaseCloudMusicApi-master.zip
+
+# Local Netlify folder
+.netlify
+vercel.json
+!server/vercel.json
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+
+# Vercel
+.vercel
+
+# v2 构建输出
+out/
+dist-web/
+
+# 网页版部署的构建结果
+/deploy
+/dist-web
+
+# Windows 安装包
+/release
+
+# 宣传影片的临时导演页和截图
+/src/renderer/public/promo
+
+# 排版检查的截图和报告（npm run layout:check）
+/scripts/layout-check/out

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 长按桌面图标跳出来的快捷选单。按了打开 App，接着做那件事（WidgetPlugin 收 lyristage.widget.action，JS 在 widget.js 处理） -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_resume"
+        android:shortcutId="resume"
+        android:shortcutShortLabel="@string/shortcut_resume">
+        <intent
+            android:action="com.jting904.lyristage.shortcut.resume"
+            android:targetClass="com.jting904.lyristage.MainActivity"
+            android:targetPackage="com.jting904.lyristage">
+            <extra android:name="lyristage.widget.action" android:value="resume" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_daily"
+        android:shortcutId="daily"
+        android:shortcutShortLabel="@string/shortcut_daily">
+        <intent
+            android:action="com.jting904.lyristage.shortcut.daily"
+            android:targetClass="com.jting904.lyristage.MainActivity"
+            android:targetPackage="com.jting904.lyristage">
+            <extra android:name="lyristage.widget.action" android:value="daily" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_fm"
+        android:shortcutId="fm"
+        android:shortcutShortLabel="@string/shortcut_fm">
+        <intent
+            android:action="com.jting904.lyristage.shortcut.fm"
+            android:targetClass="com.jting904.lyristage.MainActivity"
+            android:targetPackage="com.jting904.lyristage">
+            <extra android:name="lyristage.widget.action" android:value="fm" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_room"
+        android:shortcutId="room"
+        android:shortcutShortLabel="@string/shortcut_room">
+        <intent
+            android:action="com.jting904.lyristage.shortcut.room"
+            android:targetClass="com.jting904.lyristage.MainActivity"
+            android:targetPackage="com.jting904.lyristage">
+            <extra android:name="lyristage.widget.action" android:value="room" />
+        </intent>
+    </shortcut>
+</shortcuts>

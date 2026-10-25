@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LyriStage · Let the lyrics take the stage</title>
+<meta name="description" content="A lyrics-first music player for Windows, Android and iPhone. Nine animated lyric stages, a daily mix, and rooms to listen with friends.">
+<meta property="og:title" content="LyriStage · Let the lyrics take the stage">
+<meta property="og:description" content="Nine animated lyric stages, a fresh mix every day, and rooms where friends hear the same line at the same second.">
+<meta property="og:image" content="https://jting904.github.io/LyriStage/assets/trailer-poster.webp">
+<meta name="theme-color" content="#0e0e10">
+<link rel="icon" type="image/png" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/icon-256.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e10; --surface: #17171a; --line: rgba(255,255,255,.08); --line-2: rgba(255,255,255,.16);
+    --text: #f4f4f5; --soft: #d4d4d8; --dim: #a1a1aa; --accent: #ff3b5c; --accent-hi: #ff7a90;
+    --serif: 'Noto Serif SC', Georgia, serif; --sans: 'Noto Sans SC', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 var(--sans); overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  img, video { display: block; max-width: 100%; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 3px; border-radius: 8px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+  .serif { font-family: var(--serif); font-weight: 900; letter-spacing: -0.02em; }
+  .eyebrow { color: var(--accent); font-weight: 700; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; }
+  .muted { color: var(--dim); }
+  [hidden] { display: none !important; }
+
+  /* 导航 */
+  header { position: sticky; top: 0; z-index: 20; background: rgba(14,14,16,.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+  nav { max-width: 1200px; margin: 0 auto; padding: 12px 32px; display: flex; align-items: center; gap: 32px; }
+  .brand { display: flex; align-items: center; gap: 10px; font: 900 22px/1 var(--serif); }
+  .brand img { width: 32px; height: 32px; border-radius: 8px; }
+  .brand b, .accent { color: var(--accent); }
+  .links { display: flex; gap: 28px; font-size: 15px; color: #c4c4cc; flex: 1; }
+  .links a:hover { color: var(--text); }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .lang { display: flex; border: 1px solid var(--line-2); border-radius: 999px; padding: 3px; }
+  .lang button { border: 0; background: transparent; color: var(--dim); font-size: 13px; padding: 6px 12px; border-radius: 999px; cursor: pointer; min-height: 32px; }
+  .lang button[aria-pressed="true"] { background: var(--text); color: var(--bg); font-weight: 700; }
+  .icon-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 999px; border: 1px solid var(--line-2); }
+  .icon-btn:hover { border-color: var(--soft); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border-radius: 999px; font-weight: 700; cursor: pointer; border: 0; transition: transform .15s, box-shadow .2s, background .2s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #ff5574; }
+  .btn-sm { padding: 10px 20px; font-size: 15px; }
+  .btn-lg { padding: 16px 28px; font-size: 18px; box-shadow: 0 12px 40px rgba(255,59,92,.35); }
+  .btn-lg:hover { transform: translateY(-1px); }
+  .btn-ghost { border: 1px solid var(--line-2); padding: 16px 24px; font-size: 17px; font-weight: 500; }
+  .btn-ghost:hover { border-color: var(--soft); }
+
+  /* 首屏 */
+  .hero { position: relative; padding: 96px 0 40px; text-align: center; }
+  .hero::before { content: ""; position: absolute; left: 50%; top: -120px; width: 1100px; height: 700px; transform: translateX(-50%); background: radial-gradient(closest-side, rgba(255,59,92,.22), transparent 70%); pointer-events: none; }
+  .hero .wrap { position: relative; display: flex; flex-direction: column; align-items: center; gap: 28px; }
+  .badge { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; color: var(--soft); border: 1px solid var(--line-2); border-radius: 999px; padding: 7px 16px; background: rgba(255,255,255,.03); }
+  .dot { width: 8px; height: 8px; border-radius: 99px; background: #22c55e; flex: none; }
+  h1 { margin: 0; font: 900 clamp(46px, 7.4vw, 92px)/1.03 var(--serif); letter-spacing: -0.03em; max-width: 980px; }
+  h1 em, h2 em { color: var(--accent); }
+  .lead { margin: 0; font-size: clamp(17px, 1.6vw, 21px); line-height: 1.6; color: #b4b4bc; max-width: 640px; }
+  .cta { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .meta { font-size: 14px; color: var(--dim); }
+  .meta a { color: var(--soft); text-decoration: underline; }
+
+  .stage-frame { position: relative; width: 100%; max-width: 1120px; margin-top: 36px; }
+  .video-box { position: relative; border-radius: 22px; overflow: hidden; aspect-ratio: 16 / 9; border: 1px solid rgba(255,255,255,.1); background: #000; box-shadow: 0 50px 140px rgba(0,0,0,.6); }
+  .video-box video { width: 100%; height: 100%; object-fit: cover; }
+  .video-box::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 60%, rgba(0,0,0,.55)); pointer-events: none; }
+  .sound { position: absolute; z-index: 2; left: 24px; bottom: 22px; display: flex; align-items: center; gap: 12px; border: 0; cursor: pointer; background: rgba(255,255,255,.14); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: #fff; font-weight: 700; font-size: 16px; padding: 10px 20px 10px 10px; border-radius: 999px; min-height: 44px; }
+  .sound:hover { background: rgba(255,255,255,.22); }
+  .sound .circle { width: 34px; height: 34px; border-radius: 99px; background: #fff; display: flex; align-items: center; justify-content: center; color: var(--bg); }
+  .phone { position: absolute; right: -36px; bottom: -60px; width: 230px; border-radius: 34px; padding: 8px; background: #050506; box-shadow: 0 0 0 2px #2c2c33, 0 40px 90px rgba(0,0,0,.7); }
+  .phone img { border-radius: 27px; width: 100%; }
+
+  .facts { padding: 110px 0 30px; }
+  .facts .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; border-top: 1px solid var(--line); padding-top: 40px; }
+  .fact b { display: block; font: 900 44px/1.2 var(--serif); }
+  .fact span { color: var(--dim); }
+
+  section.block { padding: 80px 0; }
+  h2 { margin: 0; font: 900 clamp(36px, 4.6vw, 56px)/1.06 var(--serif); letter-spacing: -0.02em; }
+  h3 { margin: 0; font: 900 clamp(30px, 3.4vw, 44px)/1.1 var(--serif); letter-spacing: -0.02em; }
+  .head-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; margin-bottom: 40px; }
+  .head-row .title { display: flex; flex-direction: column; gap: 14px; }
+  .head-row p { margin: 0; color: var(--dim); font-size: 17px; max-width: 380px; }
+
+  /* 九种风格 */
+  .stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .stage { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+  .stage .media { position: relative; border-radius: 16px; overflow: hidden; aspect-ratio: 16 / 9; border: 1px solid var(--line); background: var(--surface); }
+  .stage .media img, .stage .media video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .5s cubic-bezier(.16,1,.3,1); }
+  .stage .media video { opacity: 0; transition: opacity .3s; }
+  .stage.playing .media video { opacity: 1; }
+  .stage:hover .media img, .stage:hover .media video { transform: scale(1.03); }
+  .stage figcaption { display: flex; flex-direction: column; gap: 4px; }
+  .stage figcaption b { font-size: 18px; }
+  .stage figcaption span { color: var(--dim); font-size: 15px; line-height: 1.5; }
+
+  /* 功能 */
+  .features { display: flex; flex-direction: column; gap: 120px; }
+  .feature { display: flex; gap: 64px; align-items: center; }
+  .feature.rev { flex-direction: row-reverse; }
+  .feature .text { flex: 1 1 360px; display: flex; flex-direction: column; gap: 18px; }
+  .feature .text p { margin: 0; color: var(--dim); font-size: 17px; line-height: 1.7; }
+  .feature .pic { flex: 1.4 1 520px; position: relative; min-width: 0; }
+  .shot { border-radius: 18px; overflow: hidden; border: 1px solid rgba(255,255,255,.1); box-shadow: 0 40px 100px rgba(0,0,0,.55); }
+  .shot.wide { aspect-ratio: 16 / 9; }
+  .shot.wide img { width: 100%; height: 100%; object-fit: cover; }
+  .chip { position: absolute; left: 24px; top: 24px; display: flex; align-items: center; gap: 12px; padding: 10px 18px; border-radius: 999px; background: rgba(10,10,12,.78); border: 1px solid var(--line-2); font-weight: 700; font-size: 15px; }
+  .chip code { font-family: Consolas, 'SFMono-Regular', monospace; letter-spacing: .12em; color: var(--accent-hi); font-size: 15px; }
+  .avatars { position: absolute; right: 24px; bottom: 24px; display: flex; }
+  .avatars span { width: 44px; height: 44px; border-radius: 99px; border: 3px solid var(--bg); display: flex; align-items: center; justify-content: center; font-weight: 700; margin-left: -12px; }
+  .extras { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 26px; display: flex; flex-direction: column; gap: 10px; }
+  .card b { font-size: 18px; }
+  .card span { color: var(--dim); font-size: 15px; line-height: 1.6; }
+
+  /* 下载 */
+  #download .center { text-align: center; display: flex; flex-direction: column; gap: 14px; align-items: center; margin-bottom: 44px; }
+  #download .center p { margin: 0; color: var(--dim); font-size: 17px; max-width: 620px; }
+  .platforms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .platform { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 32px; display: flex; flex-direction: column; gap: 18px; }
+  .platform.mine { border-color: rgba(255,59,92,.45); box-shadow: 0 0 0 4px rgba(255,59,92,.08); }
+  .platform .top { display: flex; justify-content: space-between; align-items: center; min-height: 34px; }
+  .yours { font-size: 12px; font-weight: 700; color: var(--accent-hi); border: 1px solid rgba(255,59,92,.4); border-radius: 999px; padding: 4px 10px; }
+  .platform .name { font-weight: 700; font-size: 24px; }
+  .platform .info { color: var(--dim); font-size: 15px; }
+  .platform .get { text-align: center; background: var(--text); color: var(--bg); font-weight: 700; padding: 14px; border-radius: 14px; }
+  .platform.mine .get { background: var(--accent); color: #fff; }
+  .platform .get:hover { filter: brightness(.92); }
+  .platform small { color: var(--dim); font-size: 13px; line-height: 1.5; }
+  .platform small a { text-decoration: underline; }
+  .all { display: block; width: fit-content; margin: 36px auto 0; color: var(--soft); text-decoration: underline; font-size: 15px; }
+
+  /* 开源 */
+  .oss { background: linear-gradient(135deg, #1b1b20, #141417); border: 1px solid var(--line); border-radius: 28px; padding: 56px; display: flex; gap: 48px; align-items: center; }
+  .oss .text { flex: 1 1 420px; display: flex; flex-direction: column; gap: 16px; }
+  .oss .text p { margin: 0; color: var(--dim); font-size: 17px; line-height: 1.7; }
+  .oss .text p a { color: var(--soft); text-decoration: underline; }
+  .repo { flex: 1 1 360px; display: flex; flex-direction: column; gap: 14px; background: var(--bg); border: 1px solid rgba(255,255,255,.1); border-radius: 18px; padding: 26px; transition: border-color .2s; }
+  .repo:hover { border-color: var(--line-2); }
+  .repo .row { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 18px; }
+  .repo .stats { display: flex; gap: 18px; color: var(--soft); font-size: 14px; flex-wrap: wrap; }
+
+  footer { border-top: 1px solid var(--line); padding: 40px 0 56px; }
+  footer .wrap { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+  footer .left { display: flex; flex-direction: column; gap: 8px; }
+  footer .left small { color: var(--dim); font-size: 13px; }
+  footer .right { display: flex; gap: 24px; font-size: 14px; color: #c4c4cc; flex-wrap: wrap; }
+  footer .right a:hover { color: var(--text); }
+
+  /* 手机底部下载条 */
+  .dock { display: none; }
+
+  @media (max-width: 900px) {
+    .links { display: none; }
+    nav { gap: 16px; justify-content: space-between; }
+    .phone { width: 150px; right: -8px; bottom: -40px; border-radius: 24px; padding: 6px; }
+    .phone img { border-radius: 19px; }
+    .stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .feature, .feature.rev { flex-direction: column; gap: 32px; align-items: stretch; }
+    .feature .text, .feature .pic, .oss .text, .repo { flex: none; }
+    .extras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .platforms { grid-template-columns: 1fr; }
+    .oss { flex-direction: column; align-items: stretch; padding: 32px; }
+  }
+  @media (max-width: 640px) {
+    .wrap, nav { padding-left: 16px; padding-right: 16px; }
+    .nav-right .btn, .nav-right .icon-btn { display: none; }
+    .hero { padding: 48px 0 24px; }
+    .hero .cta .btn-ghost { display: none; }
+    .sound { left: 12px; bottom: 12px; font-size: 14px; padding: 6px 14px 6px 6px; }
+    .sound .circle { width: 30px; height: 30px; }
+    .phone { display: none; }
+    .facts { padding: 56px 0 10px; }
+    .facts .grid { grid-template-columns: 1fr; gap: 18px; }
+    .fact { display: flex; align-items: baseline; gap: 14px; }
+    .fact b { font-size: 34px; }
+    section.block { padding: 56px 0; }
+    .stages { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; margin: 0 -16px; padding: 4px 16px 8px; gap: 14px; scrollbar-width: none; }
+    .stages::-webkit-scrollbar { display: none; }
+    .stage { flex: 0 0 78%; scroll-snap-align: start; }
+    .features { gap: 72px; }
+    .chip { left: 10px; top: 10px; padding: 6px 12px; font-size: 12px; gap: 8px; }
+    .chip code { font-size: 12px; }
+    .avatars { right: 10px; bottom: 10px; }
+    .avatars span { width: 34px; height: 34px; font-size: 13px; }
+    .extras { grid-template-columns: 1fr; }
+    .platform { padding: 22px; }
+    body { padding-bottom: 88px; }
+    .dock { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(rgba(14,14,16,0), var(--bg) 35%); }
+    .dock .btn { width: 100%; height: 56px; border-radius: 16px; font-size: 17px; box-shadow: 0 10px 30px rgba(255,59,92,.35); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .stage .media img, .stage .media video, .btn { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <a class="brand" href="#top"><img src="assets/icon-256.png" alt=""><span>Lyri<b>Stage</b></span></a>
+    <div class="links">
+      <a href="#stages" data-i18n="nav.stages">Stages</a>
+      <a href="#features" data-i18n="nav.features">Features</a>
+      <a href="#download" data-i18n="nav.download">Download</a>
+      <a href="#code" data-i18n="nav.code">Open source</a>
+    </div>
+    <div class="nav-right">
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+      </div>
+      <a class="icon-btn" href="https://github.com/JTing904" aria-label="GitHub">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
+      </a>
+      <a class="btn btn-primary btn-sm" href="#download" data-i18n="nav.download">Download</a>
+    </div>
+  </nav>
+</header>
+
+<main id="top">
+  <!-- 首屏 -->
+  <section class="hero">
+    <div class="wrap">
+      <span class="badge"><span class="dot"></span><span data-i18n="hero.badge">v2.1.11 is out · Free, no ads, open source</span></span>
+      <h1 data-i18n-html="hero.title">Let the lyrics take the <em>stage.</em></h1>
+      <p class="lead" data-i18n="hero.lead">A music player built around the words. Nine animated lyric stages, a fresh mix every day, and rooms where friends hear the same line at the same second.</p>
+      <div class="cta">
+        <a class="btn btn-primary btn-lg" id="cta" href="#download">
+          <span id="cta-icon" aria-hidden="true"></span><span id="cta-text">Download</span>
+        </a>
+        <a class="btn btn-ghost" href="#download" id="cta-other" data-i18n="hero.other">All platforms</a>
+      </div>
+      <div class="meta"><span id="cta-meta"></span> · <a href="#code" data-i18n="hero.mit">MIT licensed on GitHub</a></div>
+
+      <div class="stage-frame">
+        <div class="video-box">
+          <video id="trailer" src="assets/trailer.mp4" poster="assets/trailer-poster.webp" muted loop playsinline preload="metadata" aria-label="LyriStage trailer"></video>
+          <button class="sound" id="sound" type="button">
+            <span class="circle" id="sound-icon" aria-hidden="true"></span><span id="sound-text">Watch with sound</span>
+          </button>
+        </div>
+        <div class="phone"><img src="assets/phone-home.webp" alt="LyriStage home screen on a phone" loading="lazy"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="facts">
+    <div class="wrap grid">
+      <div class="fact"><b>9</b><span data-i18n="facts.a">lyric stages, from karaoke to calligraphy</span></div>
+      <div class="fact"><b>3</b><span data-i18n="facts.b">platforms: Windows, Android, iPhone</span></div>
+      <div class="fact"><b>0</b><span data-i18n="facts.c">ads. The code is public.</span></div>
+    </div>
+  </section>
+
+  <!-- 九种风格 -->
+  <section class="block" id="stages">
+    <div class="wrap">
+      <div class="head-row">
+        <div class="title">
+          <span class="eyebrow" data-i18n="stages.eyebrow">Lyric stages</span>
+          <h2 data-i18n-html="stages.title">Nine stages.<br>Pick your vibe.</h2>
+        </div>
+        <p data-i18n="stages.lead">Every style follows the song in real time. Hover a card to see it move.</p>
+      </div>
+      <div class="stages" id="stage-list"></div>
+    </div>
+  </section>
+
+  <!-- 功能 -->
+  <section class="block" id="features">
+    <div class="wrap features">
+      <div class="feature">
+        <div class="text">
+          <span class="eyebrow" data-i18n="daily.eyebrow">Daily Mix</span>
+          <h3 data-i18n="daily.title">A fresh mix every day, made from what you love.</h3>
+          <p data-i18n="daily.body">LyriStage learns from what you play and like, then builds a new playlist each morning. Personal FM keeps going when you just want something new.</p>
+        </div>
+        <div class="pic"><div class="shot"><img src="assets/shot-desktop.webp" alt="LyriStage home with Daily Mix and Personal FM" loading="lazy"></div></div>
+      </div>
+
+      <div class="feature rev">
+        <div class="text">
+          <span class="eyebrow" data-i18n="together.eyebrow">Listen Together</span>
+          <h3 data-i18n="together.title">Same line. Same second.</h3>
+          <p data-i18n="together.body">Open a room and send the six-letter code. Whatever the host plays, pauses or skips stays in sync for everyone, on any device.</p>
+        </div>
+        <div class="pic">
+          <div class="shot wide"><img src="assets/stage-karaoke.webp" alt="Karaoke stage playing in a Listen Together room" loading="lazy"></div>
+          <div class="chip"><span class="dot"></span><span data-i18n="together.room">Room</span> <code>7KQ3MZ</code> <span data-i18n="together.count">· 3 listening</span></div>
+          <div class="avatars" aria-hidden="true">
+            <span style="background:#ff3b5c">Y</span><span style="background:#7c5cff">M</span><span style="background:#16a34a">K</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="extras">
+        <div class="card"><b data-i18n="x1.t">Desktop lyrics</b><span data-i18n="x1.d">Lyrics float over your desktop while the app sits in the tray.</span></div>
+        <div class="card"><b data-i18n="x2.t">Lock-screen controls</b><span data-i18n="x2.d">Play, pause and skip from the Android lock screen and notification.</span></div>
+        <div class="card"><b data-i18n="x3.t">Your own library</b><span data-i18n="x3.d">Likes, playlists and history, synced between PC and phone.</span></div>
+        <div class="card"><b data-i18n="x4.t">中文 / English</b><span data-i18n="x4.d">Switch the whole app between Chinese and English, dark or light.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 下载 -->
+  <section class="block" id="download">
+    <div class="wrap">
+      <div class="center">
+        <h2 data-i18n="dl.title">Get LyriStage</h2>
+        <p data-i18n="dl.lead">Free on every platform. LyriStage is invite-only for now: anyone can look around, and playing music needs an account with an invite code from a member.</p>
+      </div>
+      <div class="platforms">
+        <div class="platform" data-os="windows">
+          <div class="top">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="#f4f4f5" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3V5.5Zm0 13 7.5 1.1v-7H3v5.9Zm8.4 1.2L21 21V12.6h-9.6v7.1Zm0-15.4v7.2H21V3l-9.6 1.3Z"/></svg>
+            <span class="yours" data-i18n="dl.yours" hidden>Your device</span>
+          </div>
+          <div><div class="name">Windows</div><div class="info" data-i18n="dl.win.info">Windows 10 / 11 · Installer · 127 MB</div></div>
+          <a class="get" data-link="exe" href="#" data-i18n="dl.win.get">Download .exe</a>
+          <small data-i18n="dl.win.note">Not code-signed yet. If SmartScreen warns you, choose More info → Run anyway.</small>
+        </div>
+        <div class="platform" data-os="android">
+          <div class="top">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="#3ddc84" aria-hidden="true"><path d="M17.6 9.48 19.4 6.4a.37.37 0 1 0-.65-.37l-1.83 3.17A11.3 11.3 0 0 0 12 8.2c-1.77 0-3.43.37-4.92 1L5.25 6.03a.37.37 0 1 0-.65.37l1.8 3.08A10.6 10.6 0 0 0 1 18h22a10.6 10.6 0 0 0-5.4-8.52ZM7 15.25a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm10 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>
+            <span class="yours" data-i18n="dl.yours" hidden>Your device</span>
+          </div>
+          <div><div class="name">Android</div><div class="info" data-i18n="dl.and.info">Android 7.0+ · APK · 14 MB</div></div>
+          <a class="get" data-link="apk" href="#" data-i18n="dl.and.get">Download APK</a>
+          <small data-i18n="dl.and.note">Allow your browser to install apps when your phone asks.</small>
+        </div>
+        <div class="platform" data-os="ios">
+          <div class="top">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="#f4f4f5" aria-hidden="true"><path d="M16.4 12.6c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.1 2.5-1.8 3.1-.5 7.6 1.3 10.1.8 1.2 1.8 2.6 3.1 2.5 1.3-.1 1.7-.8 3.2-.8s1.9.8 3.3.8c1.4 0 2.2-1.2 3-2.5 1-1.4 1.4-2.8 1.4-2.8s-2.6-1-2.6-4ZM14 5.2c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.6 2.8-1.4Z"/></svg>
+            <span class="yours" data-i18n="dl.yours" hidden>Your device</span>
+          </div>
+          <div><div class="name">iPhone</div><div class="info" data-i18n="dl.ios.info">Web app · works in Safari</div></div>
+          <a class="get" data-link="web" href="#" data-i18n="dl.ios.get">Open web app</a>
+          <small data-i18n="dl.ios.note">Tap Share → Add to Home Screen to use it like an app.</small>
+        </div>
+      </div>
+      <a class="all" data-link="releases" href="#" data-i18n="dl.all">All versions, release notes and checksums on GitHub</a>
+    </div>
+  </section>
+
+  <!-- 开源 -->
+  <section class="block" id="code" style="padding-top: 20px">
+    <div class="wrap">
+      <div class="oss">
+        <div class="text">
+          <span class="eyebrow" data-i18n="oss.eyebrow">Open source</span>
+          <h2 data-i18n="oss.title">Read every line of it.</h2>
+          <p data-i18n-html="oss.body">The code is MIT licensed. Browse it, report a bug, or fork it and build your own stage. Built on <a href="https://github.com/qier222/YesPlayMusic">YesPlayMusic</a> by qier222.</p>
+        </div>
+        <a class="repo" data-link="repo" href="#">
+          <span class="row">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
+            <span id="repo-name">JTing904/LyriStage</span>
+          </span>
+          <span class="muted" style="font-size: 15px">Vue 3 · Electron · Capacitor · Supabase</span>
+          <span class="stats"><span>MIT</span><span>v2.1.11</span><span id="stars" hidden></span></span>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="left">
+      <span class="brand" style="font-size: 20px"><span>Lyri<b>Stage</b></span></span>
+      <small data-i18n="foot.note">A personal project by JTing904. Not affiliated with NetEase Cloud Music.</small>
+    </div>
+    <div class="right">
+      <a href="privacy.html" data-i18n="foot.privacy">Privacy policy</a>
+      <a href="https://www.instagram.com/jtinnnng/">Instagram @jtinnnng</a>
+      <a href="https://github.com/JTing904">GitHub JTing904</a>
+    </div>
+  </div>
+</footer>
+
+<div class="dock"><a class="btn btn-primary" id="dock" href="#download"></a></div>
+
+<script>
+// ===== 要改下载位置，只改这里 =====
+const LINKS = {
+  exe: 'https://github.com/JTing904/LyriStage/releases/latest/download/LyriStage-Setup.exe',
+  apk: 'https://github.com/JTing904/LyriStage/releases/latest/download/LyriStage.apk',
+  web: 'https://lyristage.vercel.app',
+  releases: 'https://github.com/JTing904/LyriStage/releases/latest',
+  repo: 'https://github.com/JTing904/LyriStage',
+};
+const REPO_API = 'https://api.github.com/repos/JTing904/LyriStage';
+
+const STAGES = [
+  { id: 'perspective', en: ['3D Perspective', 'Sharp cover art behind tilted 3D lyrics, with falling petals'], zh: ['3D 透视', '清晰封面做背景，整列歌词立体倾斜，花瓣飘落'] },
+  { id: 'scroll', en: ['Scrolling', 'Word-by-word highlight over flowing cover colors'], zh: ['滚动歌词', '逐字点亮，背景是流动的封面色'] },
+  { id: 'karaoke', en: ['Karaoke', 'KTV-style alternating lines, filled in word by word'], zh: ['卡拉OK', 'KTV 双行交替，逐字填色'] },
+  { id: 'vertical', en: ['Vertical Poetry', 'Calligraphy on rice paper, right to left, with a red seal'], zh: ['竖排诗词', '宣纸书法，从右往左竖排，红色印章'] },
+  { id: 'mv', en: ['Music Video', 'Each phrase pops in with its own size, angle and color'], zh: ['动态 MV', '每段不同大小、角度和颜色，弹出来'] },
+  { id: 'vinyl', en: ['Vinyl', 'A spinning record and tonearm, with five lines alongside'], zh: ['黑胶唱片', '转动的黑胶和唱臂，旁边五行歌词'] },
+  { id: 'block', en: ['Color Block', "The cover's main color with big bold text"], zh: ['色块', '整片封面主色，大号粗体'] },
+  { id: 'typewriter', en: ['Typewriter', "A retro terminal that types each word as it's sung"], zh: ['打字机', '复古终端，跟着演唱一个字一个字打出来'] },
+  { id: 'kinetic', en: ['Big Line', 'One line at a time in huge distressed type'], zh: ['单行大字', '一次一句，超大做旧字体，一段一段浮现'], still: true },
+];
+
+const T = {
+  en: {
+    'nav.stages': 'Stages', 'nav.features': 'Features', 'nav.download': 'Download', 'nav.code': 'Open source',
+    'hero.badge': 'v2.1.11 is out · Free, no ads, open source',
+    'hero.title': 'Let the lyrics take the <em>stage.</em>',
+    'hero.lead': 'A music player built around the words. Nine animated lyric stages, a fresh mix every day, and rooms where friends hear the same line at the same second.',
+    'hero.other': 'All platforms', 'hero.mit': 'MIT licensed on GitHub',
+    'cta.windows': 'Download for Windows', 'cta.android': 'Download for Android', 'cta.ios': 'Open the web app', 'cta.other': 'Download LyriStage',
+    'meta.windows': 'Windows 10 / 11 · 127 MB', 'meta.android': 'Android 7.0+ · 14 MB', 'meta.ios': 'Add it to your Home Screen', 'meta.other': 'Windows · Android · iPhone',
+    'sound.on': 'Watch with sound', 'sound.off': 'Mute', 'sound.play': 'Play the trailer',
+    'facts.a': 'lyric stages, from karaoke to calligraphy', 'facts.b': 'platforms: Windows, Android, iPhone', 'facts.c': 'ads. The code is public.',
+    'stages.eyebrow': 'Lyric stages', 'stages.title': 'Nine stages.<br>Pick your vibe.',
+    'stages.lead': 'Every style follows the song in real time. Hover a card to see it move.',
+    'daily.eyebrow': 'Daily Mix', 'daily.title': 'A fresh mix every day, made from what you love.',
+    'daily.body': 'LyriStage learns from what you play and like, then builds a new playlist each morning. Personal FM keeps going when you just want something new.',
+    'together.eyebrow': 'Listen Together', 'together.title': 'Same line. Same second.',
+    'together.body': 'Open a room and send the six-letter code. Whatever the host plays, pauses or skips stays in sync for everyone, on any device.',
+    'together.room': 'Room', 'together.count': '· 3 listening',
+    'x1.t': 'Desktop lyrics', 'x1.d': 'Lyrics float over your desktop while the app sits in the tray.',
+    'x2.t': 'Lock-screen controls', 'x2.d': 'Play, pause and skip from the Android lock screen and notification.',
+    'x3.t': 'Your own library', 'x3.d': 'Likes, playlists and history, synced between PC and phone.',
+    'x4.t': '中文 / English', 'x4.d': 'Switch the whole app between Chinese and English, dark or light.',
+    'dl.title': 'Get LyriStage',
+    'dl.lead': 'Free on every platform. LyriStage is invite-only for now: anyone can look around, and playing music needs an account with an invite code from a member.',
+    'dl.yours': 'Your device',
+    'dl.win.info': 'Windows 10 / 11 · Installer · 127 MB', 'dl.win.get': 'Download .exe', 'dl.win.note': 'Not code-signed yet. If SmartScreen warns you, choose More info → Run anyway.',
+    'dl.and.info': 'Android 7.0+ · APK · 14 MB', 'dl.and.get': 'Download APK', 'dl.and.note': 'Allow your browser to install apps when your phone asks.',
+    'dl.ios.info': 'Web app · works in Safari', 'dl.ios.get': 'Open web app', 'dl.ios.note': 'Tap Share → Add to Home Screen to use it like an app.',
+    'dl.all': 'All versions, release notes and checksums on GitHub',
+    'oss.eyebrow': 'Open source', 'oss.title': 'Read every line of it.',
+    'oss.body': 'The code is MIT licensed. Browse it, report a bug, or fork it and build your own stage. Built on <a href="https://github.com/qier222/YesPlayMusic">YesPlayMusic</a> by qier222.',
+    'foot.note': 'A personal project by JTing904. Not affiliated with NetEase Cloud Music.', 'foot.privacy': 'Privacy policy',
+    'stars': '★ {n}',
+  },
+  zh: {
+    'nav.stages': '歌词风格', 'nav.features': '功能', 'nav.download': '下载', 'nav.code': '开源',
+    'hero.badge': 'v2.1.11 已发布 · 免费、无广告、开源',
+    'hero.title': '让歌词站上<em>舞台。</em>',
+    'hero.lead': '以歌词为主角的音乐播放器。九种会动的歌词舞台、每天一份新推荐，还能开房间和朋友同一秒听同一句。',
+    'hero.other': '其他平台', 'hero.mit': 'GitHub 开源（MIT）',
+    'cta.windows': '下载 Windows 版', 'cta.android': '下载 Android 版', 'cta.ios': '打开网页版', 'cta.other': '下载 LyriStage',
+    'meta.windows': 'Windows 10 / 11 · 127 MB', 'meta.android': 'Android 7.0+ · 14 MB', 'meta.ios': '可以添加到主屏幕', 'meta.other': 'Windows · Android · iPhone',
+    'sound.on': '开声音看', 'sound.off': '静音', 'sound.play': '播放宣传片',
+    'facts.a': '种歌词舞台，从卡拉OK到书法', 'facts.b': '个平台：Windows、Android、iPhone', 'facts.c': '广告，代码公开。',
+    'stages.eyebrow': '歌词风格', 'stages.title': '九种舞台，<br>挑你的感觉。',
+    'stages.lead': '每种风格都跟着歌曲实时变化。鼠标移到卡片上就会动起来。',
+    'daily.eyebrow': '每日推荐', 'daily.title': '每天一份新歌单，按你喜欢的挑。',
+    'daily.body': 'LyriStage 会从你听过、喜欢的歌学习口味，每天早上给你一份新歌单。只想听点新东西，就开私人 FM。',
+    'together.eyebrow': '一起听', 'together.title': '同一句，同一秒。',
+    'together.body': '开一个房间，把六位房间码发给朋友。房主播放、暂停、切歌，所有人都同步，不管用什么装置。',
+    'together.room': '房间', 'together.count': '· 3 人在听',
+    'x1.t': '桌面歌词', 'x1.d': 'App 缩到托盘时，歌词浮在桌面上。',
+    'x2.t': '锁屏控制', 'x2.d': '在 Android 锁屏和通知栏播放、暂停、切歌。',
+    'x3.t': '自己的音乐库', 'x3.d': '我喜欢、歌单、听歌记录，电脑和手机同步。',
+    'x4.t': '中文 / English', 'x4.d': '整个 App 中英切换，深色浅色随你。',
+    'dl.title': '下载 LyriStage',
+    'dl.lead': '所有平台都免费。目前是邀请制：谁都可以先逛逛，要听歌需要登录并输入成员给你的邀请码。',
+    'dl.yours': '你的装置',
+    'dl.win.info': 'Windows 10 / 11 · 安装包 · 127 MB', 'dl.win.get': '下载 .exe', 'dl.win.note': '还没有代码签名。出现"Windows 已保护你的电脑"时，点"更多信息 → 仍要运行"。',
+    'dl.and.info': 'Android 7.0+ · APK · 14 MB', 'dl.and.get': '下载 APK', 'dl.and.note': '手机问的时候，允许浏览器安装应用。',
+    'dl.ios.info': '网页版 · 用 Safari 打开', 'dl.ios.get': '打开网页版', 'dl.ios.note': '点"分享 → 添加到主屏幕"，用起来就像 App。',
+    'dl.all': '所有版本、更新说明和校验码都在 GitHub',
+    'oss.eyebrow': '开源', 'oss.title': '每一行代码都看得到。',
+    'oss.body': '代码采用 MIT 许可证。可以看、可以回报问题，也可以分支出去做你自己的舞台。基于 qier222 的 <a href="https://github.com/qier222/YesPlayMusic">YesPlayMusic</a>。',
+    'foot.note': 'JTing904 的个人项目，与网易云音乐无关。', 'foot.privacy': '隐私权政策',
+    'stars': '★ {n}',
+  },
+};
+
+// 链接
+document.querySelectorAll('[data-link]').forEach(a => { a.href = LINKS[a.dataset.link]; });
+
+// 系统判断 → 主按钮、底部下载条、"你的装置"
+const ua = navigator.userAgent;
+const OS = /Android/i.test(ua) ? 'android'
+  : (/iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) ? 'ios'
+  : /Windows/i.test(ua) ? 'windows' : 'other';
+const CTA_HREF = { windows: LINKS.exe, android: LINKS.apk, ios: LINKS.web, other: '#download' };
+const ICONS = {
+  windows: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5 10.5 4.4v7.1H3V5.5Zm0 13 7.5 1.1v-7H3v5.9Zm8.4 1.2L21 21V12.6h-9.6v7.1Zm0-15.4v7.2H21V3l-9.6 1.3Z"/></svg>',
+  android: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 9.48 19.4 6.4a.37.37 0 1 0-.65-.37l-1.83 3.17A11.3 11.3 0 0 0 12 8.2c-1.77 0-3.43.37-4.92 1L5.25 6.03a.37.37 0 1 0-.65.37l1.8 3.08A10.6 10.6 0 0 0 1 18h22a10.6 10.6 0 0 0-5.4-8.52ZM7 15.25a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm10 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>',
+  ios: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 12.6c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.1 2.5-1.8 3.1-.5 7.6 1.3 10.1.8 1.2 1.8 2.6 3.1 2.5 1.3-.1 1.7-.8 3.2-.8s1.9.8 3.3.8c1.4 0 2.2-1.2 3-2.5 1-1.4 1.4-2.8 1.4-2.8s-2.6-1-2.6-4ZM14 5.2c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.6 2.8-1.4Z"/></svg>',
+  other: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+};
+const cta = document.getElementById('cta');
+const dock = document.getElementById('dock');
+cta.href = CTA_HREF[OS];
+dock.href = CTA_HREF[OS];
+document.getElementById('cta-icon').innerHTML = ICONS[OS];
+const mine = document.querySelector(`.platform[data-os="${OS}"]`);
+if (mine) { mine.classList.add('mine'); mine.querySelector('.yours').hidden = false; mine.parentNode.prepend(mine); }
+
+// 九种风格卡片
+const list = document.getElementById('stage-list');
+STAGES.forEach(s => {
+  const fig = document.createElement('figure');
+  fig.className = 'stage';
+  fig.innerHTML = `<div class="media"><img src="assets/stage-${s.id}.webp" alt="" loading="lazy">` +
+    (s.still ? '' : `<video muted loop playsinline preload="none" src="assets/loop-${s.id}.mp4"></video>`) +
+    `</div><figcaption><b></b><span></span></figcaption>`;
+  list.appendChild(fig);
+  s.el = fig;
+});
+const canHover = matchMedia('(hover: hover)').matches;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function playCard(fig, on) {
+  const v = fig.querySelector('video');
+  if (!v || reduce) return;
+  if (on) { v.play().then(() => fig.classList.add('playing')).catch(() => {}); }
+  else { v.pause(); fig.classList.remove('playing'); }
+}
+STAGES.forEach(s => {
+  if (canHover) {
+    s.el.addEventListener('mouseenter', () => playCard(s.el, true));
+    s.el.addEventListener('mouseleave', () => playCard(s.el, false));
+  }
+});
+if (!canHover && 'IntersectionObserver' in window) {
+  const io = new IntersectionObserver(es => es.forEach(e => playCard(e.target, e.intersectionRatio > 0.6)), { threshold: [0, 0.6] });
+  STAGES.forEach(s => io.observe(s.el));
+}
+
+// 宣传片：静音自动播放；按钮开声音
+const video = document.getElementById('trailer');
+const soundBtn = document.getElementById('sound');
+const PLAY = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4v16l14-8z"/></svg>';
+const SPEAKER = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+const MUTED = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9 5 6M21 9l-5 6"/></svg>';
+if (!reduce) video.play().catch(() => {});
+function syncSound() {
+  const playing = !video.paused;
+  const key = !playing ? 'sound.play' : video.muted ? 'sound.on' : 'sound.off';
+  document.getElementById('sound-text').textContent = T[lang][key];
+  document.getElementById('sound-icon').innerHTML = !playing ? PLAY : video.muted ? SPEAKER : MUTED;
+}
+soundBtn.addEventListener('click', () => {
+  if (video.paused) { video.muted = false; video.currentTime = 0; video.play(); }
+  else if (video.muted) { video.muted = false; video.currentTime = 0; }
+  else { video.muted = true; }
+  syncSound();
+});
+['play', 'pause', 'volumechange'].forEach(ev => video.addEventListener(ev, syncSound));
+
+// GitHub 星星（仓库还没公开时就不显示）
+fetch(REPO_API).then(r => r.ok ? r.json() : null).then(d => {
+  if (!d || typeof d.stargazers_count !== 'number') return;
+  const el = document.getElementById('stars');
+  el.dataset.n = d.stargazers_count;
+  el.textContent = T[lang].stars.replace('{n}', d.stargazers_count);
+  el.hidden = false;
+}).catch(() => {});
+
+// 中英切换
+let lang = 'en';
+function setLang(l) {
+  lang = l;
+  document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en';
+  document.querySelectorAll('[data-i18n]').forEach(el => { const v = T[l][el.dataset.i18n]; if (v != null) el.textContent = v; });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { const v = T[l][el.dataset.i18nHtml]; if (v != null) el.innerHTML = v; });
+  document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === l)));
+  document.getElementById('cta-text').textContent = T[l]['cta.' + OS];
+  document.getElementById('cta-meta').textContent = T[l]['meta.' + OS];
+  dock.innerHTML = ICONS[OS] + '<span>' + T[l]['cta.' + OS] + '</span>';
+  STAGES.forEach(s => {
+    const [name, desc] = s[l];
+    s.el.querySelector('b').textContent = name;
+    s.el.querySelector('figcaption span').textContent = desc;
+    s.el.querySelector('img').alt = name;
+  });
+  const stars = document.getElementById('stars');
+  if (stars.dataset.n) stars.textContent = T[l].stars.replace('{n}', stars.dataset.n);
+  syncSound();
+  try { localStorage.setItem('lyristage-site-lang', l); } catch (e) {}
+}
+document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+let saved = null;
+try { saved = localStorage.getItem('lyristage-site-lang'); } catch (e) {}
+setLang(saved || ((navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en'));
+</script>
+</body>
+</html>

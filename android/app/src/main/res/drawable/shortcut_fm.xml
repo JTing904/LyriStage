@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 长按桌面图标的快捷选单：深色圆底（跟 App 图标一样）+ App 里同一套线条图标 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path android:fillColor="#FF1C1A17" android:pathData="M24,2a22,22 0 1,0 0.01,0z" />
+    <group android:translateX="12" android:translateY="12">
+        <path android:pathData="M12 11.5v1M8.5 8.5a5 5 0 0 0 0 7m7-7a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8m12.8-12.8a9 9 0 0 1 0 12.8" android:strokeColor="#FFF5EFE6" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    </group>
+</vector>
