@@ -80,6 +80,31 @@ function removeSelected() {
 // 列表换了（换页面、移除了歌）就清掉选择
 watch(() => props.tracks, stopSelecting);
 
+// 很长的列表（几百首）一次画完要一秒多，页面会卡一下才出来：先画前 40 首，其余接下来分批补上
+const FIRST_ROWS = 40;
+const MORE_ROWS = 120;
+const shownCount = ref(FIRST_ROWS);
+let fillFrame = 0;
+function fillRest() {
+  cancelAnimationFrame(fillFrame);
+  if (shownCount.value >= props.tracks.length) return;
+  fillFrame = requestAnimationFrame(() => {
+    shownCount.value += MORE_ROWS;
+    fillRest();
+  });
+}
+watch(
+  () => props.tracks,
+  (next, prev) => {
+    // 换了一张（第一首不一样）才从头分批画；同一张更新（例如先显示上次的、再换上最新的）就不要整个重画
+    if (!prev || next[0]?.id !== prev[0]?.id) shownCount.value = FIRST_ROWS;
+    fillRest();
+  },
+  { immediate: true }
+);
+onBeforeUnmount(() => cancelAnimationFrame(fillFrame));
+const shownTracks = computed(() => (shownCount.value >= props.tracks.length ? props.tracks : props.tracks.slice(0, shownCount.value)));
+
 function onRowClick(i) {
   if (selecting.value) toggleSelect(i);
   else play(i);
@@ -200,7 +225,7 @@ onBeforeUnmount(() => {
       <span class="time">{{ $t('时长') }}</span>
     </div>
     <div
-      v-for="(t, i) in tracks"
+      v-for="(t, i) in shownTracks"
       :key="`${t.id}-${i}`"
       class="track"
       :class="{ current: isCurrent(t), picked: selected.has(i), unavailable: isUnavailable(t), 'no-net': noNet(t) }"
