@@ -20,7 +20,7 @@ import {
 import { PersonalFM, SongRadio } from '@core/recommend';
 import { apiBase, isElectron, localApiHeaders, translateApiBase } from './platform';
 import { connectMediaSession } from './mediaSession';
-import { offlineLyrics, offlineSource, saveOffline, shouldSave } from './offline';
+import { connectOfflineDownloads, offlineLyrics, offlineSource } from './offline';
 
 configureSupabase({
   url: import.meta.env.VITE_SUPABASE_URL,
@@ -163,19 +163,11 @@ export const sharedSources = new Map();
  * - 电脑版：本机的 API 解灰
  * - 手机 App、网页版：Vercel 上的 API 解灰
  */
-/** 最近播的歌用了哪个链接（离线听歌存歌时用，不用再问一次） */
-const recentSources = new Map();
-
 async function resolveSource(track) {
   // 存在手机里的（离线听歌）：直接从手机播，不用网络
   const local = await offlineSource(track);
   if (local) return local;
-  const found = await resolveOnline(track);
-  if (found) {
-    recentSources.set(track.id, found);
-    if (recentSources.size > 30) recentSources.delete(recentSources.keys().next().value);
-  }
-  return found;
+  return resolveOnline(track);
 }
 
 async function resolveOnline(track) {
@@ -193,6 +185,15 @@ async function resolveOnline(track) {
   if (found?.bvid && found.bvid !== pick) saveBilibiliPick(track.id, found.bvid);
   return found ?? shared ?? null;
 }
+
+// 离线听歌：用户按「存到手机」的歌排队下载（offline.js），用跟播放一样的方法找链接；歌词一起存
+connectOfflineDownloads({
+  resolveOnline,
+  rawLyrics: async track => {
+    await getLyrics(track).catch(() => null);
+    return (await lyricCache.get(`lyric:v2:${track.id}`).catch(() => null)) ?? null;
+  },
+});
 
 const audio = createHtmlAudio();
 export const player = createPlayer({ audio, resolveSource });
@@ -245,14 +246,6 @@ if (import.meta.hot) {
 
 // 听完一首（或切歌）时写进听歌记录；没登录 LyriStage 账号就不记
 player.on('played', async ({ track, listenedSeconds, context }) => {
-  // 离线听歌：听够久了就在背景存进手机（连歌词一起）
-  const source = recentSources.get(track.id);
-  if (source && shouldSave(track, listenedSeconds)) {
-    lyricCache
-      .get(`lyric:v2:${track.id}`)
-      .catch(() => null)
-      .then(raw => saveOffline(track, source, raw ?? null));
-  }
   try {
     if (await getCurrentUser()) {
       await recordPlay(track, { listenedSeconds, context });

@@ -2,7 +2,8 @@
 // 歌曲列表（歌单、专辑、歌手热门、每日推荐、搜索结果共用）：
 // 点一首就从这首开始播放整个列表；正在播放的那首标红。
 // 每首右边：红心、加到歌单（自己的歌单里还有「移除」）。
-// 「多选」：勾选好几首，一次加到歌单 / 从歌单移除
+// 「多选」：勾选好几首，一次加到歌单 / 从歌单移除 / 存到手机
+// 手机 App：存在手机的歌，歌手前面有绿色小箭头（排队中是灰色）
 // 在网易云已经下架的歌变灰、标「已下架」（还是可以点，播不了会提示去搜其他版本）
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { isUnavailable } from '@core/netease';
@@ -14,6 +15,7 @@ import { usePlayer } from '../composables/usePlayer';
 import { useRoomLocked } from '../composables/useRoomLock';
 import { useLibraryStore } from '../stores/library';
 import { createSongRadio } from '../services';
+import { cancelOffline, isOffline, isQueued, offlineSupported, removeOffline, requestOffline, waitingForWifi } from '../offline';
 import LikeButton from './LikeButton.vue';
 import { artistNames, clock } from '../utils/format';
 import Cover from './Cover.vue';
@@ -64,6 +66,12 @@ function stopSelecting() {
 function addSelected() {
   if (selectedTracks.value.length) library.openAddDialog(selectedTracks.value);
 }
+function saveSelected() {
+  if (!selectedTracks.value.length) return;
+  requestOffline(selectedTracks.value);
+  notice.show(waitingForWifi() ? tr('连上 Wi-Fi 后开始存到手机') : tr('开始存到手机'));
+  stopSelecting();
+}
 function removeSelected() {
   if (!selectedTracks.value.length) return;
   emit('remove', selectedTracks.value);
@@ -97,7 +105,7 @@ const menu = ref(null);
 function openMenu(event, track) {
   const r = event.currentTarget.getBoundingClientRect();
   // 菜单宽 200、每项约 50 高：靠右对齐按钮，下面放不下就往上开
-  const height = (4 + (room.role === 'guest' ? 1 : 0) + (props.removable ? 1 : 0)) * 50 + 10;
+  const height = (4 + (room.role === 'guest' ? 1 : 0) + (props.removable ? 1 : 0) + (offlineSupported ? 1 : 0)) * 50 + 10;
   const x = Math.max(8, Math.min(r.right - 200, window.innerWidth - 208));
   const y = r.bottom + height + 6 > window.innerHeight ? r.top - height : r.bottom + 4;
   menu.value = { track, x, y };
@@ -119,6 +127,16 @@ async function menuAction(action) {
     if (allowed) notice.show(tr('已加入播放队列：{name}', { name: track.name }));
   } else if (action === 'remove') {
     emit('remove', [track]);
+  } else if (action === 'offline') {
+    if (isOffline(track.id)) {
+      await removeOffline(track.id);
+      notice.show(tr('已从手机删除《{name}》', { name: track.name }));
+    } else if (isQueued(track.id)) {
+      cancelOffline([track.id]);
+    } else {
+      requestOffline([track]);
+      notice.show(waitingForWifi() ? tr('连上 Wi-Fi 后开始存到手机') : tr('开始存《{name}》到手机', { name: track.name }));
+    }
   } else if (action === 'radio') {
     player.playFm(createSongRadio(track), { context: `radio:${track.id}` });
     if (allowed) notice.show(tr('开始《{name}》的电台：接下来是相似的歌', { name: track.name }));
@@ -149,6 +167,9 @@ onBeforeUnmount(() => {
         <span class="grow" />
         <button class="tool primary" :disabled="!selected.size" @click="addSelected">
           <Icon name="plus" :size="16" />{{ $t('加到歌单') }}
+        </button>
+        <button v-if="offlineSupported" class="tool" :disabled="!selected.size" @click="saveSelected">
+          <Icon name="offline" :size="15" />{{ $t('存到手机') }}
         </button>
         <button v-if="removable" class="tool" :disabled="!selected.size" @click="removeSelected">
           <Icon name="trash" :size="15" />{{ $t('移除') }}
@@ -195,6 +216,15 @@ onBeforeUnmount(() => {
             {{ t.name }}
           </button>
           <span class="artists">
+            <!-- 存在手机里（离线也能听）：绿色小箭头；排队等着存：灰色圈 -->
+            <span
+              v-if="offlineSupported && (isOffline(t.id) || isQueued(t.id))"
+              class="saved-mark"
+              :class="{ waiting: !isOffline(t.id) }"
+              :title="isOffline(t.id) ? $t('已存到手机') : $t('等着存到手机')"
+            >
+              <Icon name="offline" :size="10" />
+            </span>
             <!-- 按了说明是什么意思（手机没有滑鼠提示） -->
             <button
               v-if="isUnavailable(t)"
@@ -275,6 +305,11 @@ onBeforeUnmount(() => {
         <button role="menuitem" @click="menuAction('playlist')">
           <Icon name="plus" :size="18" />{{ $t('加到歌单') }}
         </button>
+        <button v-if="offlineSupported" role="menuitem" @click="menuAction('offline')">
+          <Icon :name="isOffline(menu.track.id) ? 'trash' : 'offline'" :size="18" />{{
+            isOffline(menu.track.id) ? $t('从手机删除') : isQueued(menu.track.id) ? $t('不存了') : $t('存到手机')
+          }}
+        </button>
         <button v-if="removable" role="menuitem" class="danger menu-remove" @click="menuAction('remove')">
           <Icon name="trash" :size="18" />{{ $t('从歌单移除') }}
         </button>
@@ -284,6 +319,24 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* 存在手机里的小箭头（参考 Spotify：绿色实心 = 存好了，灰色圈 = 排队中） */
+.saved-mark {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: #16a34a;
+  color: #fff;
+  vertical-align: -2px;
+}
+.saved-mark.waiting {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--text-faint);
+  color: var(--text-faint);
+}
 /* 共同歌单：谁加的 */
 .added-by {
   display: inline-flex;

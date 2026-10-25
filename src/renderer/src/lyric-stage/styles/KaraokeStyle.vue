@@ -96,10 +96,10 @@ const progressOf = (line, word) =>
   color: rgba(255, 255, 255, 0.75);
 }
 
-/* 矮的画面（手机横屏、一起听的房间）：上面的歌名会撞到从下面排上来的歌词，
-   不显示（播放条上有歌名） */
+/* 一起听房间里矮的歌词框（手机横屏）：上面的歌名会撞到从下面排上来的歌词，
+   不显示（播放条上有歌名）。全屏歌词照常显示 */
 @container (max-height: 520px) {
-  .title {
+  .stage.embedded .title {
     display: none;
   }
 }

@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.Window;
 import android.view.WindowManager;
 import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -30,6 +31,10 @@ public class MainActivity extends BridgeActivity {
         WindowCompat.setDecorFitsSystemWindows(window, false);
         window.setStatusBarColor(Color.TRANSPARENT);
         window.setNavigationBarColor(Color.TRANSPARENT);
+        // 手机横屏看歌词时会藏起状态栏、导航列（SystemBars.hide）：滑出来看一下、拉下通知栏再收回去后，
+        // 要自己再藏回去（系统默认是滑出来就一直留着）
+        WindowCompat.getInsetsController(window, window.getDecorView())
+            .setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         // 横屏时画面也铺到摄像头（挖孔）那一边，不然那边会空一条黑边
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             WindowManager.LayoutParams attrs = window.getAttributes();

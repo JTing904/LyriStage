@@ -846,7 +846,7 @@ async function main() {
         if (p.mock) await page.evaluate(p.mock);
         if (p.styleIndex !== undefined) {
           // 换歌词风格：打开歌词框（房间的或全屏的）的风格面板，按第几个（按了面板会自己关）
-          const stage = p.room ? '.stage-panel .stage' : '.stage';
+          const stage = p.room ? '.stage-panel .stage' : '.stage:not(.embedded)';
           await page.evaluate(`${HELPERS}; click('${stage} .topbar .pill[aria-expanded]')`);
           await sleep(500);
           await page.evaluate(([sel, i]) => [...document.querySelectorAll(`${sel} .picker .option`)][i]?.click(), [stage, p.styleIndex]);

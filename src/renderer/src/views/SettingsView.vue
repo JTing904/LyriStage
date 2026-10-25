@@ -32,7 +32,7 @@ import EqualizerPanel from '../components/EqualizerPanel.vue';
 import { pinWidget } from '../widget';
 import { isLockScreenLyricsOn, setLockScreenLyrics } from '../mediaSession';
 import { pushSupported, pushWanted, setPushWanted } from '../push';
-import { OFFLINE_LIMITS, offlineBytes, offlineSettings, offlineSupported, offlineTracks, saveOfflineSettings } from '../offline';
+import { offlineBytes, offlineSettings, offlineSupported, offlineTracks, saveOfflineSettings } from '../offline';
 import { t, locale, LOCALES } from '../i18n';
 import { timeAgo } from '../utils/format';
 import { showError, humanMessage } from '../friendlyError';
@@ -700,48 +700,22 @@ function summary(id) {
             </div>
           </div>
 
-          <!-- 离线听歌（手机 App）：听过的歌存在手机里 -->
+          <!-- 离线听歌（手机 App）：自己按「存到手机」的歌存在手机里 -->
           <template v-if="offlineSupported">
             <h3 class="section-label">{{ $t('离线听歌') }}</h3>
             <div class="card">
               <div class="row">
                 <span class="label">
-                  {{ $t('把听过的歌存在手机') }}
-                  <small>{{ $t('没网络也能听') }}</small>
+                  {{ $t('只用 Wi-Fi 下载') }}
+                  <small>{{ $t('用行动数据时先排队') }}</small>
                 </span>
                 <input
-                  :checked="offlineSettings.enabled"
+                  :checked="!offlineSettings.cellular"
                   type="checkbox"
                   role="switch"
                   class="switch"
-                  @change="saveOfflineSettings({ enabled: $event.target.checked })"
+                  @change="saveOfflineSettings({ cellular: !$event.target.checked })"
                 />
-              </div>
-              <div class="row">
-                <span class="label">{{ $t('用行动数据时也存') }}</span>
-                <input
-                  :checked="offlineSettings.cellular"
-                  type="checkbox"
-                  role="switch"
-                  class="switch"
-                  :disabled="!offlineSettings.enabled"
-                  @change="saveOfflineSettings({ cellular: $event.target.checked })"
-                />
-              </div>
-              <div class="row">
-                <span class="label">{{ $t('最多用多少空间') }}</span>
-                <div class="segmented" role="radiogroup" :aria-label="$t('最多用多少空间')">
-                  <button
-                    v-for="mb in OFFLINE_LIMITS"
-                    :key="mb"
-                    role="radio"
-                    :aria-checked="offlineSettings.limitMb === mb"
-                    :class="{ on: offlineSettings.limitMb === mb }"
-                    @click="saveOfflineSettings({ limitMb: mb })"
-                  >
-                    {{ mb >= 1024 ? `${mb / 1024} GB` : `${mb} MB` }}
-                  </button>
-                </div>
               </div>
               <RouterLink to="/offline" class="row link-row">
                 <span class="label">

@@ -8,6 +8,7 @@ import { usePlayCollection } from '../composables/usePlayCollection';
 import { artistNames, totalLength, year } from '../utils/format';
 import { t } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
+import OfflineButton from '../components/OfflineButton.vue';
 import TrackList from '../components/TrackList.vue';
 import LoadError from '../components/LoadError.vue';
 
@@ -71,10 +72,11 @@ const meta = computed(() => {
         @play="playAll(tracks, context)"
         @shuffle="shuffleAll(tracks, context)"
       >
-        <template v-if="album.artist?.id" #actions>
-          <RouterLink :to="`/artist/${album.artist.id}`" custom v-slot="{ navigate }">
+        <template #actions>
+          <RouterLink v-if="album.artist?.id" :to="`/artist/${album.artist.id}`" custom v-slot="{ navigate }">
             <button @click="navigate">{{ $t('歌手：{name}', { name: album.artist.name }) }}</button>
           </RouterLink>
+          <OfflineButton :tracks="tracks" />
         </template>
       </CollectionHeader>
       <TrackList :tracks="tracks" :context="context" :show-cover="false" :show-album="false" />

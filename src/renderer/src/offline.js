@@ -1,8 +1,9 @@
-// 离线听歌（手机 App）：听过的歌存在手机里，下次直接从手机播——秒开、省流量、没网络也能听
-// - 什么时候存：一首歌听了 30 秒以上（短歌听一半），在背景下载一次；默认只在 Wi-Fi 时存（不重复花行动数据）
+// 离线听歌（手机 App）：自己选的歌存在手机里，下次直接从手机播——秒开、省流量、没网络也能听
+// - 什么时候存：用户按「存到手机」（整张歌单、单首）才存，不会自动存；先排队，一首一首下载。
+//   默认只用 Wi-Fi 下载：用行动网络时先排着，连上 Wi-Fi 再接着存（关掉 App 也记得）
 // - 存在哪：App 自己的资料夹（offline/<歌曲 id>.<副档名>），歌词另外存一个 .lyrics.json，没网络也看得到歌词
 // - 播放时：播放器找链接前先问这里，有存就用手机里的档案（services.js 的 resolveSource）
-// - 空间：有上限（默认 1 GB），满了就删最久没听的
+// - 不会自动删：用户自己选的，只有用户自己删
 // - 只是缓存，不是「下载」：档案只有 LyriStage 自己读得到
 // 电脑版、网页版没有这个功能
 import { computed, reactive, ref } from 'vue';
@@ -14,11 +15,8 @@ export const offlineSupported = isNativeApp;
 
 const INDEX_KEY = 'lyristage:offline';
 const SETTINGS_KEY = 'lyristage:offline-settings';
+const QUEUE_KEY = 'lyristage:offline-queue';
 const DIR = 'offline';
-/** 听多久才存（秒）；短歌听一半就存 */
-const MIN_LISTEN_SECONDS = 30;
-/** 可以选的空间上限（MB） */
-export const OFFLINE_LIMITS = [500, 1024, 2048, 5120];
 
 function read(key, fallback) {
   try {
@@ -35,12 +33,12 @@ function write(key, value) {
   }
 }
 
-/** 设置：要不要存、行动网络也存、上限 */
-export const offlineSettings = reactive({ enabled: true, cellular: false, limitMb: 1024, ...read(SETTINGS_KEY, {}) });
+/** 设置：行动网络也下载（默认不要：只用 Wi-Fi） */
+export const offlineSettings = reactive({ cellular: false, ...read(SETTINGS_KEY, {}) });
 export function saveOfflineSettings(patch) {
   Object.assign(offlineSettings, patch);
-  write(SETTINGS_KEY, { ...offlineSettings });
-  if (patch.limitMb) trim().catch(() => {});
+  write(SETTINGS_KEY, { cellular: offlineSettings.cellular });
+  work();
 }
 
 /**
@@ -105,18 +103,70 @@ export async function offlineLyrics(id) {
   }
 }
 
-/** 现在可以存吗：开着、而且不是用行动网络（除非设置允许） */
+/** 现在可以下载吗：有网络，而且不是用行动网络（除非设置允许） */
 function allowedNow() {
-  if (!isNativeApp || !offlineSettings.enabled || !navigator.onLine) return false;
+  if (!isNativeApp || !navigator.onLine) return false;
   const type = navigator.connection?.type;
   return offlineSettings.cellular || type !== 'cellular';
 }
+/** 用行动网络、设置只用 Wi-Fi：排队的歌要等连上 Wi-Fi */
+export const waitingForWifi = () => isNativeApp && navigator.onLine && !allowedNow();
 
-/** 听够久了就存（services.js 在 played 事件叫） */
-export function shouldSave(track, listenedSeconds) {
-  if (!track?.id || index[track.id]) return false;
-  const enough = Math.min(MIN_LISTEN_SECONDS, (track.dt || 0) / 2000 || MIN_LISTEN_SECONDS);
-  return listenedSeconds >= enough && allowedNow();
+// ---- 排队下载 ----
+/** 等着存的歌（歌曲快照，最先按的在前）；关掉 App 也记得，下次打开接着存 */
+const queue = ref(read(QUEUE_KEY, []));
+const persistQueue = () => write(QUEUE_KEY, queue.value);
+/** 排队中的歌 id（界面显示灰色圈） */
+export const queuedIds = computed(() => new Set(queue.value.map(t => String(t.id))));
+export const isQueued = id => queuedIds.value.has(String(id)) || saving.value.has(id);
+
+/** services.js 给：找播放链接（不问手机里的）、拿原始歌词 */
+let deps = null;
+export function connectOfflineDownloads(options) {
+  deps = options;
+  work();
+}
+
+/** 按了「存到手机」：没存过、没在排队的放进队列 */
+export function requestOffline(tracks) {
+  if (!isNativeApp) return;
+  const adding = tracks.filter(t => t?.id && !index[t.id] && !isQueued(t.id)).map(toSnapshot);
+  if (!adding.length) return;
+  queue.value = [...queue.value, ...adding];
+  persistQueue();
+  work();
+}
+/** 不存了：从队列拿掉（正在下载的那首会下载完） */
+export function cancelOffline(ids) {
+  const drop = new Set(ids.map(String));
+  queue.value = queue.value.filter(t => !drop.has(String(t.id)));
+  persistQueue();
+}
+
+let working = false;
+async function work() {
+  if (working || !deps) return;
+  working = true;
+  try {
+    while (queue.value.length && allowedNow()) {
+      const track = queue.value[0];
+      try {
+        const source = await deps.resolveOnline(track);
+        if (source) await saveOffline(track, source, await deps.rawLyrics(track).catch(() => null));
+      } catch (err) {
+        console.warn('[LyriStage] 存进手机失败', track.id, err?.message ?? err);
+      }
+      // 存不了的（没有音源、下载失败）也拿掉，不要一直重试；用户可以再按一次
+      queue.value = queue.value.filter(t => String(t.id) !== String(track.id));
+      persistQueue();
+    }
+  } finally {
+    working = false;
+  }
+}
+if (isNativeApp) {
+  window.addEventListener('online', () => work());
+  navigator.connection?.addEventListener?.('change', () => work());
 }
 
 const extensionOf = url => {
@@ -154,7 +204,6 @@ export async function saveOffline(track, source, lyrics) {
     }
     index[track.id] = { file, lyricsFile, size, savedAt: Date.now(), lastPlayed: Date.now(), br: source.br, track: toSnapshot(track) };
     persist();
-    await trim();
   } catch (err) {
     await Filesystem.deleteFile({ path: file, directory: Directory.Data }).catch(() => {});
     console.warn('[LyriStage] 存进手机失败', track.id, err?.message ?? err);
@@ -176,20 +225,9 @@ export async function removeOffline(id) {
   if (entry.lyricsFile) await Filesystem.deleteFile({ path: entry.lyricsFile, directory: Directory.Data }).catch(() => {});
 }
 
-/** 超过上限：删最久没听的，直到放得下 */
-async function trim() {
-  const limit = offlineSettings.limitMb * 1024 * 1024;
-  const oldest = Object.entries(index).sort(([, a], [, b]) => a.lastPlayed - b.lastPlayed);
-  let total = offlineBytes.value;
-  for (const [id, entry] of oldest) {
-    if (total <= limit) break;
-    total -= entry.size || 0;
-    await removeOffline(id);
-  }
-}
-
-/** 全部清掉 */
+/** 全部清掉（排队的也不存了） */
 export async function clearOffline() {
+  cancelOffline(queue.value.map(t => t.id));
   for (const id of Object.keys(index)) await removeOffline(id);
   if (!isNativeApp) return;
   const { Filesystem, Directory } = await plugins();

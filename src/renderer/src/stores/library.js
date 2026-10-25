@@ -31,14 +31,26 @@ export const useLibraryStore = defineStore('library', () => {
   const playlists = ref([]);
   /** 喜欢 / 歌单有变动时加一，页面用来知道要重新载入 */
   const version = ref(0);
+  /** 只有「别的设备改过」（回到 App 重新拿时发现不一样）才加一：打开着的歌单页、我喜欢页用来重新载入 */
+  const synced = ref(0);
   /** 提示一句话（画面下方显示一下） */
   const say = message => useNoticeStore().show(message);
 
+  let loadedAt = 0;
   async function load() {
+    const reloading = loadedAt > 0;
+    loadedAt = Date.now();
     try {
       const [ids, lists] = await Promise.all([listLikedTrackIds(), listPlaylists()]);
+      // 别的设备改过（重新拿的时候）：通知页面重新载入
+      const changed =
+        reloading && (ids.join() !== likedIds.value.join() || JSON.stringify(lists) !== JSON.stringify(playlists.value));
       likedIds.value = ids;
       playlists.value = lists;
+      if (changed) {
+        version.value++;
+        synced.value++;
+      }
     } catch (err) {
       console.warn('[LyriStage] 音乐库载入失败', err);
       // 多半是断网：网络恢复后再载入一次
@@ -56,6 +68,12 @@ export const useLibraryStore = defineStore('library', () => {
     },
     { immediate: true }
   );
+  // 在别的设备按了红心、改了歌单：回到 App（手机切回来、电脑窗口被点到）时重新拿，最多 30 秒一次
+  const refreshIfStale = () => {
+    if (auth.allowed && document.visibilityState === 'visible' && Date.now() - loadedAt > 30_000) load();
+  };
+  document.addEventListener('visibilitychange', refreshIfStale);
+  window.addEventListener('focus', refreshIfStale);
 
   // ---- 喜欢 ----
   const isLiked = id => likedSet.value.has(Number(id));
@@ -178,6 +196,7 @@ export const useLibraryStore = defineStore('library', () => {
     likedIds,
     playlists,
     version,
+    synced,
     say,
     load,
     isLiked,

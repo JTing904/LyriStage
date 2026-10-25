@@ -55,6 +55,31 @@ export async function listRecentHistory({ days = 30, limit = 1000 } = {}) {
 }
 
 /**
+ * 最近听过的歌（首页「继续播放」：每台设备看到的都一样）。同一首只留最新那次
+ * @param {number} limit
+ */
+export async function listRecentTracks(limit = 20) {
+  const rows = unwrap(
+    await requireSupabase()
+      .from('play_history')
+      .select('source, track_id, track, played_at')
+      .order('played_at', { ascending: false })
+      // 常常重复听同一首：多拿一些，去掉重复后才够
+      .limit(limit * 5)
+  );
+  const seen = new Set();
+  const tracks = [];
+  for (const row of rows) {
+    const key = `${row.source}:${row.track_id}`;
+    if (seen.has(key) || !row.track) continue;
+    seen.add(key);
+    tracks.push(fromRow(row));
+    if (tracks.length >= limit) break;
+  }
+  return tracks;
+}
+
+/**
  * 一段时间里的全部听歌记录（听歌报告用）。数据库一次最多给 1000 行，所以分页拿
  * @param {Date} from
  * @param {Date} to

@@ -1,8 +1,8 @@
 <script setup>
-// 存在手机里的歌（离线听歌）：没网络也能播；可以全部清掉
+// 存在手机里的歌（离线听歌）：自己按「存到手机」的歌，没网络也能播；可以一首首删或全部删掉
 import { computed, ref } from 'vue';
 import { usePlayCollection } from '../composables/usePlayCollection';
-import { offlineBytes, offlineSettings, offlineSupported, offlineTracks, clearOffline } from '../offline';
+import { offlineBytes, offlineSupported, offlineTracks, clearOffline, queuedIds } from '../offline';
 import { totalLength } from '../utils/format';
 import { t } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
@@ -14,12 +14,11 @@ const { playAll, shuffleAll } = usePlayCollection();
 const mb = bytes => Math.round(bytes / 1024 / 1024);
 const meta = computed(() =>
   offlineTracks.value.length
-    ? `${t('{n} 首', { n: offlineTracks.value.length })} · ${totalLength(offlineTracks.value)} · ${t('{used} / {limit} MB', {
-        used: mb(offlineBytes.value),
-        limit: offlineSettings.limitMb,
-      })}`
+    ? `${t('{n} 首', { n: offlineTracks.value.length })} · ${totalLength(offlineTracks.value)} · ${mb(offlineBytes.value)} MB`
     : ''
 );
+/** 还有几首排队等着存 */
+const waiting = computed(() => queuedIds.value.size);
 
 const confirmClear = ref(null);
 async function clearAll() {
@@ -39,8 +38,10 @@ async function clearAll() {
       @shuffle="shuffleAll(offlineTracks, 'offline')"
     />
     <p v-if="!offlineSupported" class="page-state">{{ $t('只有手机 App 有离线听歌') }}</p>
+    <p v-if="offlineSupported && waiting" class="waiting">{{ $t('还有 {n} 首等着存', { n: waiting }) }}</p>
+    <p v-if="!offlineSupported" class="page-state">{{ $t('只有手机 App 有离线听歌') }}</p>
     <p v-else-if="!offlineTracks.length" class="page-state">
-      {{ offlineSettings.cellular ? $t('听超过 30 秒的歌会自动存进来。') : $t('连着 Wi-Fi 时，听超过 30 秒的歌会自动存进来。') }}
+      {{ $t('在歌单页按「存到手机」，或在歌曲的 ⋯ 按「存到手机」，歌就会存在这里。') }}
     </p>
     <template v-else>
       <TrackList :tracks="offlineTracks" context="offline" />
@@ -51,13 +52,18 @@ async function clearAll() {
     <ConfirmSheet
       ref="confirmClear"
       :title="$t('把存在手机里的歌全部删掉？')"
-      :text="$t('之后听到的歌会再存进来。')"
+      :text="$t('删掉后，没网络时就不能听这些歌了')"
       :confirm-label="$t('全部删掉')"
     />
   </div>
 </template>
 
 <style scoped>
+.waiting {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-dim);
+}
 .foot {
   display: flex;
   justify-content: center;

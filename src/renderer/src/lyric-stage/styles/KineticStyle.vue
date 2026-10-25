@@ -201,19 +201,19 @@ const particles = Array.from({ length: 18 }, (_, i) => ({
   text-align: center;
   transition: opacity 0.8s;
 }
-/* 矮的画面（手机横屏、一起听的房间）：歌词只在下面那行「《歌名》歌手」以上的区域置中，
-   不然会叠在一起 */
+/* 一起听房间里矮的歌词框（手机横屏）：歌词只在下面那行「《歌名》歌手」以上的区域置中，不然会叠在一起。
+   全屏歌词不用（照整个画面置中，跟以前一样） */
 @container (max-height: 520px) {
-  .center {
+  .stage.embedded .center {
     bottom: calc(var(--controls-space, 170px) + 30px);
   }
 }
 /* 非常矮（房间上面多了一条「有人想加入」）：下面那行跟歌名重复，不显示，让歌词用整个框 */
 @container (max-height: 320px) {
-  .credit {
+  .stage.embedded .credit {
     display: none;
   }
-  .center {
+  .stage.embedded .center {
     bottom: var(--controls-space, 170px);
   }
 }

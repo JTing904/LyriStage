@@ -12,6 +12,7 @@ import { usePlayCollection } from '../composables/usePlayCollection';
 import { totalLength } from '../utils/format';
 import { t } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
+import OfflineButton from '../components/OfflineButton.vue';
 import Icon from '../components/Icon.vue';
 import TrackList from '../components/TrackList.vue';
 import SongPicker from '../components/SongPicker.vue';
@@ -37,7 +38,8 @@ const error = ref('');
 let loadCount = 0;
 async function load(id) {
   const thisLoad = ++loadCount;
-  loading.value = true;
+  // 同一张歌单重新拿（别的设备改过）：照样显示，不要整页闪成载入中
+  loading.value = String(playlist.value?.id) !== String(id);
   error.value = '';
   try {
     const data = await getPlaylist(id);
@@ -57,6 +59,8 @@ async function load(id) {
   }
 }
 watch(() => route.params.id, id => id && load(id), { immediate: true });
+// 在别的设备改了这张歌单：回到 App 时重新载入
+watch(() => library.synced, () => route.params.id && load(route.params.id));
 onPullRefresh(() => load(route.params.id));
 
 const tracks = computed(() => playlist.value?.tracks ?? []);
@@ -348,6 +352,7 @@ async function removePlaylist() {
           <button class="icon-action" :aria-label="$t('添加歌曲')" @click="picker.open()">
             <Icon name="plus" :size="18" /><span class="label">{{ $t('添加歌曲') }}</span>
           </button>
+          <OfflineButton :tracks="tracks" />
           <button
             class="icon-action"
             :aria-label="isShared ? $t('一起编辑的人') : $t('邀请一起编辑')"
