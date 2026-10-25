@@ -208,6 +208,16 @@ connectOfflineDownloads({
 });
 
 const audio = createHtmlAudio();
+// 一起听的音量（RoomVolumeSheet）：真正播出来的大小 = 播放器的音量 × 房间里的音乐大小 × 有人讲话时的比例。
+// 播放器设音量时也经过这里，房间的设定才不会被盖掉
+const mix = { room: 1, duck: 0.35, ducked: false };
+let baseVolume = 1;
+const setRawVolume = audio.setVolume.bind(audio);
+const applyVolume = () => setRawVolume(baseVolume * mix.room * (mix.ducked ? mix.duck : 1));
+audio.setVolume = volume => {
+  baseVolume = volume;
+  applyVolume();
+};
 export const player = createPlayer({
   audio,
   resolveSource,
@@ -222,8 +232,18 @@ export const audioEffects = createAudioEffects(audio);
  * @param {boolean} on
  */
 export function duckMusic(on) {
-  const volume = player.getState().volume;
-  audio.setVolume(on ? volume * 0.35 : volume);
+  mix.ducked = on;
+  applyVolume();
+}
+
+/**
+ * 一起听房间里的音乐大小、有人讲话时变多小（0~1）；离开房间时设回 { music: 1 }
+ * @param {{ music?: number, duck?: number }} options
+ */
+export function setRoomMix({ music, duck }) {
+  if (music !== undefined) mix.room = Math.min(1, Math.max(0, music));
+  if (duck !== undefined) mix.duck = Math.min(1, Math.max(0, duck));
+  applyVolume();
 }
 
 /**

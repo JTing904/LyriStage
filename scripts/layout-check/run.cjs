@@ -254,6 +254,27 @@ const PAGES = [
     close: () => click('.stage .topbar .pill[aria-expanded="true"]'),
     fits: [['.stage-panel .picker', '.stage-panel']],
   },
+  // 语音中：上面那条多一个「房间音量」按钮；按了是音量面板（假装在语音里，不真的开麦克风）
+  {
+    id: 'room-volume',
+    hash: '#/room',
+    room: true,
+    mock: MOCK_MEMBERS,
+    open: () => {
+      STORE('voice').status = 'on';
+      // 平板、电脑：上面那条的按钮；手机：收在「⋯」里
+      setTimeout(() => {
+        if (click('.volume-btn')) return;
+        click('.more-wrap .round-btn');
+        setTimeout(() => [...document.querySelectorAll('.more-wrap .menu button')].find(b => /房间音量|Room volume/.test(b.textContent))?.click(), 300);
+      }, 400);
+    },
+    close: () => {
+      document.querySelector('dialog.room-volume')?.close();
+      STORE('voice').status = 'off';
+    },
+    fits: [['dialog.room-volume[open]', 'viewport']],
+  },
   // 房间里人多：上面那条（房间码、语音、头像）不能挤扁或叠在一起
   { id: 'room-many', hash: '#/room', room: true, mock: MOCK_MEMBERS },
   // 房主按「关闭房间」：先确认；可以先交给别人当房主

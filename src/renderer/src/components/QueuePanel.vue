@@ -1,6 +1,5 @@
 <script setup>
 // 播放队列面板（电脑：右边滑出；手机：从下面拉上来）
-// - 睡眠定时
 // - 正在播放
 // - 接下来（你加入的）：可以拖动排序、移除、清空
 // - 歌单里接下来的歌：可以拖动排序、移除
@@ -8,13 +7,11 @@
 import { nextTick, onBeforeUnmount, reactive, ref, shallowRef, watch } from 'vue';
 import { usePlayer } from '../composables/usePlayer';
 import { useUiStore } from '../stores/ui';
-import { useSleepStore } from '../stores/sleep';
 import { artistNames } from '../utils/format';
 import Cover from './Cover.vue';
 import Icon from './Icon.vue';
 
 const ui = useUiStore();
-const sleep = useSleepStore();
 const { state, player } = usePlayer();
 
 const LIST_LIMIT = 100; // 歌单很长时只显示接下来这么多首
@@ -135,7 +132,6 @@ const dropClass = (section, index) =>
       : 'drop-before'
     : '';
 
-const SLEEP_OPTIONS = [15, 30, 60];
 </script>
 
 <template>
@@ -150,23 +146,6 @@ const SLEEP_OPTIONS = [15, 30, 60];
       </header>
 
       <div ref="scroller" class="scroller">
-        <!-- 睡眠定时 -->
-        <section class="sleep">
-          <span class="sleep-label"><Icon name="moon" :size="16" />{{ $t('睡眠定时') }}</span>
-          <template v-if="sleep.active">
-            <span class="sleep-state">
-              {{ sleep.afterSong ? $t('这首播完就停') : $t('{time} 后暂停', { time: sleep.remaining }) }}
-            </span>
-            <button class="chip" @click="sleep.cancel()">{{ $t('取消') }}</button>
-          </template>
-          <template v-else>
-            <button v-for="m in SLEEP_OPTIONS" :key="m" class="chip" @click="sleep.start(m)">
-              {{ $t('{n} 分钟', { n: m }) }}
-            </button>
-            <button class="chip" @click="sleep.startAfterSong()">{{ $t('这首播完') }}</button>
-          </template>
-        </section>
-
         <!-- 正在播放 -->
         <section v-if="view.current">
           <h3>{{ $t('正在播放') }}</h3>
@@ -409,48 +388,6 @@ h3 {
   font-size: 13px;
   line-height: 1.6;
   color: var(--text-dim);
-}
-
-/* 睡眠定时 */
-.sleep {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 0 4px 14px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--surface-hover);
-}
-.sleep-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-right: 4px;
-  font-size: 13px;
-  font-weight: 700;
-}
-.sleep-state {
-  flex: 1;
-  font-size: 13px;
-  color: var(--accent);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.chip {
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.chip:hover {
-  border-color: var(--text-dim);
 }
 
 /* 一行 */

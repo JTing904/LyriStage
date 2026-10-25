@@ -13,7 +13,8 @@ import { computed, ref, watch } from 'vue';
 import { registerPlugin } from '@capacitor/core';
 import { createHttp } from '@core/http/client';
 import { getAccessToken, getSupabase } from '@core/data';
-import { duckMusic } from '../services';
+import { duckMusic, setRoomMix } from '../services';
+import { DUCK_LEVELS, roomVolume } from '../roomVolume';
 import { isNativeApp, translateApiBase } from '../platform';
 import { useAuthStore } from './auth';
 import { useRoomStore } from './room';
@@ -90,6 +91,7 @@ export const useVoiceStore = defineStore('voice', () => {
       const audio = new Audio();
       audio.autoplay = true;
       audio.srcObject = stream;
+      audio.volume = roomVolume.voice;
       audio.play().catch(() => {});
       peer.audio = audio;
       peer.analyser = meterFor(stream);
@@ -292,6 +294,20 @@ export const useVoiceStore = defineStore('voice', () => {
   watch(
     () => room.inRoom,
     inRoom => !inRoom && status.value !== 'off' && leave()
+  );
+
+  // ---- 房间音量（RoomVolumeSheet）----
+  // 音乐：在房间里才乘上房间的音乐大小；有人讲话时变多小。语音：每个人的声音都套上
+  watch(
+    () => [room.inRoom, roomVolume.music, roomVolume.duck],
+    ([inRoom]) => setRoomMix({ music: inRoom ? roomVolume.music : 1, duck: DUCK_LEVELS[roomVolume.duck] ?? DUCK_LEVELS.some }),
+    { immediate: true }
+  );
+  watch(
+    () => roomVolume.voice,
+    volume => {
+      for (const peer of peers.values()) if (peer.audio) peer.audio.volume = volume;
+    }
   );
 
   return { status, muted, error, participants, speaking, inVoice, join, leave, toggleMute };

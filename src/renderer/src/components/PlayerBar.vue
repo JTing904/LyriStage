@@ -317,8 +317,8 @@ function toggleMute() {
         >
           <Icon name="dislike" :size="20" />
         </button>
-        <!-- 歌词舞台：睡眠定时（开着时写还剩多久）；完整播放条的在播放队列面板里 -->
-        <span v-if="compact" class="sleep-wrap">
+        <!-- 睡眠定时（开着时写还剩多久）：歌词舞台和电脑版的播放条都有 -->
+        <span class="sleep-wrap">
           <button
             class="icon toggle sleep-btn"
             :class="{ on: sleep.active }"
@@ -343,13 +343,12 @@ function toggleMute() {
         <button
           class="icon toggle queue-btn"
           :class="{ on: ui.queueOpen }"
-          :title="sleep.active ? $t('播放队列（睡眠定时中）') : $t('播放队列')"
+          :title="$t('播放队列')"
           :aria-label="$t('播放队列')"
           :aria-expanded="ui.queueOpen"
           @click="ui.queueOpen = !ui.queueOpen"
         >
           <Icon name="queue" :size="20" />
-          <span v-if="sleep.active && !compact" class="sleep-dot" aria-hidden="true"><Icon name="moon" :size="10" /></span>
         </button>
         <div class="volume">
           <button
@@ -510,18 +509,6 @@ button.icon.sleep-btn {
   position: relative;
 }
 /* 睡眠定时开着：队列按钮右上角一个小月亮 */
-.sleep-dot {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  display: grid;
-  place-items: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--bar-accent);
-  color: #fff;
-}
 /* ---------- 进度条 ---------- */
 /* 完整：贴在播放条最上缘，平时 2px，滑过 / 拖动时变粗并出现圆点 */
 .progress {

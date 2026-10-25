@@ -14,6 +14,7 @@ import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
 import SongPicker from '../components/SongPicker.vue';
 import HostSheet from '../components/HostSheet.vue';
+import RoomVolumeSheet from '../components/RoomVolumeSheet.vue';
 import LyricStage from '../lyric-stage/LyricStage.vue';
 import { t } from '../i18n';
 import { shareLink } from '../platform';
@@ -28,6 +29,7 @@ const router = useRouter();
 const { state, player } = usePlayer();
 
 const input = ref('');
+const volumeSheet = ref(null);
 const copied = ref('');
 
 // 网址带了房间码（/room?code=ABC123）就直接加入；
@@ -244,10 +246,21 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
               <Icon :name="voice.muted ? 'mic-off' : 'mic'" :size="16" />
               <span class="label">{{ voice.status === 'connecting' ? $t('连接中…') : voice.muted ? $t('已静音') : $t('语音中') }}</span>
             </button>
-            <button class="voice-leave" :aria-label="$t('离开语音')" :title="$t('离开语音')" @click="voice.leave()">
+            <!-- 手机这条放不下：「离开语音」收进「⋯」 -->
+            <button v-if="!isPhone" class="voice-leave" :aria-label="$t('离开语音')" :title="$t('离开语音')" @click="voice.leave()">
               <Icon name="x" :size="14" />
             </button>
           </span>
+          <!-- 语音中：音乐、语音分开调大小（音乐太大声会盖过讲话）。手机这条放不下，收进「⋯」 -->
+          <button
+            v-if="voice.status !== 'off' && !isPhone"
+            class="round-btn volume-btn"
+            :aria-label="$t('房间音量')"
+            :title="$t('房间音量')"
+            @click="volumeSheet.open()"
+          >
+            <Icon name="volume" :size="17" />
+          </button>
           <span class="avatars" :aria-label="$t('{n} 人在听', { n: room.members.length })">
             <span
               v-for="m in shownMembers"
@@ -284,6 +297,10 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
           <span class="more-wrap">
             <button class="round-btn" :aria-label="$t('更多')" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">⋯</button>
             <div v-if="menuOpen" class="menu" role="menu">
+              <template v-if="voice.status !== 'off' && isPhone">
+                <button role="menuitem" @click="(menuOpen = false), volumeSheet.open()">{{ $t('房间音量') }}</button>
+                <button role="menuitem" @click="(menuOpen = false), voice.leave()">{{ $t('离开语音') }}</button>
+              </template>
               <button role="menuitem" class="danger" @click="leaveOrClose">
                 {{ room.role === 'host' ? $t('关闭房间') : $t('离开房间') }}
               </button>
@@ -427,6 +444,7 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
       </aside>
 
       <HostSheet ref="hostSheet" />
+      <RoomVolumeSheet ref="volumeSheet" />
       <SongPicker
         ref="picker"
         :busy="requesting"
