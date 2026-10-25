@@ -11,7 +11,7 @@
 
 [官网](https://jting904.github.io/LyriStage/) · [下载](https://github.com/JTing904/LyriStage/releases/latest) · [网页版](https://lyristage.vercel.app) · [English](README.md)
 
-![版本](https://img.shields.io/badge/version-2.1.10-ff3b5c) ![许可证](https://img.shields.io/badge/code-MIT-blue) ![平台](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
+![版本](https://img.shields.io/badge/version-2.1.11-ff3b5c) ![许可证](https://img.shields.io/badge/code-MIT-blue) ![平台](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20iPhone-555)
 
 <a href="https://jting904.github.io/LyriStage/"><img src="docs/images/trailer-poster.webp" width="760" alt="LyriStage 宣传片：到官网观看"></a>
 
