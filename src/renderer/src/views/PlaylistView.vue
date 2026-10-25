@@ -8,6 +8,7 @@ import { usePlayCollection } from '../composables/usePlayCollection';
 import { count, totalLength } from '../utils/format';
 import { t } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
+import SaveAsPlaylistButton from '../components/SaveAsPlaylistButton.vue';
 import OfflineButton from '../components/OfflineButton.vue';
 import TrackList from '../components/TrackList.vue';
 import LoadError from '../components/LoadError.vue';
@@ -71,10 +72,13 @@ const meta = computed(() => {
         @play="playAll(tracks, context)"
         @shuffle="shuffleAll(tracks, context)"
       >
-        <template #actions><OfflineButton
-          :tracks="tracks"
-          :collection="{ key: `playlist:${route.params.id}`, kind: 'playlist', id: route.params.id, name: info.name }"
-        /></template>
+        <template #actions>
+          <SaveAsPlaylistButton :name="info.name" :tracks="tracks" />
+          <OfflineButton
+            :tracks="tracks"
+            :collection="{ key: `playlist:${route.params.id}`, kind: 'playlist', id: route.params.id, name: info.name }"
+          />
+        </template>
       </CollectionHeader>
       <TrackList :tracks="tracks" :context="context" />
     </template>

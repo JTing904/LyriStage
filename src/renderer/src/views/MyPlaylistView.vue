@@ -12,6 +12,7 @@ import { usePlayCollection } from '../composables/usePlayCollection';
 import { totalLength } from '../utils/format';
 import { t } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
+import SaveAsPlaylistButton from '../components/SaveAsPlaylistButton.vue';
 import OfflineButton from '../components/OfflineButton.vue';
 import Icon from '../components/Icon.vue';
 import TrackList from '../components/TrackList.vue';
@@ -352,6 +353,8 @@ async function removePlaylist() {
           <button class="icon-action" :aria-label="$t('添加歌曲')" @click="picker.open()">
             <Icon name="plus" :size="18" /><span class="label">{{ $t('添加歌曲') }}</span>
           </button>
+          <!-- 别人开的共同歌单：可以复制一份成自己的 -->
+          <SaveAsPlaylistButton v-if="!isOwner" :name="playlist.name" :tracks="tracks" />
           <OfflineButton
             :tracks="tracks"
             :collection="{ key: `mine:${playlist.id}`, kind: 'mine', id: playlist.id, name: playlist.name }"

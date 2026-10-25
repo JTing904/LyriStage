@@ -171,6 +171,20 @@ export const useLibraryStore = defineStore('library', () => {
   }
   const addToPlaylist = (playlistId, tracks) => addToPlaylists([playlistId], tracks);
 
+  /**
+   * 别人的歌单、专辑、每日推荐「存成我的歌单」：建一个新歌单，照原本的顺序把歌加进去
+   * @returns {Promise<{ id: string, name: string } | null>} 新歌单（没登录就是 null）
+   */
+  async function saveAsPlaylist(name, tracks) {
+    if (!auth.requireMember('存成我的歌单')) return null;
+    const row = await createPlaylistRow({ name: name.trim().slice(0, 100) || t('新歌单') });
+    // 很长的歌单分批加（一次送几千首太大）
+    for (let i = 0; i < tracks.length; i += 200) await addTracksToPlaylist(row.id, tracks.slice(i, i + 200));
+    await refreshPlaylists();
+    version.value++;
+    return row;
+  }
+
   async function removeFromPlaylist(playlistId, trackIds) {
     await removeTracksFromPlaylist(playlistId, trackIds);
     await refreshPlaylists();
@@ -203,6 +217,7 @@ export const useLibraryStore = defineStore('library', () => {
     toggleLike,
     refreshPlaylists,
     createPlaylist,
+    saveAsPlaylist,
     renamePlaylist,
     setPlaylistCover,
     deletePlaylist,

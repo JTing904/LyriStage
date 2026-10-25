@@ -10,6 +10,8 @@ const STROKE = {
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zm9 16-4-4',
   library: 'M4 4v16M9 4v16m5-16 5 16',
   plus: 'M12 5v14M5 12h14',
+  // 存成我的歌单：两张叠着的卡片
+  copy: 'M9 9h11v11H9zM5 15V4h11',
   more: '',
   trash: 'M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14',
   'chevron-right': 'm9 6 6 6-6 6',

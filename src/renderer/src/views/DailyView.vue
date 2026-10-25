@@ -7,6 +7,7 @@ import { usePlayCollection } from '../composables/usePlayCollection';
 import { totalLength } from '../utils/format';
 import { t, locale } from '../i18n';
 import CollectionHeader from '../components/CollectionHeader.vue';
+import SaveAsPlaylistButton from '../components/SaveAsPlaylistButton.vue';
 import TrackList from '../components/TrackList.vue';
 import LoadError from '../components/LoadError.vue';
 
@@ -65,6 +66,8 @@ const meta = computed(() =>
         <button :disabled="loading || refreshing" @click="refresh">
           {{ refreshing ? $t('正在重新挑…') : $t('换一批') }}
         </button>
+        <!-- 今天的推荐明天就换掉：喜欢的话存成自己的歌单 -->
+        <SaveAsPlaylistButton :name="`${$t('每日推荐')} ${title}`" :tracks="tracks" />
       </template>
     </CollectionHeader>
 
