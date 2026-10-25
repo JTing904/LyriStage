@@ -522,6 +522,66 @@ async function shareSlide() {
 .share:disabled {
   opacity: 0.6;
 }
+.share {
+  flex: none;
+  white-space: nowrap;
+}
+/* 手机横过来：卡片又矮又窄（约 230px 宽），字照屏幕宽度算会塞不下、把按钮挤扁 */
+@media (max-height: 500px) {
+  .story {
+    padding: calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 12px);
+  }
+  .close {
+    top: calc(env(safe-area-inset-top) + 22px);
+    right: 10px;
+    width: 34px;
+    height: 34px;
+  }
+  .teaser {
+    font-size: 28px;
+  }
+  .cover {
+    width: min(45%, 130px);
+    margin-bottom: 12px !important;
+    border-radius: 12px;
+  }
+  .eyebrow {
+    font-size: 15px;
+  }
+  .big {
+    font-size: 52px;
+  }
+  .big.long {
+    font-size: 32px;
+  }
+  .unit {
+    font-size: 18px;
+  }
+  .quote {
+    font-size: 22px;
+  }
+  .sub {
+    margin-top: 10px !important;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .list {
+    gap: 8px;
+    margin-top: 10px !important;
+  }
+  .list img {
+    width: 38px;
+    height: 38px;
+  }
+  .list strong {
+    font-size: 14px;
+  }
+  .share {
+    height: 38px;
+    padding: 0 16px;
+    font-size: 14px;
+  }
+}
 .waiting {
   justify-content: center;
   align-items: center;
