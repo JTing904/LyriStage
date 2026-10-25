@@ -69,8 +69,12 @@ export async function exchangeAuthCode(code) {
   return unwrap(await requireSupabase().auth.exchangeCodeForSession(code));
 }
 
+/**
+ * 退出登录：只登出这台设备。
+ * Supabase 默认是 scope 'global'（这个账号在所有设备的登录一起作废），在平板退出会连手机、电脑也被登出
+ */
 export async function signOut() {
-  unwrap(await requireSupabase().auth.signOut());
+  unwrap(await requireSupabase().auth.signOut({ scope: 'local' }));
 }
 
 /** 当前登录的用户，未登录或未配置 Supabase 时返回 null */
