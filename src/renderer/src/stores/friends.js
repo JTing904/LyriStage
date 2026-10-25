@@ -86,10 +86,13 @@ export const useFriendsStore = defineStore('friends', () => {
     }
   }
 
+  /** 好友名单第一次载入好了没（还没好就不要显示「还没有好友」：慢网路时会让人以为好友不见了） */
+  const loaded = ref(false);
   async function refresh() {
     try {
       const [list, now] = await Promise.all([listFriends(), listFriendsNowPlaying()]);
       friends.value = list.friends;
+      loaded.value = true;
       incoming.value = list.incoming;
       outgoing.value = list.outgoing;
       listening.value = new Map(now.map(n => [n.userId, n]));
@@ -299,6 +302,7 @@ export const useFriendsStore = defineStore('friends', () => {
 
   return {
     available,
+    loaded,
     searchAvailable,
     search,
     sendTo,

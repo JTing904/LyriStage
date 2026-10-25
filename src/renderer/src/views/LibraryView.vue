@@ -234,6 +234,7 @@ async function create() {
         <button type="button" class="ghost" @click="creating = false">{{ $t('取消') }}</button>
       </form>
       <TileGrid v-if="tiles.length" :items="tiles" />
+      <p v-else-if="!library.loaded" class="hint">{{ $t('载入中…') }}</p>
       <p v-else-if="!creating" class="hint">{{ $t('还没有歌单。按右边的 ＋ 新建，或在歌曲的 ⋯ 选「加到歌单」。') }}</p>
     </section>
   </div>

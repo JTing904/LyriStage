@@ -353,7 +353,8 @@ async function togglePrivate() {
 
           <section>
             <h2 class="section-title">{{ $t('好友') }}</h2>
-            <p v-if="!rows.length" class="empty">{{ $t('还没有好友。把你的好友码传给朋友吧。') }}</p>
+            <p v-if="!rows.length && !friendsStore.loaded" class="empty">{{ $t('载入中…') }}</p>
+            <p v-else-if="!rows.length" class="empty">{{ $t('还没有好友。把你的好友码传给朋友吧。') }}</p>
             <ul v-else class="people card">
               <li v-for="p in rows" :key="p.id">
                 <button class="avatar-btn" :aria-label="$t('看 {name} 的便签', { name: p.name })" @click="openFriend(p)">

@@ -37,6 +37,8 @@ export const useLibraryStore = defineStore('library', () => {
   const say = message => useNoticeStore().show(message);
 
   let loadedAt = 0;
+  /** 歌单第一次载入好了没（还没好就不要显示「还没有歌单」） */
+  const loaded = ref(false);
   async function load() {
     const reloading = loadedAt > 0;
     loadedAt = Date.now();
@@ -47,6 +49,7 @@ export const useLibraryStore = defineStore('library', () => {
         reloading && (ids.join() !== likedIds.value.join() || JSON.stringify(lists) !== JSON.stringify(playlists.value));
       likedIds.value = ids;
       playlists.value = lists;
+      loaded.value = true;
       if (changed) {
         version.value++;
         synced.value++;
@@ -209,6 +212,7 @@ export const useLibraryStore = defineStore('library', () => {
   return {
     likedIds,
     playlists,
+    loaded,
     version,
     synced,
     say,
