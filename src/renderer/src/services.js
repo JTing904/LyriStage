@@ -170,10 +170,26 @@ async function resolveSource(track) {
   return resolveOnline(track);
 }
 
-async function resolveOnline(track) {
+/**
+ * 网络慢吗：系统说是 2G / 3G，或测到的下载速度不到 1.5 Mbps。
+ * 高音质（320kbps）在慢网路要先下载好一阵子才出声（实测慢速 3G 要 38 秒），慢的时候改用标准音质（128kbps）。
+ * 浏览器不提供（iPhone Safari）就当作不慢
+ */
+function slowNetwork() {
+  const connection = navigator.connection;
+  if (!connection) return false;
+  if (['slow-2g', '2g', '3g'].includes(connection.effectiveType)) return true;
+  return typeof connection.downlink === 'number' && connection.downlink > 0 && connection.downlink < 1.5;
+}
+
+/**
+ * @param {object} track
+ * @param {{ level?: 'standard' | 'exhigh' }} [options] 不给就看网络快慢；存到手机的歌一律要高音质
+ */
+async function resolveOnline(track, { level } = {}) {
   // 网易云的链接、以前在 B 站挑过的视频：两个一起问（一个一个问要多等一趟）
   const pickPromise = getBilibiliPick(track.id).catch(() => null);
-  const official = await netease.songUrl(track.id);
+  const official = await netease.songUrl(track.id, level ?? (slowNetwork() ? 'standard' : 'exhigh'));
   if (official) return official;
   const shared = sharedSources.get(track.id);
   // 房主（电脑版）分享的 B 站链接可能要带 B 站的 Referer，手机、网页版播不了，先自己找
@@ -188,7 +204,8 @@ async function resolveOnline(track) {
 
 // 离线听歌：用户按「存到手机」的歌排队下载（offline.js），用跟播放一样的方法找链接；歌词一起存
 connectOfflineDownloads({
-  resolveOnline,
+  // 存到手机：一律高音质（多半在 Wi-Fi 下载，不急）
+  resolveOnline: track => resolveOnline(track, { level: 'exhigh' }),
   // 整张存到手机的歌单：在背景对一次现在有哪些歌（新加的存、拿掉的删）
   fetchCollection: async (kind, id) => {
     const data = await import('@core/data');
