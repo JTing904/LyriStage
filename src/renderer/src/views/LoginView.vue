@@ -52,11 +52,39 @@ const error = ref('');
 /** 登录了但还没兑换邀请码 */
 const needInvite = computed(() => auth.loggedIn && auth.member === false);
 
+// 朋友分享的邀请链接（#/invite/邀请码 → 这里的 ?invite=）：直接到「注册」，邀请码帮他填好。
+// 也记在这台设备：用 Google / GitHub 登录要先离开 App，回来到「输入邀请码」那一步时也帮他填好
+const PENDING_INVITE_KEY = 'lyristage:pending-invite';
+const fromLink = String(route.query.invite ?? '').trim();
+try {
+  if (fromLink) localStorage.setItem(PENDING_INVITE_KEY, fromLink);
+} catch {
+  // 存不了：这次照样帮他填
+}
+/** 链接带来的邀请码（没有就是 ''） */
+const linkedInvite = (() => {
+  try {
+    return fromLink || localStorage.getItem(PENDING_INVITE_KEY) || '';
+  } catch {
+    return fromLink;
+  }
+})();
+if (linkedInvite) invite.value = linkedInvite;
+if (fromLink) mode.value = 'register';
+/** 邀请码是链接帮他填的（还没改过）：显示「已填好」 */
+const inviteFilled = computed(() => Boolean(linkedInvite) && invite.value === linkedInvite);
+
 // 成为成员就进 App
 watch(
   () => auth.allowed,
   allowed => {
-    if (allowed) router.replace(redirectTarget(route));
+    if (!allowed) return;
+    try {
+      localStorage.removeItem(PENDING_INVITE_KEY);
+    } catch {
+      // 没关系
+    }
+    router.replace(redirectTarget(route));
   },
   { immediate: true }
 );
@@ -196,7 +224,7 @@ onBeforeUnmount(() => clearInterval(resendTimer));
             <input v-model="name" autocomplete="nickname" maxlength="30" required />
           </label>
           <label>
-            {{ $t('邀请码') }}
+            <span class="label-row">{{ $t('邀请码') }}<small v-if="inviteFilled" class="filled">{{ $t('✓ 已填好') }}</small></span>
             <input
               v-model="invite"
               class="code"
@@ -282,12 +310,25 @@ onBeforeUnmount(() => clearInterval(resendTimer));
 
         <!-- 登录 / 注册 -->
         <form v-else class="form" @submit.prevent="submit">
+          <!-- 登录 / 注册切换：小手机一打开就看得到「注册」（第一次来的多半是拿到邀请码的朋友） -->
+          <div class="tabs" role="tablist">
+            <button type="button" role="tab" :aria-selected="mode === 'login'" :class="{ on: mode === 'login' }" @click="mode = 'login'">
+              {{ $t('登录') }}
+            </button>
+            <button type="button" role="tab" :aria-selected="mode === 'register'" :class="{ on: mode === 'register' }" @click="mode = 'register'">
+              {{ $t('注册') }}
+            </button>
+          </div>
           <div class="head">
             <h1 class="display">{{ mode === 'login' ? $t('登录 LyriStage') : $t('注册 LyriStage') }}</h1>
             <p v-if="mode === 'login'">
               {{ $t('不需要网易云账号。你的喜欢、歌单和听歌记录保存在 LyriStage 自己的账号里，电脑和手机同步。') }}
             </p>
-            <p v-else>{{ $t('LyriStage 目前只开放给受邀的朋友，注册需要邀请码。') }}</p>
+            <p v-else-if="!inviteFilled">{{ $t('LyriStage 目前只开放给受邀的朋友，注册需要邀请码。') }}</p>
+            <p v-else class="invited">
+              {{ $t('🎉 有朋友邀请你加入 LyriStage') }}
+              <small>{{ $t('邀请码已经帮你填好，填完下面就能开始听歌') }}</small>
+            </p>
           </div>
 
           <template v-if="mode === 'login'">
@@ -354,7 +395,7 @@ onBeforeUnmount(() => clearInterval(resendTimer));
             </span>
           </label>
           <label v-if="mode === 'register'">
-            {{ $t('邀请码') }}
+            <span class="label-row">{{ $t('邀请码') }}<small v-if="inviteFilled" class="filled">{{ $t('✓ 已填好') }}</small></span>
             <input
               v-model="invite"
               class="code"
@@ -392,6 +433,50 @@ onBeforeUnmount(() => clearInterval(resendTimer));
 </template>
 
 <style scoped>
+/* 登录 / 注册切换 */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  background: var(--surface-hover);
+}
+.tabs button {
+  flex: 1;
+  min-height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tabs button.on {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+/* 点邀请链接来的 */
+.invited {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--text);
+  font-weight: 700;
+}
+.invited small {
+  display: block;
+  margin-top: 2px;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+.filled {
+  color: #16a34a;
+  font-weight: 700;
+}
 .login {
   min-height: 100%;
   display: grid;

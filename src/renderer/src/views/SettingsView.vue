@@ -23,6 +23,7 @@ import {
   openAtLogin,
   setDesktopLyrics,
   setOpenAtLogin,
+  shareLink,
   setDesktopLyricsLocked,
   updateStatus,
 } from '../platform';
@@ -217,6 +218,28 @@ async function generate() {
     inviteError.value = t(err.message || String(err));
   } finally {
     inviteBusy.value = false;
+  }
+}
+
+/** 邀请链接：朋友点开直接到注册、邀请码帮他填好（装了 Android App 的会在 App 打开） */
+const inviteUrl = code => `https://lyristage.vercel.app/#/invite/${encodeURIComponent(code)}`;
+/** 分享邀请链接：手机跳出分享面板，电脑复制 */
+async function shareInvite(code) {
+  try {
+    const result = await shareLink({
+      title: 'LyriStage',
+      text: t('来 LyriStage 一起听歌！点这个链接注册（邀请码 {code}）：', { code }),
+      url: inviteUrl(code),
+    });
+    if (result === 'copied') {
+      copied.value = `link:${code}`;
+      setTimeout(() => {
+        if (copied.value === `link:${code}`) copied.value = '';
+      }, 2000);
+    }
+  } catch {
+    // 分享不了就复制邀请码
+    copy(code);
   }
 }
 
@@ -949,15 +972,18 @@ function summary(id) {
           <div class="card">
             <div class="row invite-row">
               <div class="invite-top">
-                <p class="hint">{{ $t('每个邀请码只能用一次。生成后会自动复制，直接贴给朋友就好。') }}</p>
+                <p class="hint">{{ $t('每个邀请码只能用一次。分享链接给朋友，他点开就能注册（邀请码已经帮他填好）。') }}</p>
                 <button class="primary" :disabled="inviteBusy" @click="generate">
                   {{ inviteBusy ? $t('生成中…') : $t('一键生成邀请码') }}
                 </button>
               </div>
               <div v-if="newCode" class="new-code">
                 <code>{{ newCode }}</code>
+                <button class="primary small" @click="shareInvite(newCode)">
+                  {{ copied === `link:${newCode}` ? $t('链接已复制 ✓') : $t('分享邀请链接') }}
+                </button>
                 <button class="ghost small" @click="copy(newCode)">
-                  {{ copied === newCode ? $t('已复制 ✓') : $t('复制') }}
+                  {{ copied === newCode ? $t('已复制 ✓') : $t('复制邀请码') }}
                 </button>
               </div>
               <p v-if="inviteError" class="invite-error" role="alert">{{ inviteError }}</p>
@@ -970,9 +996,9 @@ function summary(id) {
                   <button
                     v-if="i.usedCount < i.maxUses && !i.grantsAdmin"
                     class="link-btn"
-                    @click="copy(i.code)"
+                    @click="shareInvite(i.code)"
                   >
-                    {{ copied === i.code ? $t('已复制 ✓') : $t('复制') }}
+                    {{ copied === `link:${i.code}` ? $t('链接已复制 ✓') : $t('分享') }}
                   </button>
                 </li>
               </ul>

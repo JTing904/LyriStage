@@ -23,6 +23,8 @@ export const router = createRouter({
       meta: { bare: true },
     },
     { path: '/report', name: 'report', component: () => import('./views/ReportView.vue'), meta: { member: true } },
+    // 邀请链接（管理员在设置里分享）：到注册、帮他填好邀请码
+    { path: '/invite/:code', redirect: to => ({ path: '/login', query: { invite: to.params.code } }) },
     { path: '/join/:code', name: 'join-playlist', component: () => import('./views/JoinPlaylistView.vue'), meta: { member: true } },
     { path: '/friends', name: 'friends', component: () => import('./views/FriendsView.vue'), meta: { member: true } },
     { path: '/room', name: 'room', component: () => import('./views/RoomView.vue'), meta: { member: true } },
