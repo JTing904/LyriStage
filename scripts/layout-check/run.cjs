@@ -254,6 +254,25 @@ const PAGES = [
     close: () => click('.stage .topbar .pill[aria-expanded="true"]'),
     fits: [['.stage-panel .picker', '.stage-panel']],
   },
+  // 之前没截过的页面：每日推荐、专辑、听歌报告和年度回顾、搜索的各个分页、设置的歌词和关于、打不开的共享歌单码
+  { id: 'daily', hash: '#/daily', wait: 5000 },
+  { id: 'album', hash: '#/album/18903', wait: 4000 },
+  { id: 'report', hash: '#/report', wait: 5000 },
+  {
+    id: 'report-wrapped',
+    hash: '#/report',
+    wait: 5000,
+    open: () => click('.wrapped'),
+    close: () => document.querySelector('dialog[open]')?.close(),
+  },
+  ...['song', 'lyric', 'artist', 'album', 'playlist'].map(tab => ({
+    id: `search-${tab}`,
+    hash: `#/search?q=${encodeURIComponent('晴天')}&tab=${tab}`,
+    wait: 4000,
+  })),
+  { id: 'settings-lyrics', hash: '#/settings?c=lyrics' },
+  { id: 'settings-about', hash: '#/settings?c=about' },
+  { id: 'join-bad-code', hash: '#/join/ZZZZZZ', wait: 3500 },
   // 语音中：上面那条多一个「房间音量」按钮；按了是音量面板（假装在语音里，不真的开麦克风）
   {
     id: 'room-volume',

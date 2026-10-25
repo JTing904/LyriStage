@@ -770,7 +770,7 @@ function summary(id) {
             <div class="row">
               <span class="label">
                 {{ $t('正在播放小组件') }}
-                <small>{{ widgetHint || $t('在桌面播放、切歌，拉高显示歌词') }}</small>
+                <small>{{ widgetHint || $t('在桌面播放、看歌词') }}</small>
               </span>
               <button class="ghost" @click="addWidget">{{ $t('加到桌面') }}</button>
             </div>

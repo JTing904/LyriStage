@@ -75,7 +75,8 @@ const meta = computed(() => {
       >
         <template #actions>
           <RouterLink v-if="album.artist?.id" :to="`/artist/${album.artist.id}`" custom v-slot="{ navigate }">
-            <button @click="navigate">{{ $t('歌手：{name}', { name: album.artist.name }) }}</button>
+            <!-- 手机这一排还有存成歌单、存到手机：歌手名太长就省略，不要挤成两行 -->
+            <button class="artist-link" @click="navigate"><span>{{ $t('歌手：{name}', { name: album.artist.name }) }}</span></button>
           </RouterLink>
           <SaveAsPlaylistButton :name="album.name" :tracks="tracks" />
           <OfflineButton
@@ -88,3 +89,14 @@ const meta = computed(() => {
     </template>
   </div>
 </template>
+
+<style scoped>
+.artist-link {
+  min-width: 0;
+}
+.artist-link span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+</style>
