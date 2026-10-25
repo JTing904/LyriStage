@@ -126,8 +126,10 @@ export function judge(source, songs) {
 }
 
 /**
- * 在网易云找这首：先搜「歌名 歌手」；不够好再问「被藏起来的原唱」（没版权的歌，例如周杰伦，网易云搜索只给翻唱）；
- * 还是找不到就只搜歌名（歌手名字两边写法不同，例如英文名 / 中文名）
+ * 在网易云找这首：先搜「歌名 歌手」。
+ * - 一首同名的都没有：只搜歌名再试一次（歌手名字两边写法不同，例如英文名 / 中文名）
+ * - 有同名的但版本、歌手不对（多半只搜到翻唱）：问「被藏起来的原唱」（没版权的歌，例如周杰伦，网易云搜索只给翻唱）
+ * 每一步都比较慢（原唱要 2 秒左右），一张歌单几十首，只在可能有用的时候问
  * @param {SourceTrack} source
  * @param {{ searchSongs: Function, hiddenSongs: Function }} netease
  * @returns {Promise<MatchResult>}
@@ -137,16 +139,15 @@ export async function matchTrack(source, netease) {
   let songs = await netease.searchSongs(query, { limit: 8 }).catch(() => []);
   let result = judge(source, songs);
   if (result.status === 'ok') return result;
-  const hidden = await netease.hiddenSongs(query, { limit: 5 }).catch(() => []);
-  if (hidden.length) {
-    songs = [...hidden, ...songs];
+  const nameOnly = source.match?.name ?? source.name;
+  if (result.status === 'none' && source.artists.length && nameOnly && nameOnly !== query) {
+    songs = [...songs, ...(await netease.searchSongs(nameOnly, { limit: 10 }).catch(() => []))];
     result = judge(source, songs);
     if (result.status === 'ok') return result;
   }
-  const nameOnly = source.match?.name ?? source.name;
-  if (source.artists.length && nameOnly && nameOnly !== query) {
-    songs = [...songs, ...(await netease.searchSongs(nameOnly, { limit: 10 }).catch(() => []))];
-    result = judge(source, songs);
+  if (result.status === 'version') {
+    const hidden = await netease.hiddenSongs(query, { limit: 5, fallback: false }).catch(() => []);
+    if (hidden.length) result = judge(source, [...hidden, ...songs]);
   }
   return result;
 }
@@ -174,7 +175,7 @@ export function parseTextList(text) {
  * @param {(index: number, result: MatchResult) => void} onResult
  * @param {{ concurrency?: number, isCancelled?: () => boolean }} [options]
  */
-export async function matchAll(tracks, netease, onResult, { concurrency = 3, isCancelled = () => false } = {}) {
+export async function matchAll(tracks, netease, onResult, { concurrency = 4, isCancelled = () => false } = {}) {
   let next = 0;
   async function worker() {
     while (next < tracks.length && !isCancelled()) {

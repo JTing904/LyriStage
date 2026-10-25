@@ -238,10 +238,11 @@ export function createNetease(http) {
      * 关键词里有歌手名时，去他的所有歌曲里找名字对得上的、没版权的，补回搜索结果。
      * 只搜歌名（「告白气球」）时，用搜索结果里翻唱写的「原唱：xxx」认出歌手（originalArtist）
      * @param {string} keyword
-     * @param {{ limit?: number, originalArtist?: string | null }} [options]
+     * @param {{ limit?: number, originalArtist?: string | null, fallback?: boolean }} [options]
+     *   fallback: false = 服务器找不到就算了，不用老方法（老方法要翻歌手几百首歌，最慢 20 多秒；导入歌单一次找几十首用不起）
      * @returns {Promise<object[]>}
      */
-    async hiddenSongs(keyword, { limit = 10, originalArtist = null } = {}) {
+    async hiddenSongs(keyword, { limit = 10, originalArtist = null, fallback = true } = {}) {
       const norm = text => String(text).toLowerCase().replace(/[\s\p{P}]/gu, '');
       const k = norm(keyword);
       if (!k) return [];
@@ -253,6 +254,7 @@ export function createNetease(http) {
       } catch {
         // 用老方法
       }
+      if (!fallback) return [];
       const lookup = async name =>
         (await http.get('/cloudsearch', { keywords: name, type: 100, limit: 3 })).result?.artists ?? [];
       // 要试的歌手：关键词里的歌手（「晴天 周杰伦」），再来是翻唱写的原唱（「稻香」→ 周杰伦）。

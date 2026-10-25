@@ -93,6 +93,23 @@ describe('matchTrack', () => {
     expect(r.pick.id).toBe(186016);
   });
 
+  it('一首同名的都没有：只搜歌名，不去问原唱（原唱很慢、也帮不上忙）', async () => {
+    const netease = {
+      searchSongs: vi.fn(async q => (q === 'Sunny Day' ? [{ id: 1, name: 'Sunny Day', ar: [{ name: '周杰伦', alias: ['Jay Chou'] }], dt: 200000 }] : [])),
+      hiddenSongs: vi.fn(async () => []),
+    };
+    const r = await matchTrack(src('Sunny Day', ['Jay Chou'], 200000, { query: 'Sunny Day Jay Chou' }), netease);
+    expect(r.status).toBe('ok');
+    expect(netease.searchSongs).toHaveBeenCalledTimes(2);
+    expect(netease.hiddenSongs).not.toHaveBeenCalled();
+  });
+
+  it('问原唱时不用老方法（不翻歌手几百首歌）', async () => {
+    const netease = { searchSongs: vi.fn(async () => [song(9, '晴天', '翻唱的人')]), hiddenSongs: vi.fn(async () => []) };
+    await matchTrack(src('晴天', ['周杰伦']), netease);
+    expect(netease.hiddenSongs).toHaveBeenCalledWith('晴天 周杰伦', expect.objectContaining({ fallback: false }));
+  });
+
   it('搜索出错：当作找不到，不会整个停掉', async () => {
     const netease = { searchSongs: async () => { throw new Error('offline'); }, hiddenSongs: async () => { throw new Error('offline'); } };
     expect((await matchTrack(src('晴天', ['周杰伦']), netease)).status).toBe('none');
