@@ -79,6 +79,23 @@ const UNGUEST = () => {
 /** 交给页面的工具函式（箭头函式的 toString 没有名字，要包成 const 才叫得到） */
 const HELPERS = `const STORE = ${STORE.toString()}; const click = ${click.toString()}; const UNGUEST = ${UNGUEST.toString()};`;
 
+/** 把画面上的歌单名、前几首歌名和歌手、迷你播放条的歌名换成很长的中英混合文字（只改画面，不改资料） */
+function LONG_TEXT() {
+  const song = '这是一首名字非常非常长的歌 (Live at the Very Long Concert Hall · 2026 Remastered Edition)';
+  const artist = '很长的歌手名字 Featuring Another Very Long Artist Name / 第三位歌手';
+  document.querySelectorAll('.collection-header h1').forEach(el => (el.textContent = '一个名字很长很长很长的歌单 A Very Long Playlist Name'));
+  [...document.querySelectorAll('.track:not(.head)')].slice(0, 4).forEach(row => {
+    const name = row.querySelector('.name');
+    if (name) name.textContent = song;
+    // 只换歌手连结的字，留着旁边的「已存到手机」「其他音源」小标
+    const link = row.querySelector('.artists a');
+    if (link) link.textContent = artist;
+  });
+  const meta = document.querySelector('.mini .meta');
+  if (meta?.children[0]) meta.children[0].textContent = song;
+  if (meta?.children[1]) meta.children[1].textContent = artist;
+}
+
 /** 好友：塞几个名字很长的好友、便签、正在听 */
 function MOCK_FRIENDS() {
   const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia;
@@ -180,6 +197,10 @@ const PAGES = [
     fits: [['dialog.confirm-sheet[open]', 'viewport']],
   },
   { id: 'liked', hash: '#/liked' },
+  // 很长的歌单名、歌名（测试账号的资料都很短，长的才会挤坏）
+  { id: 'playlist-long', hash: '#/playlist/3778678', wait: 4000, open: LONG_TEXT },
+  { id: 'my-playlist-long', hash: '#/my/TEMP_PLAYLIST', wait: 3500, open: LONG_TEXT },
+  { id: 'home-long', hash: '#/', open: LONG_TEXT },
   // 自己的歌单（一排按钮最多：添加、存到手机、邀请、海报、⋯、随机、播放）：测试账号没有自己的歌单，
   // 先临时建一个「LS 测试」（TEMP_PLAYLIST 换成它的 id），全部测完一定删掉
   { id: 'my-playlist', hash: '#/my/TEMP_PLAYLIST', wait: 3500 },

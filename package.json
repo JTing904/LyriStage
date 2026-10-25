@@ -17,6 +17,7 @@
     "test": "vitest run",
     "smoke": "node scripts/smoke/run.js",
     "layout:check": "node scripts/layout-check/run.cjs",
+    "flow:check": "node scripts/flow-check/run.cjs",
     "test:integration": "vitest run --config vitest.integration.config.mjs",
     "app:build": "vite build --config vite.web.config.mjs --mode app && cap sync android",
     "app:apk": "npm run app:build && cd android && gradlew.bat assembleDebug",

@@ -7,6 +7,7 @@ import { getCurrentUser } from '../data/auth';
 import { listLikedTracks } from '../data/library';
 import { listDislikedTrackIds, listRecentHistory } from '../data/history';
 import { localDay, toSnapshot, fromRow } from '../data/track';
+import { isUnavailable } from '../netease';
 import {
   computeArtistAffinity,
   createRng,
@@ -177,6 +178,9 @@ export async function getDailyRecommendations({ netease, force = false }) {
 
 // 私人 FM -------------------------------------------------------------------------
 
+/** 网易云能直接播（不用找其他音源）：有版权（st ≥ 0），而且这个账号至少能播一种音质（pl > 0，VIP 歌是 0） */
+const playsDirectly = track => !isUnavailable(track) && (track.privilege?.pl ?? 1) > 0;
+
 /**
  * 私人 FM：维护一个候选队列，快用完时自动补充。
  * 本次会话里跳过和喜欢会即时影响后面的选歌（通过排除 + 重新计算偏好）。
@@ -216,6 +220,12 @@ export class PersonalFM {
   /** 取接下来的 n 首（和网易云 /personal_fm 一样一次给几首） */
   async next(n = 1) {
     if (this.queue.length < n + 3) await this._refill();
+    // 按下 FM 的第一首：挑网易云能直接播的。要找其他音源（B 站）的歌第一次找要等好几秒、
+    // 慢的时候 20 秒，按下去一直没声音像坏掉；后面的歌播放器会提前找好，不用避开
+    if (this.served.size === 0) {
+      const direct = this.queue.findIndex(playsDirectly);
+      if (direct > 0) this.queue.unshift(...this.queue.splice(direct, 1));
+    }
     const tracks = this.queue.splice(0, n);
     tracks.forEach(t => this.served.add(String(t.id)));
     // 补货放后台，下次取的时候就不用等
