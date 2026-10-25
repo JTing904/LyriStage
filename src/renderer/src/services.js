@@ -189,6 +189,18 @@ async function resolveOnline(track) {
 // 离线听歌：用户按「存到手机」的歌排队下载（offline.js），用跟播放一样的方法找链接；歌词一起存
 connectOfflineDownloads({
   resolveOnline,
+  // 整张存到手机的歌单：在背景对一次现在有哪些歌（新加的存、拿掉的删）
+  fetchCollection: async (kind, id) => {
+    const data = await import('@core/data');
+    if (kind === 'liked') return data.listLikedTracks();
+    if (kind === 'mine') return (await data.getPlaylist(id)).tracks ?? [];
+    if (kind === 'playlist') return netease.playlistTracks(id);
+    if (kind === 'album') {
+      const album = await netease.album(id);
+      return album.songs.map(song => ({ ...song, al: { ...song.al, picUrl: song.al?.picUrl || album.album?.picUrl } }));
+    }
+    return null;
+  },
   rawLyrics: async track => {
     await getLyrics(track).catch(() => null);
     return (await lyricCache.get(`lyric:v2:${track.id}`).catch(() => null)) ?? null;

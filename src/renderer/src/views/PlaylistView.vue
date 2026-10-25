@@ -71,7 +71,10 @@ const meta = computed(() => {
         @play="playAll(tracks, context)"
         @shuffle="shuffleAll(tracks, context)"
       >
-        <template #actions><OfflineButton :tracks="tracks" /></template>
+        <template #actions><OfflineButton
+          :tracks="tracks"
+          :collection="{ key: `playlist:${route.params.id}`, kind: 'playlist', id: route.params.id, name: info.name }"
+        /></template>
       </CollectionHeader>
       <TrackList :tracks="tracks" :context="context" />
     </template>

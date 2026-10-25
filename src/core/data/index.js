@@ -11,3 +11,4 @@ export * from './friends';
 export * from './playlistCovers';
 export * from './archive';
 export * from './errors';
+export * from './playbackState';

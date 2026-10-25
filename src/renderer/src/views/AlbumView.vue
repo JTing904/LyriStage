@@ -76,7 +76,10 @@ const meta = computed(() => {
           <RouterLink v-if="album.artist?.id" :to="`/artist/${album.artist.id}`" custom v-slot="{ navigate }">
             <button @click="navigate">{{ $t('歌手：{name}', { name: album.artist.name }) }}</button>
           </RouterLink>
-          <OfflineButton :tracks="tracks" />
+          <OfflineButton
+            :tracks="tracks"
+            :collection="{ key: `album:${route.params.id}`, kind: 'album', id: route.params.id, name: album.name }"
+          />
         </template>
       </CollectionHeader>
       <TrackList :tracks="tracks" :context="context" :show-cover="false" :show-album="false" />

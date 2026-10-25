@@ -56,7 +56,7 @@ const meta = computed(() =>
       @play="playAll(tracks, 'liked')"
       @shuffle="shuffleAll(tracks, 'liked')"
     >
-      <template #actions><OfflineButton :tracks="tracks" /></template>
+      <template #actions><OfflineButton :tracks="tracks" :collection="{ key: 'liked', kind: 'liked', name: $t('我喜欢的音乐') }" /></template>
     </CollectionHeader>
     <p v-if="loading" class="page-state">{{ $t('加载中…') }}</p>
     <LoadError v-else-if="error" :error="error" :what="$t('我喜欢的音乐')" @retry="load" />

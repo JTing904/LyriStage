@@ -3,7 +3,7 @@
 // 点一首就从这首开始播放整个列表；正在播放的那首标红。
 // 每首右边：红心、加到歌单（自己的歌单里还有「移除」）。
 // 「多选」：勾选好几首，一次加到歌单 / 从歌单移除 / 存到手机
-// 手机 App：存在手机的歌，歌手前面有绿色小箭头（排队中是灰色）
+// 手机 App：存在手机的歌，歌手前面有绿色小箭头（排队中是灰色）；没网络时没存的歌变灰，只播存好的
 // 在网易云已经下架的歌变灰、标「已下架」（还是可以点，播不了会提示去搜其他版本）
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { isUnavailable } from '@core/netease';
@@ -15,7 +15,7 @@ import { usePlayer } from '../composables/usePlayer';
 import { useRoomLocked } from '../composables/useRoomLock';
 import { useLibraryStore } from '../stores/library';
 import { createSongRadio } from '../services';
-import { cancelOffline, isOffline, isQueued, offlineSupported, removeOffline, requestOffline, waitingForWifi } from '../offline';
+import { cancelOffline, isOffline, isQueued, offlineSupported, online, removeOfflineByUser, requestOffline, waitingForWifi } from '../offline';
 import LikeButton from './LikeButton.vue';
 import { artistNames, clock } from '../utils/format';
 import Cover from './Cover.vue';
@@ -88,9 +88,18 @@ function onRowClick(i) {
 const { state, player } = usePlayer();
 const isCurrent = track => state.track?.id === track.id;
 
+/** 没网络、这首也没存在手机：播不了 */
+const noNet = track => offlineSupported && !online.value && !isOffline(track.id);
+
 function play(index) {
   const track = props.tracks[index];
   if (isCurrent(track)) return player.toggle();
+  if (offlineSupported && !online.value) {
+    if (noNet(track)) return notice.show(tr('这首没存到手机，连上网络才能听'));
+    // 没网络：只排存好的歌，播完这首不会卡在播不了的歌
+    const saved = props.tracks.filter(t => isOffline(t.id));
+    return player.playList(saved, saved.indexOf(track), props.context);
+  }
   player.playList(props.tracks, index, props.context);
 }
 
@@ -129,7 +138,7 @@ async function menuAction(action) {
     emit('remove', [track]);
   } else if (action === 'offline') {
     if (isOffline(track.id)) {
-      await removeOffline(track.id);
+      await removeOfflineByUser(track.id);
       notice.show(tr('已从手机删除《{name}》', { name: track.name }));
     } else if (isQueued(track.id)) {
       cancelOffline([track.id]);
@@ -194,7 +203,7 @@ onBeforeUnmount(() => {
       v-for="(t, i) in tracks"
       :key="`${t.id}-${i}`"
       class="track"
-      :class="{ current: isCurrent(t), picked: selected.has(i), unavailable: isUnavailable(t) }"
+      :class="{ current: isCurrent(t), picked: selected.has(i), unavailable: isUnavailable(t), 'no-net': noNet(t) }"
       @click="onRowClick(i)"
     >
       <span class="no">
@@ -319,6 +328,10 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* 没网络、没存在手机：变灰（还是可以点，会说明为什么不能播） */
+.track.no-net {
+  opacity: 0.4;
+}
 /* 存在手机里的小箭头（参考 Spotify：绿色实心 = 存好了，灰色圈 = 排队中） */
 .saved-mark {
   display: inline-grid;

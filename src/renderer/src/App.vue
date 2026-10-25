@@ -26,6 +26,8 @@ import {
 import { t } from './i18n';
 import { useThemeStore } from './stores/theme';
 import { useAuthStore } from './stores/auth';
+import { useRoomStore } from './stores/room';
+import { connectHandoff } from './handoff';
 import { useRecentStore } from './stores/recent';
 import { useFriendsStore } from './stores/friends';
 import { useNoticeStore } from './stores/notice';
@@ -51,6 +53,14 @@ const { state, player } = usePlayer();
 useThemeStore();
 const auth = useAuthStore();
 useRecentStore();
+// 换设备接着听：登录好过几秒（这台先恢复好自己上次的歌）问一次，之后切回 App 时再问
+const roomStore = useRoomStore();
+const handoff = connectHandoff({ isMember: () => auth.allowed, inRoom: () => roomStore.inRoom });
+watch(
+  () => auth.allowed,
+  allowed => allowed && setTimeout(() => handoff.check(), 3000),
+  { immediate: true }
+);
 // 好友：一打开就要开始告诉好友在听什么、收到好友换歌的通知
 const friendsStore = useFriendsStore();
 

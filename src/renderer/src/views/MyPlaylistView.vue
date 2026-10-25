@@ -352,7 +352,10 @@ async function removePlaylist() {
           <button class="icon-action" :aria-label="$t('添加歌曲')" @click="picker.open()">
             <Icon name="plus" :size="18" /><span class="label">{{ $t('添加歌曲') }}</span>
           </button>
-          <OfflineButton :tracks="tracks" />
+          <OfflineButton
+            :tracks="tracks"
+            :collection="{ key: `mine:${playlist.id}`, kind: 'mine', id: playlist.id, name: playlist.name }"
+          />
           <button
             class="icon-action"
             :aria-label="isShared ? $t('一起编辑的人') : $t('邀请一起编辑')"

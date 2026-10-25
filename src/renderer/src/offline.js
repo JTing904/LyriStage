@@ -3,7 +3,8 @@
 //   默认只用 Wi-Fi 下载：用行动网络时先排着，连上 Wi-Fi 再接着存（关掉 App 也记得）
 // - 存在哪：App 自己的资料夹（offline/<歌曲 id>.<副档名>），歌词另外存一个 .lyrics.json，没网络也看得到歌词
 // - 播放时：播放器找链接前先问这里，有存就用手机里的档案（services.js 的 resolveSource）
-// - 不会自动删：用户自己选的，只有用户自己删
+// - 整张歌单按「存到手机」：记住这张（collections），之后歌单加了歌会自动存、拿掉的歌会从手机删
+//   （打开那一页时、或在背景每隔一段时间用 Wi-Fi 对一次）；单首按的只有用户自己删
 // - 只是缓存，不是「下载」：档案只有 LyriStage 自己读得到
 // 电脑版、网页版没有这个功能
 import { computed, reactive, ref } from 'vue';
@@ -13,9 +14,16 @@ import { isNativeApp } from './platform';
 
 export const offlineSupported = isNativeApp;
 
+/** 现在有没有网络（没网络时，没存到手机的歌变灰、点了会说明） */
+export const online = ref(navigator.onLine);
+window.addEventListener('online', () => (online.value = true));
+window.addEventListener('offline', () => (online.value = false));
+
 const INDEX_KEY = 'lyristage:offline';
 const SETTINGS_KEY = 'lyristage:offline-settings';
 const QUEUE_KEY = 'lyristage:offline-queue';
+const COLLECTIONS_KEY = 'lyristage:offline-collections';
+const MANUAL_KEY = 'lyristage:offline-manual';
 const DIR = 'offline';
 
 function read(key, fallback) {
@@ -125,16 +133,115 @@ let deps = null;
 export function connectOfflineDownloads(options) {
   deps = options;
   work();
+  setTimeout(syncAll, 5000);
 }
 
-/** 按了「存到手机」：没存过、没在排队的放进队列 */
-export function requestOffline(tracks) {
-  if (!isNativeApp) return;
+/** 单首按「存到手机」的歌（不跟着歌单删） */
+const manual = reactive(new Set(read(MANUAL_KEY, []).map(String)));
+const persistManual = () => write(MANUAL_KEY, [...manual]);
+
+/**
+ * 整张存到手机的歌单：key（例如 playlist:123、mine:abc、liked、album:456）→
+ * { ids: 现在歌单里的歌, skip: 用户自己从手机删掉的（不要再存回来） }
+ * @type {Record<string, { kind: string, id: string | null, name: string, ids: string[], skip: string[] }>}
+ */
+const collections = reactive(read(COLLECTIONS_KEY, {}));
+const persistCollections = () => write(COLLECTIONS_KEY, collections);
+export const isSavedCollection = key => Boolean(collections[key]);
+
+/** 排进队列（没存过、没在排的） */
+function enqueue(tracks) {
   const adding = tracks.filter(t => t?.id && !index[t.id] && !isQueued(t.id)).map(toSnapshot);
   if (!adding.length) return;
   queue.value = [...queue.value, ...adding];
   persistQueue();
   work();
+}
+
+/**
+ * 按了「存到手机」：单首（记成自己选的），或整张歌单（记住这张，之后跟着更新）
+ * @param {object[]} tracks
+ * @param {{ key: string, kind: string, id?: string | null, name?: string }} [collection]
+ */
+export function requestOffline(tracks, collection = null) {
+  if (!isNativeApp) return;
+  if (collection) {
+    collections[collection.key] = {
+      kind: collection.kind,
+      id: collection.id ?? null,
+      name: collection.name ?? '',
+      ids: tracks.map(t => String(t.id)),
+      skip: [],
+    };
+    persistCollections();
+  } else {
+    for (const t of tracks) manual.add(String(t.id));
+    persistManual();
+  }
+  enqueue(tracks);
+}
+
+/** 还有别的理由留着这首吗：单首存的，或在别的存起来的歌单里 */
+function stillWanted(id, exceptKey) {
+  if (manual.has(id)) return true;
+  return Object.entries(collections).some(([key, c]) => key !== exceptKey && c.ids.includes(id) && !c.skip.includes(id));
+}
+
+/**
+ * 存起来的歌单现在的歌（打开那一页、背景对一次时）：新加的排队存，拿掉的从手机删
+ * @param {string} key
+ * @param {object[]} tracks
+ */
+export async function syncCollection(key, tracks) {
+  const saved = collections[key];
+  if (!saved || !isNativeApp) return;
+  const ids = tracks.map(t => String(t.id));
+  const removed = saved.ids.filter(id => !ids.includes(id));
+  saved.ids = ids;
+  saved.skip = saved.skip.filter(id => ids.includes(id));
+  persistCollections();
+  enqueue(tracks.filter(t => !saved.skip.includes(String(t.id))));
+  for (const id of removed) {
+    if (stillWanted(id, key)) continue;
+    cancelOffline([id]);
+    await removeOffline(id);
+  }
+}
+
+/** 存到一半按「不存了」：还没存的不存了、这张也不再跟着更新（已经存好的留着） */
+export function stopCollection(key) {
+  const saved = collections[key];
+  if (!saved) return;
+  delete collections[key];
+  persistCollections();
+  cancelOffline(saved.ids.filter(id => !stillWanted(id)));
+}
+
+/** 从手机删掉整张：只属于这张的歌也从手机删掉，之后不再跟着更新 */
+export async function unsaveCollection(key) {
+  const saved = collections[key];
+  if (!saved) return;
+  delete collections[key];
+  persistCollections();
+  const drop = saved.ids.filter(id => !stillWanted(id));
+  cancelOffline(drop);
+  for (const id of drop) await removeOffline(id);
+}
+
+/** 背景对一次存起来的歌单（打开 App、连上 Wi-Fi 时；最多 30 分钟一次） */
+const SYNC_EVERY_MS = 30 * 60 * 1000;
+let syncedAt = 0;
+async function syncAll() {
+  if (!deps?.fetchCollection || !allowedNow() || Date.now() - syncedAt < SYNC_EVERY_MS) return;
+  syncedAt = Date.now();
+  for (const [key, c] of Object.entries(collections)) {
+    try {
+      const tracks = await deps.fetchCollection(c.kind, c.id);
+      if (tracks) await syncCollection(key, tracks);
+    } catch {
+      // 拿不到（没登录、歌单被删）就下次再对
+    }
+  }
 }
 /** 不存了：从队列拿掉（正在下载的那首会下载完） */
 export function cancelOffline(ids) {
@@ -165,8 +272,9 @@ async function work() {
   }
 }
 if (isNativeApp) {
-  window.addEventListener('online', () => work());
-  navigator.connection?.addEventListener?.('change', () => work());
+  window.addEventListener('online', () => (work(), syncAll()));
+  navigator.connection?.addEventListener?.('change', () => (work(), syncAll()));
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && syncAll());
 }
 
 const extensionOf = url => {
@@ -214,6 +322,19 @@ export async function saveOffline(track, source, lyrics) {
   }
 }
 
+/**
+ * 用户自己从手机删掉一首（⋯ 选单）：存起来的歌单之后不要再把它存回来
+ * @param {string | number} id
+ */
+export async function removeOfflineByUser(id) {
+  const key = String(id);
+  manual.delete(key);
+  persistManual();
+  for (const c of Object.values(collections)) if (c.ids.includes(key) && !c.skip.includes(key)) c.skip.push(key);
+  persistCollections();
+  await removeOffline(id);
+}
+
 /** 从手机删掉一首 */
 export async function removeOffline(id) {
   const entry = index[id];
@@ -225,9 +346,13 @@ export async function removeOffline(id) {
   if (entry.lyricsFile) await Filesystem.deleteFile({ path: entry.lyricsFile, directory: Directory.Data }).catch(() => {});
 }
 
-/** 全部清掉（排队的也不存了） */
+/** 全部清掉（排队的也不存了，存起来的歌单也不跟着更新了） */
 export async function clearOffline() {
   cancelOffline(queue.value.map(t => t.id));
+  for (const key of Object.keys(collections)) delete collections[key];
+  persistCollections();
+  manual.clear();
+  persistManual();
   for (const id of Object.keys(index)) await removeOffline(id);
   if (!isNativeApp) return;
   const { Filesystem, Directory } = await plugins();
