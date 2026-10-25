@@ -38,6 +38,13 @@
                 <data android:scheme="https" android:host="lyristage.vercel.app" android:path="/" />
             </intent-filter>
 
+            <!-- 在 QQ 音乐、Spotify 等 App 的歌单按「分享」→ LyriStage：导入那张歌单（MainActivity 转成 #/import?text=…） -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
             <!-- GitHub / Google 登录授权完回到 App：lyristage://auth/callback?code=… -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

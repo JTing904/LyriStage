@@ -37,7 +37,6 @@ async function clearAll() {
       @play="playAll(offlineTracks, 'offline')"
       @shuffle="shuffleAll(offlineTracks, 'offline')"
     />
-    <p v-if="!offlineSupported" class="page-state">{{ $t('只有手机 App 有离线听歌') }}</p>
     <p v-if="offlineSupported && waiting" class="waiting">{{ $t('还有 {n} 首等着存', { n: waiting }) }}</p>
     <p v-if="!offlineSupported" class="page-state">{{ $t('只有手机 App 有离线听歌') }}</p>
     <p v-else-if="!offlineTracks.length" class="page-state">

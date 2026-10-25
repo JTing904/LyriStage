@@ -11,6 +11,7 @@ const { findOnPublicSources, checkPublicSources } = require('./publicSources');
 const { handleTranslate } = require('./translate');
 const { handleIce } = require('./voice');
 const { handleOriginals, itunesSearch } = require('./originals');
+const { handleImport } = require('./importPlaylist');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -412,6 +413,10 @@ function createHandler(options = {}) {
     }
     if (url.pathname === '/search/originals') {
       const { status, body } = await handleOriginals(url, originalsDeps);
+      return sendJson(res, status, body);
+    }
+    if (url.pathname === '/import/playlist') {
+      const { status, body } = await handleImport(url);
       return sendJson(res, status, body);
     }
     if (url.pathname === '/voice/ice') {

@@ -15,6 +15,8 @@ export const router = createRouter({
     { path: '/album/:id', name: 'album', component: () => import('./views/AlbumView.vue') },
     { path: '/artist/:id', name: 'artist', component: () => import('./views/ArtistView.vue') },
     { path: '/my/:id', name: 'my-playlist', component: () => import('./views/MyPlaylistView.vue'), meta: { member: true } },
+    // 导入其他 App 的歌单：?text= 是从别的 App 分享进来的（Android 的分享选单）
+    { path: '/import', name: 'import', component: () => import('./views/ImportView.vue'), meta: { member: true } },
     {
       path: '/login',
       name: 'login',

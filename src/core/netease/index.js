@@ -275,6 +275,16 @@ export function createNetease(http) {
       return [];
     },
 
+    /**
+     * 读其他 App 的公开歌单（QQ 音乐、Spotify、Apple Music、YouTube Music；LyriStage 服务器读，见 server/lib/importPlaylist.js）
+     * @param {string} link 歌单链接，或分享出来的整段文字
+     * @returns {Promise<{ source: string, id?: string, name?: string, cover?: string, total?: number, tracks?: object[] }>}
+     *   source 是 netease 时只有 id（App 自己打开那张歌单）
+     */
+    async readOtherPlaylist(link) {
+      return http.get('/import/playlist', { url: link });
+    },
+
     async artistAlbums(id, { limit = 30, offset = 0 } = {}) {
       const data = await http.get('/artist/album', { id, limit, offset });
       return data.hotAlbums ?? [];

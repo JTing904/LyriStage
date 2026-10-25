@@ -14,6 +14,7 @@ import { t } from '../i18n';
 import Cover from '../components/Cover.vue';
 import Icon from '../components/Icon.vue';
 import TileGrid from '../components/TileGrid.vue';
+import ImportSheet from '../components/ImportSheet.vue';
 import { offlineSupported, offlineTracks } from '../offline';
 import { showError } from '../friendlyError';
 
@@ -106,6 +107,10 @@ async function join() {
     showError(err, t('没加进去'));
   }
 }
+
+// ＋ 的选单：新建歌单 / 导入歌单
+const addMenu = ref(null);
+const importSheet = ref(null);
 
 // 新建歌单
 const creating = ref(false);
@@ -219,10 +224,30 @@ async function create() {
         >
           <Icon name="friends" :size="18" /><span class="label">{{ $t('加入共同歌单') }}</span>
         </button>
-        <button class="new-btn" :aria-label="$t('新建歌单')" :title="$t('新建歌单')" @click="creating = !creating">
-          <Icon name="plus" :size="18" /><span class="label">{{ $t('新建歌单') }}</span>
+        <button
+          class="new-btn add-btn"
+          :aria-label="$t('添加歌单')"
+          :title="$t('添加歌单')"
+          aria-haspopup="dialog"
+          @click="addMenu.showModal()"
+        >
+          <Icon name="plus" :size="18" /><span class="label">{{ $t('添加歌单') }}</span>
         </button>
       </div>
+      <!-- 新建，或导入别的 App 的歌单（那一排不多加按钮，小手机才不会挤） -->
+      <dialog ref="addMenu" class="add-menu" @click.self="addMenu.close()">
+        <div class="add-box">
+          <span class="grab" aria-hidden="true" />
+          <button @click="addMenu.close(), (creating = true)">
+            <Icon name="plus" :size="20" /><span>{{ $t('新建歌单') }}</span>
+          </button>
+          <button @click="addMenu.close(), importSheet.open()">
+            <Icon name="import" :size="20" />
+            <span>{{ $t('导入歌单') }}<small>{{ $t('QQ 音乐、Spotify、Apple Music…') }}</small></span>
+          </button>
+        </div>
+      </dialog>
+      <ImportSheet ref="importSheet" />
       <form v-if="joining" class="create" @submit.prevent="join">
         <input v-model="joinCode" :placeholder="$t('朋友给你的邀请码')" maxlength="12" required autofocus />
         <button class="primary" :disabled="!joinCode.trim()">{{ $t('加入') }}</button>
@@ -499,6 +524,77 @@ async function create() {
 .new-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+/* ＋ 的选单：电脑在中间，手机从下面滑上来（跟其他面板一样） */
+.add-menu {
+  width: min(360px, calc(100vw - 24px));
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.4);
+}
+.add-menu::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+.add-box {
+  display: grid;
+  padding: 8px;
+}
+.add-box .grab {
+  display: none;
+}
+.add-box button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.add-box button:hover {
+  background: var(--surface-hover);
+}
+.add-box button + button {
+  border-top: 1px solid var(--line);
+}
+.add-box span {
+  display: grid;
+  min-width: 0;
+}
+.add-box small {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+@media (max-width: 899px), (pointer: coarse) and (max-height: 600px) {
+  .add-menu {
+    width: 100vw;
+    max-width: 100vw;
+    margin: auto 0 0;
+    border: 0;
+    border-radius: 24px 24px 0 0;
+  }
+  .add-box {
+    padding: 8px 12px calc(16px + env(safe-area-inset-bottom));
+  }
+  .add-box .grab {
+    display: block;
+    width: 40px;
+    height: 5px;
+    margin: 4px auto 8px;
+    border-radius: 3px;
+    background: var(--line-strong);
+  }
 }
 .create {
   display: flex;

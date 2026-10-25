@@ -1,6 +1,8 @@
 package com.jting904.lyristage;
 
+import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Window;
@@ -23,6 +25,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(VoicePlugin.class);
         // 拔掉耳机、蓝牙断开时暂停
         registerPlugin(HeadphonesPlugin.class);
+        setIntent(sharedToImport(getIntent()));
         super.onCreate(savedInstanceState);
         Window window = getWindow();
         // 画面铺到状态栏、导航列底下，两条都透明，透出页面自己的颜色
@@ -45,5 +48,22 @@ public class MainActivity extends BridgeActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.setNavigationBarContrastEnforced(false);
         }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(sharedToImport(intent));
+    }
+
+    /**
+     * 别的 App 分享过来的文字（QQ 音乐、Spotify 歌单的「分享」→ LyriStage）：
+     * 换成 App 链接 https://lyristage.vercel.app/#/import?text=…，网页那边跟邀请链接一样处理（platform 的 onAppLink）
+     */
+    private static Intent sharedToImport(Intent intent) {
+        if (intent == null || !Intent.ACTION_SEND.equals(intent.getAction())) return intent;
+        String text = intent.getStringExtra(Intent.EXTRA_TEXT);
+        if (text == null || text.trim().isEmpty()) return intent;
+        Uri link = Uri.parse("https://lyristage.vercel.app/#/import?text=" + Uri.encode(text.trim()));
+        return new Intent(Intent.ACTION_VIEW, link);
     }
 }

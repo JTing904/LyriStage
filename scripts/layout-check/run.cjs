@@ -187,6 +187,32 @@ const PAGES = [
     fits: [['dialog.sheet[open]', 'viewport']],
   },
   { id: 'library', hash: '#/library' },
+  // 音乐库「＋」：新建 / 导入歌单的选单
+  {
+    id: 'library-add',
+    hash: '#/library',
+    open: () => click('.add-btn'),
+    close: () => document.querySelector('dialog.add-menu')?.close(),
+    fits: [['dialog.add-menu[open]', 'viewport']],
+  },
+  // 导入歌单：贴链接的面板（只打开来看）
+  {
+    id: 'import-sheet',
+    hash: '#/import',
+    close: () => document.querySelector('dialog.import-sheet')?.close(),
+    fits: [['dialog.import-sheet[open]', 'viewport']],
+  },
+  // 导入歌单：贴歌名清单、在网易云找（只找，不存成歌单）
+  {
+    id: 'import-list',
+    hash: '#/import',
+    open: () => {
+      document.querySelector('dialog.import-sheet')?.close();
+      STORE('importer').start('晴天 - 周杰伦\n说好不哭 - 周杰伦\nHousewife - Tate McRae\n这首歌不存在 - 没有这个人\n十年 - 陈奕迅\n江南 - 林俊杰\n光年之外 - 邓紫棋');
+    },
+    openWait: 9000,
+    close: () => STORE('importer').reset(),
+  },
   { id: 'offline', hash: '#/offline' },
   // 「全部删掉」的确认面板：只打开来看，关掉时等于按取消（不会真的删）
   {
@@ -946,7 +972,7 @@ async function main() {
         }
         if (p.open) {
           await page.evaluate(`${HELPERS}; (${p.open.toString()})()`);
-          await sleep(1000);
+          await sleep(p.openWait ?? 1000);
         }
         const see = profile.rotation === 1 ? p.seeLandscape ?? [] : [];
         const { issues, width, height } = await page.evaluate(CHECK, { reach: p.reach ?? [], see, fits: p.fits ?? [], textOverlap: Boolean(p.textOverlap) });
