@@ -33,14 +33,17 @@ const RESTART_THRESHOLD = 3;
 const SOURCE_TTL_MS = 10 * 60 * 1000;
 // 这首听了这么久才先帮下一首找音源（一直快速跳歌时不要白白多找，B 站搜太多会被限制）
 const PREFETCH_AFTER_SECONDS = 10;
+/** 找音源最多试几次（找不到才再试；网络出错不重试） */
+const SOURCE_ATTEMPTS = 2;
 
 /**
  * @param {object} deps
  * @param {AudioBackend} deps.audio
  * @param {(track: Track) => Promise<Source | null>} deps.resolveSource 找播放链接（网易云 → 解灰）
  * @param {() => number} [deps.rng] 随机播放用
+ * @param {(track: Track) => boolean} [deps.slowSource] 这首找音源很慢（要去其他音源找，要好几秒）：下一首是这种就一开始播就先帮它找
  */
-export function createPlayer({ audio, resolveSource, rng = Math.random }) {
+export function createPlayer({ audio, resolveSource, rng = Math.random, slowSource = () => false }) {
   const events = new Emitter();
   const queue = new Queue({ rng });
 
@@ -115,12 +118,16 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
     let fetchedAt = Date.now();
     const ready = prefetched;
     prefetched = null;
+    let attempts = 0;
     if (ready && ready.id === track.id && Date.now() - ready.at < SOURCE_TTL_MS) {
       source = await ready.promise; // 预先找好的（还在找就等它）
       fetchedAt = ready.at;
+      attempts = 1;
     }
-    // 没有预先找好（或预先找的时候失败了）：现在找
-    if (!source) {
+    // 没有预先找好（或预先找的时候失败了）：现在找。
+    // 找不到再试一次才算没有：其他音源（B 站）偶尔第一次找不到，第二次就有
+    while (!source && attempts < SOURCE_ATTEMPTS && token === loadToken) {
+      attempts += 1;
       try {
         source = await resolveSource(track);
       } catch (err) {
@@ -128,6 +135,7 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
         // 没要播放（App 打开时恢复上次的歌）就不报错：用户什么都还没按，跳出错误很奇怪；
         // 之后按播放会再拿一次，那时候才报
         if (token === loadToken && autoplay) events.emit('error', { track, error: err });
+        break;
       }
     }
     if (token !== loadToken) return; // 已经切到别的歌了
@@ -154,13 +162,17 @@ export function createPlayer({ audio, resolveSource, rng = Math.random }) {
     sourceAt = fetchedAt;
   }
 
-  /** 这首听了 10 秒（短歌就一半）时，先帮下一首拿播放链接；界面收到 prefetch 事件可以顺便载入歌词 */
+  /**
+   * 这首听了 10 秒（短歌就一半）时，先帮下一首拿播放链接；界面收到 prefetch 事件可以顺便载入歌词。
+   * 下一首找音源很慢（其他音源）：一开始播就先找，按「下一首」才不用等好几秒
+   */
   function maybePrefetch(time) {
     const current = state.track;
     if (!current || state.mode === 'fm' || !state.duration) return;
-    if (time < Math.min(PREFETCH_AFTER_SECONDS, state.duration / 2)) return;
     const next = queue.peekNext();
     if (!next || next.id === current.id) return;
+    const after = slowSource(next) ? 1 : Math.min(PREFETCH_AFTER_SECONDS, state.duration / 2);
+    if (time < after) return;
     // 同一组只找一次；中途下一首换了（插了「下一首播放」、排序）就为新的那首再找
     const key = `${current.id}>${next.id}`;
     if (prefetchKey === key) return;

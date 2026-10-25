@@ -370,6 +370,9 @@ export default {
   '打开': 'Open',
   '没存成功': 'Couldn’t save it',
   '新歌单': 'New playlist',
+  // 找音源找很久
+  '正在找其他音源…': 'Finding another source…',
+  '正在载入…': 'Loading…',
   '{n} 首 · {mb} MB': '{n} songs · {mb} MB',
   '把存在手机里的歌全部删掉？之后听到的歌会再存进来。': 'Delete all songs saved on this phone? Songs you play later will be saved again.',
   '只有手机 App 有离线听歌': 'Offline listening is only in the phone app',

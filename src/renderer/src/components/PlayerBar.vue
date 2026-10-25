@@ -14,6 +14,7 @@ import { useSleepStore } from '../stores/sleep';
 import { useAuthStore } from '../stores/auth';
 import { useFmDislike } from '../composables/useFmDislike';
 import { useRoomLocked } from '../composables/useRoomLock';
+import { useLoadingHint } from '../composables/useLoadingHint';
 import HostLine from './HostLine.vue';
 
 const ui = useUiStore();
@@ -51,6 +52,8 @@ const artists = computed(() =>
 const subtitle = computed(() =>
   [artists.value, track.value?.al?.name].filter(Boolean).join(' • ')
 );
+/** 找音源找很久：歌手那一行改成「正在找其他音源…」 */
+const loadingHint = useLoadingHint(props.state);
 const cover = computed(
   () =>
     track.value?.al?.picUrl &&
@@ -154,7 +157,7 @@ function toggleMute() {
       <div class="meta">
         <strong>{{ track?.name ?? $t('没有在播放') }}</strong>
         <HostLine v-if="locked" />
-        <span v-else>{{ artists }}</span>
+        <span v-else :class="{ 'loading-hint': loadingHint }">{{ loadingHint || artists }}</span>
       </div>
       <LikeButton v-if="track" :track="track" />
       <AddToPlaylistButton v-if="track" :track="track" />
@@ -256,7 +259,7 @@ function toggleMute() {
         <div class="meta">
           <strong>{{ track?.name ?? $t('没有在播放') }}</strong>
           <HostLine v-if="locked" />
-          <span v-else>{{ subtitle }}</span>
+          <span v-else :class="{ 'loading-hint': loadingHint }">{{ loadingHint || subtitle }}</span>
         </div>
         <LikeButton v-if="track" :track="track" />
       <AddToPlaylistButton v-if="track" :track="track" />
@@ -388,6 +391,11 @@ function toggleMute() {
 </template>
 
 <style scoped>
+/* 找音源找很久时的提示（代替歌手那一行） */
+.loading-hint {
+  color: var(--accent);
+  font-weight: 600;
+}
 /* 完整模式跟随 App 的深色 / 浅色主题 */
 .player-bar {
   --bar-bg: var(--bar, #18181b);

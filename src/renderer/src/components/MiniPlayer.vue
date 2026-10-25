@@ -6,6 +6,7 @@ import Cover from './Cover.vue';
 import { useUiStore } from '../stores/ui';
 import HostLine from './HostLine.vue';
 import { useRoomLocked } from '../composables/useRoomLock';
+import { useLoadingHint } from '../composables/useLoadingHint';
 
 const ui = useUiStore();
 /** 一起听的成员：播放键变灰（还是按得到，按了会说只有房主能控制） */
@@ -65,6 +66,8 @@ function onOpen() {
 const artists = computed(() =>
   (props.state.track?.ar ?? []).map(a => a.name).join(' / ')
 );
+/** 找音源找很久：歌手那一行改成「正在找其他音源…」 */
+const loadingHint = useLoadingHint(props.state);
 </script>
 
 <template>
@@ -83,7 +86,7 @@ const artists = computed(() =>
       <span class="meta">
         <strong>{{ state.track.name }}</strong>
         <HostLine v-if="locked" />
-        <span v-else>{{ artists }}</span>
+        <span v-else :class="{ 'loading-hint': loadingHint }">{{ loadingHint || artists }}</span>
       </span>
     </button>
     <button
@@ -105,6 +108,11 @@ const artists = computed(() =>
 </template>
 
 <style scoped>
+/* 找音源找很久时的提示（代替歌手那一行） */
+.loading-hint {
+  color: var(--accent);
+  font-weight: 600;
+}
 .mini {
   position: relative;
   display: flex;

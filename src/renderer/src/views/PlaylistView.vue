@@ -1,3 +1,9 @@
+<script>
+// 这次打开 App 看过的歌单（最多 20 张）：再打开时先马上显示，同时在背景拿最新的
+const recentlyOpened = new Map();
+const REMEMBER = 20;
+</script>
+
 <script setup>
 // 网易云歌单
 import { computed, ref, watch } from 'vue';
@@ -22,20 +28,27 @@ const loading = ref(true);
 const error = ref('');
 
 async function load(id) {
-  loading.value = true;
+  const key = String(id);
+  const seen = recentlyOpened.get(key);
   error.value = '';
-  info.value = null;
-  tracks.value = [];
+  // 看过：先显示上次的（不用等），背景拿到最新的再换上；没看过才显示载入中
+  info.value = seen?.info ?? null;
+  tracks.value = seen?.tracks ?? [];
+  loading.value = !seen;
   try {
     const [detail, songs] = await Promise.all([
       netease.playlist(id),
       netease.playlistTracks(id),
     ]);
-    if (String(id) !== String(route.params.id)) return; // 等的时候换了别的歌单
+    if (key !== String(route.params.id)) return; // 等的时候换了别的歌单
     info.value = detail;
     tracks.value = songs;
+    recentlyOpened.delete(key);
+    recentlyOpened.set(key, { info: detail, tracks: songs });
+    if (recentlyOpened.size > REMEMBER) recentlyOpened.delete(recentlyOpened.keys().next().value);
   } catch (err) {
-    error.value = err;
+    // 有上次的就照样显示（例如断网），没有才显示错误
+    if (!seen) error.value = err;
   } finally {
     loading.value = false;
   }

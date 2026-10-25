@@ -56,9 +56,9 @@ const allPlayable = async track => ({
 /** 等所有已排队的 Promise 跑完 */
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 
-function setup(resolveSource = allPlayable) {
+function setup(resolveSource = allPlayable, options = {}) {
   const audio = fakeAudio();
-  const player = createPlayer({ audio, resolveSource });
+  const player = createPlayer({ audio, resolveSource, ...options });
   const played = [];
   const unplayable = [];
   player.on('played', e => played.push(e));
@@ -448,5 +448,54 @@ describe('player 预先载入下一首', () => {
     await flush();
     await player.next();
     expect(audio.src).toBe(urlOf(2));
+  });
+});
+
+describe('player 找音源慢、偶尔找不到（其他音源）', () => {
+  it('第一次找不到：再找一次，找到了就播，不跳歌', async () => {
+    let first = true;
+    const resolve = vi.fn(async t => {
+      if (t.id === 1 && first) {
+        first = false;
+        return null;
+      }
+      return { url: urlOf(t.id) };
+    });
+    const { audio, player, unplayable } = setup(resolve);
+    await player.playList(tracks, 0);
+    expect(player.getState().track.id).toBe(1);
+    expect(audio.src).toBe(urlOf(1));
+    expect(unplayable).toEqual([]);
+    expect(resolve.mock.calls.filter(([t]) => t.id === 1)).toHaveLength(2);
+  });
+
+  it('两次都找不到才跳下一首', async () => {
+    const resolve = vi.fn(async t => (t.id === 1 ? null : { url: urlOf(t.id) }));
+    const { player, unplayable } = setup(resolve);
+    await player.playList(tracks, 0);
+    expect(unplayable).toEqual([1]);
+    expect(player.getState().track.id).toBe(2);
+    expect(resolve.mock.calls.filter(([t]) => t.id === 1)).toHaveLength(2);
+  });
+
+  it('网络出错不重试（停在这首，按播放再试）', async () => {
+    const resolve = vi.fn(async () => {
+      throw new Error('offline');
+    });
+    const { player } = setup(resolve);
+    player.on('error', () => {});
+    await player.playList(tracks, 0);
+    expect(resolve).toHaveBeenCalledTimes(1);
+  });
+
+  it('下一首找音源很慢：一开始播就先帮它找（不用等 10 秒）', async () => {
+    const resolve = vi.fn(async t => ({ url: urlOf(t.id) }));
+    const { audio, player } = setup(resolve, { slowSource: t => t.id === 2 });
+    const prefetched = [];
+    player.on('prefetch', t => prefetched.push(t.id));
+    await player.playList(tracks, 0);
+    audio.tick(1);
+    await flush();
+    expect(prefetched).toEqual([2]);
   });
 });

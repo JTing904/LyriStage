@@ -93,8 +93,8 @@ export default {
   歌单名字: 'Playlist name',
   新建: 'Create',
   '新建失败：{error}': "Couldn't create playlist: {error}",
-  '还没有歌单。在任何一首歌旁边按 ＋ 就能加进歌单。':
-    'No playlists yet. Tap ＋ next to any song to add it to one.',
+  '还没有歌单。按右边的 ＋ 新建，或在歌曲的 ⋯ 选「加到歌单」。':
+    'No playlists yet. Tap ＋ on the right to make one, or choose “Add to playlist” in a song’s ⋯ menu.',
 
   // 我喜欢的音乐
   '还没有喜欢的歌。听到喜欢的就按一下 ♡。': 'No liked songs yet. Tap ♡ on a song you love.',

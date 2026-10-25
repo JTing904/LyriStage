@@ -1,6 +1,6 @@
 // 把 core 里的模块按当前平台的配置组装好，界面直接 import 这里
 import { createHttp } from '@core/http/client';
-import { createNetease } from '@core/netease';
+import { createNetease, isUnavailable } from '@core/netease';
 import { buildLyrics, findLrclibLyrics, hasTimedLyrics } from '@core/lyrics';
 import { createPlayer } from '@core/player/player';
 import { createHtmlAudio } from '@core/player/audio';
@@ -208,7 +208,12 @@ connectOfflineDownloads({
 });
 
 const audio = createHtmlAudio();
-export const player = createPlayer({ audio, resolveSource });
+export const player = createPlayer({
+  audio,
+  resolveSource,
+  // 网易云没有版权的歌要去其他音源（B 站）找，要好几秒：下一首是这种就先帮它找
+  slowSource: track => isUnavailable(track),
+});
 /** 均衡器、音量平衡（设置页） */
 export const audioEffects = createAudioEffects(audio);
 
