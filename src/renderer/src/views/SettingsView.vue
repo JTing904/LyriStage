@@ -15,6 +15,7 @@ import AvatarFigure from '../components/AvatarFigure.vue';
 import Icon from '../components/Icon.vue';
 import { squareAvatar } from '../utils/image';
 import {
+  checkAndroidUpdate,
   checkForUpdates,
   installUpdate,
   saveImage as saveFile,
@@ -28,6 +29,7 @@ import {
   updateStatus,
 } from '../platform';
 import { desktopLyrics } from '../desktop';
+import { updateAndroidNow } from '../androidUpdate';
 import { netease, audioEffects } from '../services';
 import EqualizerPanel from '../components/EqualizerPanel.vue';
 import { pinWidget } from '../widget';
@@ -65,15 +67,16 @@ function toggleOpenAtLogin(on) {
 async function checkUpdate() {
   checking.value = true;
   try {
-    update.value = await checkForUpdates();
+    update.value = isElectron ? await checkForUpdates() : await checkAndroidUpdate();
   } finally {
     checking.value = false;
   }
 }
 const updateText = computed(() => {
   const s = update.value?.status;
+  if (s === 'checking' || checking.value) return t('正在检查…');
+  if (s === 'available') return t('有新版本 {version}', { version: update.value.version });
   if (s === 'dev') return t('开发模式不会自动更新');
-  if (s === 'checking') return t('正在检查…');
   if (s === 'downloading') return t('有新版本，正在下载…');
   if (s === 'ready') return t('新版本 {version} 已经下载好', { version: update.value.version });
   if (s === 'latest') return t('已经是最新版本');
@@ -886,12 +889,20 @@ function summary(id) {
         <!-- ===== 关于 ===== -->
         <template v-else-if="cat === 'about'">
           <div class="card">
-            <div class="row">
+            <div class="row version-row">
               <span class="label">
-                LyriStage {{ appVersion }}
-                <small v-if="isElectron">{{ updateText }}</small>
+                <span class="app-name">LyriStage {{ appVersion }}</span>
+                <small v-if="isElectron || update || checking">{{ updateText }}</small>
               </span>
-              <template v-if="isElectron">
+              <template v-if="isNativeApp">
+                <button v-if="update?.status === 'available'" class="primary" @click="updateAndroidNow(update)">
+                  {{ $t('更新') }}
+                </button>
+                <button v-else class="ghost" :disabled="checking" @click="checkUpdate">
+                  {{ $t('检查更新') }}
+                </button>
+              </template>
+              <template v-else-if="isElectron">
                 <button v-if="update?.status === 'ready'" class="primary" @click="installUpdate()">
                   {{ $t('重启更新') }}
                 </button>
@@ -1653,6 +1664,16 @@ button {
 }
 .row:has(> .segmented) > .label {
   flex: 1 1 8em;
+}
+/* 关于：「LyriStage 版本」不拆两行，放不下就让按钮掉到下一行 */
+.version-row {
+  flex-wrap: wrap;
+}
+.version-row > .label {
+  flex: 1 1 9em;
+}
+.app-name {
+  white-space: nowrap;
 }
 .segmented button {
   padding: 7px 14px;

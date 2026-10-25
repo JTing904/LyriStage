@@ -9,20 +9,13 @@ import { storeToRefs } from 'pinia';
 import { ApiError } from '@core/http/client';
 import { adminStorageUsage } from '@core/data';
 import { isUnavailable, isUnblockRateLimited } from '@core/netease';
-import { createFmSource, getEnglishTranslation, getLyrics } from './services';
+import { createFmSource, getEnglishTranslation, getLyrics, warmUpFm } from './services';
 import { usePlayer } from './composables/usePlayer';
 import { installRoomLock } from './composables/useRoomLock';
 import { offlineSupported } from './offline';
 import { PULL_TRIGGER, attachPullRefresh } from './composables/usePullRefresh';
-import {
-  findAndroidUpdate,
-  installAndroidUpdate,
-  installUpdate,
-  isElectron,
-  onBackButton,
-  onUpdateReady,
-  openInBrowser,
-} from './platform';
+import { findAndroidUpdate, installUpdate, isElectron, onBackButton, onUpdateReady } from './platform';
+import { updateAndroidNow } from './androidUpdate';
 import { t } from './i18n';
 import { useThemeStore } from './stores/theme';
 import { useAuthStore } from './stores/auth';
@@ -44,7 +37,6 @@ import PlayerBar from './components/PlayerBar.vue';
 import QueuePanel from './components/QueuePanel.vue';
 import RoomReactions from './components/RoomReactions.vue';
 import { report, trackContext } from './errorReporter';
-import { explainError } from './friendlyError';
 // 歌词舞台、海报墙：打开时才载入（App 打开时不用等）
 const LyricStage = defineAsyncComponent(() => import('./lyric-stage/LyricStage.vue'));
 const QueueWall = defineAsyncComponent(() => import('./components/QueueWall.vue'));
@@ -59,6 +51,12 @@ const handoff = connectHandoff({ isMember: () => auth.allowed, inRoom: () => roo
 watch(
   () => auth.allowed,
   allowed => allowed && setTimeout(() => handoff.check(), 3000),
+  { immediate: true }
+);
+// 私人 FM：登录好过一会儿在背景先挑好第一批歌（按下去就马上有歌，不用等 8 秒）
+watch(
+  () => auth.allowed,
+  allowed => allowed && setTimeout(warmUpFm, 8000),
   { immediate: true }
 );
 // 好友：一打开就要开始告诉好友在听什么、收到好友换歌的通知
@@ -202,38 +200,13 @@ onUpdateReady(({ version }) => {
   });
 });
 
-// Android：GitHub 上有新版本就提示去下载（电脑版会自动更新，网页版永远是最新的）
-// Android：有新版本时按「更新」就在 App 里下载、跳出安装画面（拿不到 APK 网址时才开浏览器）
+// Android：GitHub 上有新版本就提示更新（电脑版会自动更新，网页版永远是最新的）
 findAndroidUpdate().then(update => {
   if (!update) return;
-  const offer = () =>
-    notice.show(t('有新版本 {version}', { version: update.version }), {
-      action: { label: t('更新'), run: () => updateNow(update) },
-      duration: 20000,
-    });
-  async function updateNow({ url }) {
-    if (!url.endsWith('.apk')) return openInBrowser(url);
-    notice.show(t('正在下载新版本…'), { duration: 120000 });
-    try {
-      const status = await installAndroidUpdate(url, percent =>
-        notice.show(t('正在下载新版本… {p}%', { p: percent }), { duration: 120000 })
-      );
-      if (status === 'needs-permission') {
-        notice.show(t('请允许 LyriStage 安装 App，回来再按一次「更新」'), {
-          action: { label: t('更新'), run: () => updateNow(update) },
-          duration: 60000,
-        });
-      } else {
-        notice.dismiss();
-      }
-    } catch (err) {
-      notice.show(explainError(err, t('新版本没下载成功')).message, {
-        action: { label: t('改用浏览器下载'), run: () => openInBrowser(url) },
-        duration: 20000,
-      });
-    }
-  }
-  offer();
+  notice.show(t('有新版本 {version}', { version: update.version }), {
+    action: { label: t('更新'), run: () => updateAndroidNow(update) },
+    duration: 20000,
+  });
 });
 
 // 管理员：数据库快满时提醒（免费方案 500 MB；每天最多检查一次）

@@ -79,7 +79,12 @@ export const applyPrivileges = (tracks, privileges) =>
  * @param {boolean} loggedIn
  */
 export function createFmSource(loggedIn) {
-  if (loggedIn) return new PersonalFM({ netease });
+  if (loggedIn) {
+    // 有先帮你挑好的（warmUpFm）就用那个：按下去马上有歌
+    const ready = warmFm;
+    warmFm = null;
+    return ready ?? new PersonalFM({ netease });
+  }
   const buffer = [];
   return {
     async next(count = 1) {
@@ -91,6 +96,22 @@ export function createFmSource(loggedIn) {
       return buffer.splice(0, count);
     },
   };
+}
+
+/**
+ * 私人 FM 第一次按要先去网易云找一批候选歌（要问好几次，约 8 秒）：
+ * 打开 App 登录好之后在背景先挑好第一批，按下去就马上有歌。一次打开只挑一次；网络慢就不挑（不跟别的抢）
+ * @type {PersonalFM | null}
+ */
+let warmFm = null;
+let warmedUp = false;
+export function warmUpFm() {
+  if (warmedUp || slowNetwork()) return;
+  warmedUp = true;
+  warmFm = new PersonalFM({ netease });
+  warmFm._refill().catch(() => {
+    warmFm = null;
+  });
 }
 
 /** 从这首歌开始的电台（相似歌曲，按你的口味排） */

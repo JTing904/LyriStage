@@ -268,23 +268,41 @@ export async function findAndroidUpdate() {
   try {
     const last = Number(localStorage.getItem(UPDATE_CHECKED_KEY));
     if (Date.now() - last < UPDATE_CHECK_EVERY_MS) return null;
+  } catch {
+    // 读不到上次时间就照样问
+  }
+  const result = await checkAndroidUpdate();
+  return result.status === 'available' ? result : null;
+}
+
+/**
+ * Android：马上去 GitHub 问（设定里按「检查更新」用，不管刚刚问过没有）
+ * @returns {Promise<{ status: 'available', version: string, url: string } | { status: 'latest' | 'error' }>}
+ */
+export async function checkAndroidUpdate() {
+  try {
     const [{ App }, { isNewerVersion }] = await Promise.all([
       import('@capacitor/app'),
       import('@core/version'),
     ]);
     const { version: current } = await App.getInfo();
     const res = await fetch(LATEST_RELEASE_API, { headers: { Accept: 'application/vnd.github+json' } });
-    if (!res.ok) return null;
-    localStorage.setItem(UPDATE_CHECKED_KEY, String(Date.now()));
+    if (!res.ok) return { status: 'error' };
+    try {
+      localStorage.setItem(UPDATE_CHECKED_KEY, String(Date.now()));
+    } catch {
+      // 存不了就下次再问
+    }
     const release = await res.json();
-    if (!isNewerVersion(release.tag_name, current)) return null;
+    if (!isNewerVersion(release.tag_name, current)) return { status: 'latest' };
     const apk = release.assets?.find(asset => asset.name?.endsWith('.apk'));
     return {
+      status: 'available',
       version: String(release.tag_name).replace(/^v/i, ''),
       url: apk?.browser_download_url ?? RELEASES_PAGE,
     };
   } catch {
-    return null;
+    return { status: 'error' };
   }
 }
 
