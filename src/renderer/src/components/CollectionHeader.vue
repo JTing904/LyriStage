@@ -291,6 +291,23 @@ h1 {
     display: none;
   }
 }
+/* 窄手机（360 左右）：自己的歌单一排有 7 个按钮，缩小一点才放得下 */
+@media (max-width: 400px) {
+  .actions {
+    gap: 6px;
+  }
+  .actions :slotted(button.icon-action) {
+    width: 38px;
+    height: 38px;
+  }
+  .shuffle {
+    width: 40px;
+  }
+  .play {
+    width: 52px;
+    height: 52px;
+  }
+}
 
 /* 手机横屏：画面矮，封面放左边、缩小 */
 @media (pointer: coarse) and (max-height: 600px) and (orientation: landscape) {

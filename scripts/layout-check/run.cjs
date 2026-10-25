@@ -180,6 +180,20 @@ const PAGES = [
     fits: [['dialog.confirm-sheet[open]', 'viewport']],
   },
   { id: 'liked', hash: '#/liked' },
+  // 自己的歌单（一排按钮最多：添加、存到手机、邀请、海报、⋯、随机、播放）：测试账号没有自己的歌单，
+  // 先临时建一个「LS 测试」（TEMP_PLAYLIST 换成它的 id），全部测完一定删掉
+  { id: 'my-playlist', hash: '#/my/TEMP_PLAYLIST', wait: 3500 },
+  // 整张存到手机、存到一半：按钮外圈画进度（假装成存到一半的样子，不会真的去存）
+  {
+    id: 'my-playlist-saving',
+    hash: '#/my/TEMP_PLAYLIST',
+    wait: 3500,
+    open: () => {
+      const b = document.querySelector('.offline-btn');
+      b?.classList.replace('idle', 'saving');
+      b?.style.setProperty('--saved', '0.78');
+    },
+  },
   { id: 'playlist', hash: '#/playlist/3778678', wait: 4000 },
   {
     id: 'track-menu',
@@ -842,8 +856,25 @@ async function main() {
   const results = [];
   let openedRoom = false;
   let currentProfile = null;
+  let tempPlaylist = null;
+  let playlistCount = null;
 
   try {
+    if (pages.some(p => p.hash?.includes('TEMP_PLAYLIST'))) {
+      // 临时歌单：拿网易云歌单的前 6 首当内容。记下原本有几个歌单，删掉后对一下
+      ({ tempPlaylist, playlistCount } = await page.evaluate(`${HELPERS}; (async () => {
+        const lib = STORE('library');
+        await lib.refreshPlaylists();
+        const playlistCount = lib.playlists.length;
+        const res = await fetch('https://lyristage-api.vercel.app/playlist/track/all?id=3778678&limit=6');
+        const { songs } = await res.json();
+        const row = await lib.saveAsPlaylist('LS 测试', songs);
+        return { tempPlaylist: row?.id ?? null, playlistCount };
+      })()`));
+      if (!tempPlaylist) throw new Error('临时歌单建不起来（测试账号要登录）');
+      console.log(`临时歌单 LS 测试：${tempPlaylist}（原本 ${playlistCount} 个歌单）`);
+    }
+    for (const p of pages) if (p.hash?.includes('TEMP_PLAYLIST')) p.hash = p.hash.replace('TEMP_PLAYLIST', tempPlaylist);
     for (const [profileId, locale, theme] of runs) {
       const profile = PROFILES[profileId];
       if (currentProfile !== profileId) {
@@ -918,6 +949,19 @@ async function main() {
     try {
       ({ browser, page } = await connect());
       if (openedRoom) await page.evaluate(`${HELPERS}; UNGUEST(); STORE('room').leave()`).catch(() => {});
+      if (tempPlaylist) {
+        try {
+          const left = await page.evaluate(`${HELPERS}; (async () => {
+            const lib = STORE('library');
+            await lib.deletePlaylist(${JSON.stringify(tempPlaylist)});
+            await lib.refreshPlaylists();
+            return lib.playlists.length;
+          })()`);
+          console.log(`删掉临时歌单：现在 ${left} 个歌单${left === playlistCount ? '，跟原本一样' : `，原本 ${playlistCount} 个，请检查！`}`);
+        } catch (err) {
+          console.log(`！！临时歌单 ${tempPlaylist} 没删掉，要手动删：${err.message}`);
+        }
+      }
       await page.evaluate(
         ([keys, values]) => keys.forEach((k, i) => (values[i] === null ? localStorage.removeItem(k) : localStorage.setItem(k, values[i]))),
         [KEYS, original]

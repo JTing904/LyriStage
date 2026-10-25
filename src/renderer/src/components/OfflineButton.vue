@@ -43,6 +43,9 @@ watch(
 const label = computed(() =>
   status.value === 'done' ? t('已存到手机') : status.value === 'saving' ? t('不存了') : t('存到手机')
 );
+const showCount = computed(() => status.value === 'saving' || (status.value === 'idle' && saved.value > 0));
+/** 读屏：手机上数字藏起来了（只画一圈进度），「存到手机」后面念出存了几首 */
+const ariaLabel = computed(() => (showCount.value ? `${label.value} ${saved.value}/${total.value}` : label.value));
 
 async function onClick() {
   if (status.value === 'saving') {
@@ -63,13 +66,14 @@ async function onClick() {
     v-if="offlineSupported && total"
     class="icon-action offline-btn"
     :class="status"
-    :aria-label="label"
+    :style="{ '--saved': total ? saved / total : 0 }"
+    :aria-label="ariaLabel"
     :aria-pressed="status === 'done'"
     @click="onClick"
   >
     <Icon :name="status === 'done' ? 'check' : 'offline'" :size="18" />
     <span class="label">{{ label }}</span>
-    <span v-if="status === 'saving' || (status === 'idle' && saved)" class="count">{{ saved }}/{{ total }}</span>
+    <span v-if="showCount" class="count" aria-hidden="true">{{ saved }}/{{ total }}</span>
     <Teleport to="body">
       <ConfirmSheet
         ref="confirmSheet"
@@ -93,17 +97,25 @@ async function onClick() {
   border-color: #16a34a;
   color: #16a34a;
 }
-/* 手机的圆形图标按钮放不下「12/40」：存的时候变宽 */
+/* 手机只留圆形图标（文字给读屏用 aria-label）：放不下「43/55」，变宽会把整排撑出画面，
+   改成存的时候沿着按钮画一圈进度（参考 Spotify 下载歌单）。
+   CollectionHeader 藏 .label 的样式套不到元件里面，这里自己藏 */
 @media (max-width: 640px) {
-  /* 手机只留图标（文字给读屏用 aria-label）；CollectionHeader 藏 .label 的样式套不到元件里面，这里自己藏 */
-  .label {
+  .label,
+  .count {
     display: none;
   }
-  button.offline-btn.icon-action.saving,
-  button.offline-btn.icon-action.idle:has(.count) {
-    width: auto;
-    padding: 0 12px;
-    gap: 6px;
+  .offline-btn {
+    position: relative;
+  }
+  .offline-btn.saving::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 50%;
+    background: conic-gradient(var(--accent) calc(var(--saved) * 1turn), transparent 0);
+    mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+    pointer-events: none;
   }
 }
 </style>
