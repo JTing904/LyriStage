@@ -74,7 +74,7 @@ export const useRecentStore = defineStore('recent', () => {
   document.addEventListener('visibilitychange', refreshIfStale);
   window.addEventListener('focus', refreshIfStale);
 
-  player.on('track', track => {
+  function onTrack(track) {
     const snapshot = toSnapshot(track);
     session.value = [snapshot, ...session.value.filter(t => !sameTrack(t, snapshot))].slice(0, MAX);
     local.value = [snapshot, ...local.value.filter(t => !sameTrack(t, snapshot))].slice(0, MAX);
@@ -86,6 +86,11 @@ export const useRecentStore = defineStore('recent', () => {
       }
     }
     merge();
+  }
+  player.on('track', onTrack);
+  // 打开 App 恢复上次那首时不一定有 track 事件：载入的歌一换就放到最前面
+  player.on('change', state => {
+    if (state.track && !(session.value[0] && sameTrack(session.value[0], state.track))) onTrack(state.track);
   });
 
   return { tracks, refresh };
